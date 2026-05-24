@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dari App Prototype</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+        body { background: #1a1a1a; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif; }
+        .device { width: 393px; height: 852px; background: #fff; border-radius: 44px; overflow: hidden; position: relative; box-shadow: 0 30px 80px rgba(0,0,0,0.6); border: 2px solid #333; }
+        .status-bar { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 12px 20px 0; font-size: 12px; font-weight: 600; position: relative; z-index: 10; flex-shrink: 0; }
+        .status-bar.light { color: #fff; }
+        .status-bar.dark { color: #1a1a1a; }
+        .status-time { font-size: 15px; font-weight: 700; }
+        .screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; background: #fff; }
+        .screen.hidden { display: none; }
+        .screen.slide-in { animation: slideIn 0.3s ease; }
+        @keyframes slideIn { from{transform:translateX(100%)} to{transform:translateX(0)} }
+        :root { --carrot:#FF6F0F; --carrot-light:#FFF3EB; --carrot-dark:#E55A00; }
+
+        /* SPLASH */
+        #splash { background: var(--carrot); }
+        #splash .status-bar { background: transparent; }
+        .splash-body { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:16px; }
+        .splash-icon { width:100px; height:100px; background:rgba(255,255,255,0.15); border-radius:24px; display:flex; align-items:center; justify-content:center; }
+        .splash-name { color:#fff; font-size:42px; font-weight:800; letter-spacing:-2px; }
+        .splash-sub { color:rgba(255,255,255,0.75); font-size:16px; }
+        .splash-loader { margin-top:40px; width:48px; height:4px; background:rgba(255,255,255,0.3); border-radius:2px; overflow:hidden; }
+        .splash-loader-bar { width:40%; height:100%; background:#fff; border-radius:2px; animation:loadBar 1.5s ease-in-out infinite; }
+        @keyframes loadBar { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
+
+        /* LANG */
+        .screen-header { padding:20px 24px 14px; flex-shrink:0; }
+        .screen-title { font-size:22px; font-weight:700; color:#1a1a1a; }
+        .lang-list { flex:1; overflow-y:auto; }
+        .lang-list::-webkit-scrollbar { display:none; }
+        .lang-item { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; border-bottom:1px solid #f5f5f5; cursor:pointer; }
+        .lang-item.selected { background:var(--carrot-light); }
+        .lang-name { font-size:17px; color:#1a1a1a; font-weight:500; }
+        .radio-btn { width:22px; height:22px; border-radius:50%; border:2px solid #ddd; display:flex; align-items:center; justify-content:center; }
+        .radio-btn.on { background:var(--carrot); border-color:var(--carrot); }
+        .radio-dot { width:8px; height:8px; border-radius:50%; background:#fff; }
+        .lang-item:not(.selected) .radio-dot { display:none; }
+        .btn-fixed { padding:12px 24px 20px; flex-shrink:0; }
+        .btn-primary { background:var(--carrot); color:#fff; border-radius:14px; padding:17px; text-align:center; font-size:17px; font-weight:700; cursor:pointer; }
+        .btn-primary:active { opacity:0.85; }
+        .btn-secondary { background:#f5f5f5; color:#888; border-radius:14px; padding:15px; text-align:center; font-size:16px; font-weight:500; cursor:pointer; margin-top:8px; }
+
+        /* PERM */
+        .perm-body { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:32px 28px; gap:16px; }
+        .perm-icon-wrap { width:90px; height:90px; border-radius:50%; background:var(--carrot-light); display:flex; align-items:center; justify-content:center; margin-bottom:8px; }
+        .perm-title { font-size:22px; font-weight:700; color:#1a1a1a; text-align:center; }
+        .perm-desc { font-size:15px; color:#888; text-align:center; line-height:1.6; }
+        .perm-list { width:100%; display:flex; flex-direction:column; gap:10px; }
+        .perm-row { display:flex; align-items:flex-start; gap:12px; background:#FAFAFA; border-radius:12px; padding:14px 16px; }
+        .perm-dot-icon { width:8px; height:8px; border-radius:50%; background:var(--carrot); margin-top:5px; flex-shrink:0; }
+        .perm-txt { font-size:14px; color:#555; line-height:1.5; }
+        .perm-btns { width:100%; display:flex; flex-direction:column; gap:10px; margin-top:8px; }
+
+        /* HOME */
+        .appbar { display:flex; align-items:center; justify-content:space-between; padding:12px 20px 10px; flex-shrink:0; }
+        .app-logo { font-size:26px; font-weight:800; color:var(--carrot); letter-spacing:-1px; }
+        .lang-pill { font-size:13px; background:var(--carrot-light); color:var(--carrot-dark); padding:6px 14px; border-radius:20px; font-weight:600; cursor:pointer; }
+        .search-filter-row { display:flex; align-items:center; gap:10px; padding:0 20px 10px; flex-shrink:0; }
+        .search-box { flex:1; display:flex; align-items:center; gap:10px; background:#F5F5F5; border-radius:14px; padding:13px 16px; cursor:pointer; }
+        .search-ph { font-size:15px; color:#aaa; }
+        .filter-btn { display:flex; align-items:center; gap:6px; border:1.5px solid #e0e0e0; border-radius:14px; padding:12px 14px; cursor:pointer; flex-shrink:0; }
+        .filter-btn.active { background:var(--carrot-light); border-color:var(--carrot); }
+        .filter-btn-txt { font-size:14px; color:#555; font-weight:500; }
+        .filter-btn.active .filter-btn-txt { color:var(--carrot-dark); }
+        .filter-count { font-size:14px; font-weight:700; color:var(--carrot); }
+        .chips-row { display:flex; gap:8px; padding:0 20px 10px; overflow-x:auto; flex-shrink:0; }
+        .chips-row::-webkit-scrollbar { display:none; }
+        .active-chip { display:flex; align-items:center; gap:6px; background:var(--carrot-light); border:1px solid #FFD4B3; border-radius:20px; padding:6px 10px 6px 14px; white-space:nowrap; }
+        .active-chip-txt { font-size:13px; color:var(--carrot-dark); font-weight:500; }
+        .active-chip-x { font-size:16px; color:var(--carrot); font-weight:700; line-height:1; cursor:pointer; }
+        .result-row { display:flex; justify-content:space-between; align-items:center; padding:4px 20px 8px; flex-shrink:0; }
+        .result-count { font-size:14px; color:#888; }
+        .result-count b { color:var(--carrot); font-weight:700; }
+        .sort-chips { display:flex; gap:6px; }
+        .sort-chip { font-size:13px; padding:5px 12px; border-radius:20px; border:1px solid #e0e0e0; color:#666; cursor:pointer; }
+        .sort-chip.on { background:#1a1a1a; color:#fff; border-color:#1a1a1a; }
+        .job-list { flex:1; overflow-y:auto; padding-bottom:20px; }
+        .job-list::-webkit-scrollbar { display:none; }
+        .job-card { margin:0 20px 12px; padding:16px; border:1px solid #f0f0f0; border-radius:16px; cursor:pointer; background:#fff; }
+        .job-card:active { background:#fafafa; }
+        .jc-top { display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:6px; }
+        .jc-title { font-size:16px; font-weight:600; color:#1a1a1a; flex:1; margin-right:8px; }
+        .co-logo { width:28px; height:28px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+        .site-badge { display:flex; align-items:center; gap:4px; background:var(--carrot-light); border-radius:6px; padding:4px 10px; flex-shrink:0; }
+        .site-dot { width:6px; height:6px; border-radius:50%; background:var(--carrot); }
+        .site-name { font-size:12px; color:var(--carrot-dark); font-weight:600; }
+        .jc-company-row { display:flex; align-items:center; gap:6px; margin-bottom:8px; }
+        .jc-company { font-size:13px; color:#555; font-weight:500; }
+        .jc-loc { font-size:13px; color:#aaa; }
+        .jc-tags { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:8px; }
+        .tag { display:inline-flex; font-size:12px; padding:4px 10px; border-radius:10px; font-weight:500; }
+        .tag-blue { background:#E3F2FD; color:#1565C0; }
+        .tag-gray { background:#F5F5F5; color:#555; }
+        .tag-green { background:#E8F5E9; color:#2E7D32; }
+        .tag-orange { background:var(--carrot-light); color:var(--carrot-dark); }
+        .jc-bottom { display:flex; justify-content:space-between; align-items:center; padding-top:8px; border-top:1px solid #f8f8f8; }
+        .jc-dday { font-size:13px; color:#999; }
+        .jc-dday.urgent { color:#E53935; font-weight:600; }
+        .jc-salary { font-size:15px; font-weight:700; color:var(--carrot); }
+        .top-fab { position:absolute; bottom:28px; right:20px; width:48px; height:48px; background:#fff; border-radius:50%; border:1px solid #e0e0e0; display:flex; align-items:center; justify-content:center; box-shadow:0 2px 12px rgba(0,0,0,0.15); cursor:pointer; opacity:0; transition:opacity 0.3s; pointer-events:none; z-index:10; }
+        .top-fab.visible { opacity:1; pointer-events:auto; }
+
+        /* 광고 배너 */
+        .ad-banner { margin:0 20px 12px; height:50px; background:#f8f8f8; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px dashed #ddd; }
+        .ad-banner span { font-size:11px; color:#ccc; letter-spacing:0.5px; }
+
+        /* SKELETON */
+        .progress-wrap { height:3px; background:#f0f0f0; flex-shrink:0; overflow:hidden; }
+        .progress-bar { height:100%; width:40%; background:var(--carrot); border-radius:2px; animation:progressAnim 1.4s ease-in-out infinite; }
+        @keyframes progressAnim { 0%{transform:translateX(-100%)} 100%{transform:translateX(350%)} }
+        .sk { background:#f0f0f0; border-radius:6px; animation:skPulse 1.4s ease-in-out infinite; }
+        @keyframes skPulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+        .sk-card { margin:0 20px 12px; padding:16px; border:1px solid #f0f0f0; border-radius:16px; }
+        .sk-row { display:flex; justify-content:space-between; margin-bottom:10px; }
+
+        /* FILTER */
+        .tab-bar { display:flex; border-bottom:1px solid #f0f0f0; flex-shrink:0; padding:0 12px; overflow-x:auto; }
+        .tab-bar::-webkit-scrollbar { display:none; }
+        .tab-item { font-size:15px; font-weight:500; color:#aaa; padding:14px; white-space:nowrap; cursor:pointer; position:relative; flex-shrink:0; }
+        .tab-item.on { color:var(--carrot); font-weight:700; }
+        .tab-item.on::after { content:''; position:absolute; bottom:-1px; left:0; right:0; height:2.5px; background:var(--carrot); border-radius:2px; }
+        .tab-dot { display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--carrot); margin-left:4px; vertical-align:middle; }
+        .tab-content-wrap { flex:1; overflow-y:auto; padding:20px; }
+        .tab-content-wrap::-webkit-scrollbar { display:none; }
+        .tab-pane { display:none; }
+        .tab-pane.active { display:block; }
+        .fp-label { font-size:13px; font-weight:700; color:#888; letter-spacing:0.4px; margin-bottom:12px; }
+        .fp-chips { display:flex; gap:8px; flex-wrap:wrap; }
+        .fp-chip { font-size:14px; padding:9px 16px; border-radius:22px; border:1.5px solid #e0e0e0; color:#555; background:#fff; font-weight:500; cursor:pointer; }
+        .fp-chip.sel { background:var(--carrot-light); color:var(--carrot-dark); border-color:var(--carrot); font-weight:600; }
+        .fp-fixed { padding:14px 20px 20px; border-top:1px solid #eee; display:flex; gap:10px; flex-shrink:0; background:#fff; }
+        .fp-reset-btn { flex:1; border:1.5px solid #ddd; border-radius:14px; padding:15px; text-align:center; font-size:15px; color:#888; font-weight:500; cursor:pointer; }
+        .fp-apply-btn { flex:2; background:var(--carrot); border-radius:14px; padding:15px; text-align:center; font-size:15px; color:#fff; font-weight:700; cursor:pointer; }
+
+        /* SEARCH */
+        .search-header { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
+        .back-btn { width:40px; height:40px; display:flex; align-items:center; justify-content:center; cursor:pointer; border-radius:50%; }
+        .back-btn:active { background:#f5f5f5; }
+        .search-input-box { flex:1; display:flex; align-items:center; gap:10px; background:#F5F5F5; border-radius:14px; padding:13px 16px; }
+        .search-input-box input { flex:1; background:none; border:none; outline:none; font-size:16px; color:#1a1a1a; font-family:inherit; }
+        .search-input-box input::placeholder { color:#aaa; }
+        .search-cancel { font-size:15px; color:#555; cursor:pointer; white-space:nowrap; }
+        .recent-section { padding:16px 20px 8px; }
+        .recent-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .recent-title { font-size:16px; font-weight:700; color:#1a1a1a; }
+        .recent-clear { font-size:13px; color:#aaa; cursor:pointer; }
+        .recent-item { display:flex; align-items:center; justify-content:space-between; padding:13px 20px; border-bottom:1px solid #f8f8f8; cursor:pointer; }
+        .recent-left { display:flex; align-items:center; gap:12px; }
+        .recent-text { font-size:15px; color:#333; }
+        .recent-del { font-size:20px; color:#ccc; cursor:pointer; }
+        .search-results { flex:1; overflow-y:auto; }
+        .search-results::-webkit-scrollbar { display:none; }
+
+        /* DETAIL */
+        .detail-topbar { display:flex; align-items:center; justify-content:space-between; padding:10px 16px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
+        .topbar-title { font-size:17px; font-weight:700; color:#1a1a1a; }
+        .detail-scroll { flex:1; overflow-y:auto; }
+        .detail-scroll::-webkit-scrollbar { display:none; }
+        .detail-ad-banner { margin:16px 24px 0; height:50px; background:#f8f8f8; border-radius:10px; display:flex; align-items:center; justify-content:center; border:1px dashed #ddd; }
+        .detail-ad-banner span { font-size:11px; color:#ccc; letter-spacing:0.5px; }
+        .det-company-section { padding:20px 24px 16px; border-bottom:1px solid #f5f5f5; }
+        .det-title { font-size:19px; font-weight:700; color:#1a1a1a; margin-bottom:10px; line-height:1.3; }
+        .det-company-row { display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+        .det-logo { width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+        .det-company { font-size:14px; color:#555; font-weight:500; }
+        .det-loc { font-size:14px; color:#aaa; }
+        .visa-chips-row { display:flex; gap:6px; flex-wrap:wrap; }
+        .visa-chip { font-size:12px; padding:4px 10px; border-radius:10px; font-weight:600; background:#E3F2FD; color:#1565C0; }
+        .info-section { padding:4px 24px 8px; border-bottom:1px solid #f5f5f5; }
+        .info-row { display:flex; justify-content:space-between; align-items:center; padding:10px 0; border-bottom:1px solid #f8f8f8; }
+        .info-row:last-child { border-bottom:none; }
+        .info-key { font-size:13px; color:#aaa; font-weight:500; }
+        .info-val { font-size:14px; color:#1a1a1a; font-weight:600; text-align:right; }
+        .info-val.orange { color:var(--carrot); font-size:15px; }
+        .info-val.red { color:#E53935; }
+        .desc-section { padding:18px 24px; border-bottom:1px solid #f5f5f5; }
+        .desc-sub-title { font-size:14px; font-weight:700; color:#1a1a1a; margin-bottom:8px; }
+        .desc-txt { font-size:14px; color:#666; line-height:1.8; margin-bottom:16px; }
+        .desc-txt:last-child { margin-bottom:0; }
+        .disclaimer { padding:14px 24px 20px; }
+        .disclaimer-txt { font-size:12px; color:#bbb; line-height:1.7; text-align:center; }
+        .detail-btn-wrap { padding:14px 24px 20px; border-top:1px solid #f0f0f0; flex-shrink:0; }
+        .btn-apply { background:var(--carrot); color:#fff; border-radius:16px; padding:18px; text-align:center; font-size:17px; font-weight:700; cursor:pointer; }
+        .btn-apply:active { opacity:0.85; }
+
+        /* BOTTOM SHEET */
+        .overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:100; display:none; cursor:pointer; }
+        .overlay.show { display:block; animation:fadeIn 0.25s ease; }
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        .bottom-sheet { position:absolute; bottom:0; left:0; right:0; background:#fff; border-radius:24px 24px 0 0; z-index:101; max-height:70%; display:flex; flex-direction:column; transform:translateY(100%); transition:transform 0.3s ease; }
+        .bottom-sheet.show { transform:translateY(0); }
+        .bs-handle { width:40px; height:4px; background:#e0e0e0; border-radius:2px; margin:14px auto 4px; flex-shrink:0; }
+        .bs-header { display:flex; justify-content:space-between; align-items:center; padding:10px 20px 14px; border-bottom:1px solid #f0f0f0; flex-shrink:0; }
+        .bs-title { font-size:18px; font-weight:700; color:#1a1a1a; }
+        .bs-close { font-size:24px; color:#bbb; cursor:pointer; }
+        .bs-list { overflow-y:auto; }
+        .bs-list::-webkit-scrollbar { display:none; }
+        .toast { position:absolute; bottom:100px; left:50%; transform:translateX(-50%); background:rgba(0,0,0,0.8); color:#fff; padding:12px 20px; border-radius:24px; font-size:14px; white-space:nowrap; z-index:200; opacity:0; transition:opacity 0.3s; pointer-events:none; }
+        .toast.show { opacity:1; }
+    </style>
+</head>
+<body>
+<div class="device">
+
+    <!-- 스플래시 -->
+    <div class="screen" id="splash">
+        <div class="status-bar light"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="splash-body">
+            <div class="splash-icon">
+                <svg width="56" height="56" viewBox="0 0 120 120"><rect width="120" height="120" rx="26" fill="rgba(255,255,255,0.15)"/><path d="M24 18L24 102L58 102Q100 102 100 60Q100 18 58 18Z" fill="#FF6F0F"/><path d="M40 34L40 86L58 86Q82 86 82 60Q82 34 58 34Z" fill="rgba(255,255,255,0.95)"/><line x1="40" y1="52" x2="82" y2="52" stroke="#FF6F0F" stroke-width="5" stroke-linecap="round"/><line x1="40" y1="70" x2="82" y2="70" stroke="#FF6F0F" stroke-width="5" stroke-linecap="round"/><line x1="40" y1="52" x2="40" y2="70" stroke="#FF6F0F" stroke-width="4" stroke-linecap="round"/><line x1="55" y1="52" x2="55" y2="70" stroke="#FF6F0F" stroke-width="4" stroke-linecap="round"/><line x1="68" y1="52" x2="68" y2="70" stroke="#FF6F0F" stroke-width="4" stroke-linecap="round"/><line x1="82" y1="52" x2="82" y2="70" stroke="#FF6F0F" stroke-width="4" stroke-linecap="round"/></svg>
+            </div>
+            <div class="splash-name">Dari</div>
+            <div class="splash-sub">외국인 구인정보</div>
+            <div class="splash-loader"><div class="splash-loader-bar"></div></div>
+        </div>
+    </div>
+
+    <!-- 언어선택 -->
+    <div class="screen hidden" id="lang-select">
+        <div class="status-bar dark"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="screen-header"><div class="screen-title">언어를 선택하세요</div></div>
+        <div class="lang-list" id="langList"></div>
+        <div class="btn-fixed"><div class="btn-primary" onclick="goTo('location-perm')">시작하기</div></div>
+    </div>
+
+    <!-- 위치권한 -->
+    <div class="screen hidden" id="location-perm">
+        <div class="status-bar dark"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="perm-body">
+            <div class="perm-icon-wrap">
+                <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><path d="M24 4C16.27 4 10 10.27 10 18c0 11.25 14 28 14 28s14-16.75 14-28c0-7.73-6.27-14-14-14z" fill="#FF6F0F" opacity="0.2"/><path d="M24 4C16.27 4 10 10.27 10 18c0 11.25 14 28 14 28s14-16.75 14-28c0-7.73-6.27-14-14-14z" stroke="#FF6F0F" stroke-width="2"/><circle cx="24" cy="18" r="5" fill="#FF6F0F"/></svg>
+            </div>
+            <div class="perm-title">주변 공고를 찾고 있어요</div>
+            <div class="perm-desc">현재 위치를 허용하면 가까운 구인 공고를 먼저 보여드릴게요</div>
+            <div class="perm-list">
+                <div class="perm-row"><div class="perm-dot-icon"></div><div class="perm-txt">현재 위치 기반 공고 우선 표시</div></div>
+                <div class="perm-row"><div class="perm-dot-icon"></div><div class="perm-txt">위치 정보는 공고 검색에만 사용해요</div></div>
+                <div class="perm-row"><div class="perm-dot-icon"></div><div class="perm-txt">언제든지 설정에서 변경할 수 있어요</div></div>
+            </div>
+            <div class="perm-btns">
+                <div class="btn-primary" onclick="allowLocation()">위치 허용하기</div>
+                <div class="btn-secondary" onclick="goTo('home')">허용 안 함</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 홈 -->
+    <div class="screen hidden" id="home">
+        <div class="status-bar dark"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="appbar">
+            <div class="app-logo">Dari</div>
+            <div class="lang-pill" id="langPill" onclick="showLangSheet()">🇻🇳 VI</div>
+        </div>
+        <div class="search-filter-row">
+            <div class="search-box" onclick="goTo('search')">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="#aaa" stroke-width="1.5"/><path d="M10 10l3 3" stroke="#aaa" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <span class="search-ph">직종, 지역, 회사 검색</span>
+            </div>
+            <div class="filter-btn" id="homeFilterBtn" onclick="goTo('filter')">
+                <svg width="16" height="16" viewBox="0 0 14 14" fill="none"><path d="M2 4h10M4 7h6M6 10h2" stroke="#555" stroke-width="1.4" stroke-linecap="round"/></svg>
+                <span class="filter-btn-txt">필터</span>
+                <span class="filter-count" id="homeFilterCount" style="display:none;"></span>
+            </div>
+        </div>
+        <div class="chips-row" id="activeChips"></div>
+        <div class="result-row">
+            <span class="result-count">전체 <b>1,849</b>개</span>
+            <div class="sort-chips"><div class="sort-chip on">최신순</div></div>
+        </div>
+        <div class="job-list" id="jobList" onscroll="handleHomeScroll(this)">
+            <div id="skeletonCards">
+                <div class="sk-card"><div class="sk-row"><div class="sk" style="width:46px;height:46px;border-radius:12px;"></div><div class="sk" style="width:70px;height:24px;border-radius:6px;"></div></div><div class="sk" style="width:70%;height:18px;margin-bottom:8px;"></div><div class="sk" style="width:50%;height:14px;margin-bottom:10px;"></div><div style="display:flex;gap:6px;margin-bottom:8px;"><div class="sk" style="width:50px;height:24px;border-radius:10px;"></div><div class="sk" style="width:60px;height:24px;border-radius:10px;"></div></div><div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #f8f8f8;"><div class="sk" style="width:40px;height:14px;"></div><div class="sk" style="width:80px;height:16px;"></div></div></div>
+                <div class="sk-card"><div class="sk-row"><div class="sk" style="width:46px;height:46px;border-radius:12px;"></div><div class="sk" style="width:70px;height:24px;border-radius:6px;"></div></div><div class="sk" style="width:60%;height:18px;margin-bottom:8px;"></div><div class="sk" style="width:45%;height:14px;margin-bottom:10px;"></div><div style="display:flex;gap:6px;margin-bottom:8px;"><div class="sk" style="width:50px;height:24px;border-radius:10px;"></div><div class="sk" style="width:60px;height:24px;border-radius:10px;"></div></div><div style="display:flex;justify-content:space-between;padding-top:8px;border-top:1px solid #f8f8f8;"><div class="sk" style="width:40px;height:14px;"></div><div class="sk" style="width:80px;height:16px;"></div></div></div>
+            </div>
+            <div id="jobCards" style="display:none;"></div>
+        </div>
+        <div class="top-fab" id="homeFab" onclick="document.getElementById('jobList').scrollTo({top:0,behavior:'smooth'})">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none"><path d="M10 16V4M4 10l6-6 6 6" stroke="#555" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+    </div>
+
+    <!-- 필터 -->
+    <div class="screen hidden" id="filter">
+        <div class="status-bar dark"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="appbar"><div class="app-logo">Dari</div><div class="lang-pill">🇻🇳 VI</div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 20px;flex-shrink:0;">
+            <div style="font-size:20px;font-weight:700;color:#1a1a1a;">필터</div>
+            <div onclick="cancelFilter()" style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:24px;color:#aaa;">×</div>
+        </div>
+        <div class="tab-bar" id="filterTabBar"></div>
+        <div class="tab-content-wrap" id="filterContent"></div>
+        <div class="fp-fixed">
+            <div class="fp-reset-btn" onclick="resetFilters()">초기화</div>
+            <div class="fp-apply-btn" id="applyBtn" onclick="applyFilters()">결과보기</div>
+        </div>
+    </div>
+
+    <!-- 검색 -->
+    <div class="screen hidden" id="search">
+        <div class="status-bar dark"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="search-header">
+            <div class="back-btn" onclick="goBack()"><svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M13 16L7 10l6-6" stroke="#1a1a1a" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="search-input-box">
+                <svg width="18" height="18" viewBox="0 0 16 16" fill="none"><circle cx="6.5" cy="6.5" r="4.5" stroke="#aaa" stroke-width="1.5"/><path d="M10 10l3 3" stroke="#aaa" stroke-width="1.5" stroke-linecap="round"/></svg>
+                <input type="text" id="searchInput" placeholder="검색어 입력..." oninput="handleSearch(this.value)">
+            </div>
+            <div class="search-cancel" onclick="goBack()">취소</div>
+        </div>
+        <div id="searchDefault" style="flex:1;overflow-y:auto;">
+            <div class="recent-section">
+                <div class="recent-header"><span class="recent-title">최근 검색어</span><span class="recent-clear" onclick="clearRecent()">전체 삭제</span></div>
+            </div>
+            <div id="recentList"></div>
+        </div>
+        <div id="searchResultArea" style="flex:1;overflow:hidden;display:none;flex-direction:column;">
+            <div class="progress-wrap" id="searchProgress"><div class="progress-bar"></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 20px 8px;">
+                <span class="result-count">전체 <b id="searchResultCount">0</b>개</span>
+                <div class="sort-chips">
+                    <div class="sort-chip on" onclick="setSort(this)">정확도순</div>
+                    <div class="sort-chip" onclick="setSort(this)">최신순</div>
+                    <div class="sort-chip" onclick="setSort(this)">급여높은순</div>
+                </div>
+            </div>
+            <div class="search-results" id="searchResults"></div>
+        </div>
+        <div id="searchEmpty" style="flex:1;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:40px;">
+            <svg width="72" height="72" viewBox="0 0 72 72" fill="none"><circle cx="32" cy="32" r="20" stroke="#e0e0e0" stroke-width="3"/><path d="M47 47l14 14" stroke="#e0e0e0" stroke-width="3" stroke-linecap="round"/></svg>
+            <div style="font-size:18px;font-weight:700;color:#1a1a1a;">검색 결과가 없어요</div>
+            <div style="font-size:14px;color:#aaa;text-align:center;line-height:1.6;">다른 검색어로 다시<br>시도해보세요</div>
+        </div>
+    </div>
+
+    <!-- 공고 상세 -->
+    <div class="screen hidden" id="job-detail">
+        <div class="status-bar dark"><span class="status-time">9:41</span><span>●●●</span></div>
+        <div class="detail-topbar">
+            <div class="back-btn" onclick="goBack()"><svg width="22" height="22" viewBox="0 0 20 20" fill="none"><path d="M13 16L7 10l6-6" stroke="#1a1a1a" stroke-width="1.8" stroke-linecap="round"/></svg></div>
+            <div class="topbar-title">공고 상세</div>
+            <div style="width:40px;"></div>
+        </div>
+        <div class="detail-scroll" id="detailScroll">
+            <!-- 광고 배너 — 최상단 -->
+            <div class="detail-ad-banner"><span>Advertisement</span></div>
+            <div class="det-company-section">
+                <div class="det-title" id="detailTitle"></div>
+                <div class="det-company-row">
+                    <div class="det-logo" id="detailLogo"></div>
+                    <span class="det-company" id="detailCompany"></span>
+                    <span class="det-loc" id="detailLoc"></span>
+                </div>
+                <div class="visa-chips-row" id="detailVisaChips"></div>
+            </div>
+            <div class="info-section">
+                <div class="info-row"><span class="info-key">급여</span><span class="info-val orange" id="det-salary">-</span></div>
+                <div class="info-row"><span class="info-key">근무요일</span><span class="info-val" id="det-workdays">-</span></div>
+                <div class="info-row"><span class="info-key">근무시간</span><span class="info-val" id="det-worktime">-</span></div>
+                <div class="info-row"><span class="info-key">근무형태</span><span class="info-val" id="det-workmodel">-</span></div>
+                <div class="info-row"><span class="info-key">고용형태</span><span class="info-val" id="det-employ">-</span></div>
+                <div class="info-row"><span class="info-key">직종</span><span class="info-val" id="det-jobtype">-</span></div>
+                <div class="info-row"><span class="info-key">마감일</span><span class="info-val red" id="det-deadline">-</span></div>
+                <div class="info-row"><span class="info-key">근무지</span><span class="info-val" id="det-location" style="max-width:55%;text-align:right;line-height:1.4;">-</span></div>
+                <div class="info-row"><span class="info-key">공고 출처</span><span class="info-val" id="det-source">-</span></div>
+            </div>
+            <div class="desc-section" id="detailDesc"></div>
+            <div class="disclaimer">
+                <div class="disclaimer-txt">본 공고는 외부 사이트에서 수집된 정보입니다.<br>채용 관련 문의는 해당 사이트를 이용해 주세요.</div>
+            </div>
+        </div>
+        <div class="detail-btn-wrap">
+            <div class="btn-apply" onclick="openJobUrl()">지원하기</div>
+        </div>
+    </div>
+
+    <!-- 언어 바텀시트 -->
+    <div class="overlay" id="overlay" onclick="hideLangSheet()"></div>
+    <div class="bottom-sheet" id="langSheet">
+        <div class="bs-handle"></div>
+        <div class="bs-header"><div class="bs-title">언어 변경</div><div class="bs-close" onclick="hideLangSheet()">×</div></div>
+        <div class="bs-list" id="langSheetList"></div>
+    </div>
+    <div class="toast" id="toast"></div>
+</div>
+
+<script>
+    const langs = [
+      {code:'zh',name:'中文'},{code:'vi',name:'Tiếng Việt'},{code:'en',name:'English'},
+      {code:'th',name:'ภาษาไทย'},{code:'uz',name:"O'zbekcha"},{code:'ne',name:'नेपाली'},
+      {code:'fil',name:'Filipino'},{code:'km',name:'ភាសាខ្មែរ'},{code:'my',name:'မြန်မာဘာသာ'},
+      {code:'in',name:'Bahasa Indonesia'},{code:'mn',name:'Монгол'},{code:'bn',name:'বাংলা'},
+      {code:'ru',name:'Русский'},{code:'kk',name:'Қазақша'},{code:'si',name:'සිංහල'},
+      {code:'fr',name:'Français'},{code:'tr',name:'Türkçe'},{code:'ko',name:'한국어'}
+    ];
+    const flags = {zh:'🇨🇳',vi:'🇻🇳',en:'🇺🇸',th:'🇹🇭',uz:'🇺🇿',ne:'🇳🇵',fil:'🇵🇭',km:'🇰🇭',my:'🇲🇲',in:'🇮🇩',mn:'🇲🇳',bn:'🇧🇩',ru:'🇷🇺',kk:'🇰🇿',si:'🇱🇰',fr:'🇫🇷',tr:'🇹🇷',ko:'🇰🇷'};
+
+    const jobs = [
+      {id:1,title:'공장 생산직 모집',company:'삼성제조',location:'인천 남동구 논현로 123',visa:['E-9','H-2'],type:'제조·생산',employ:'정규직',salary:'월 230만원',workDays:'Mon ~ Fri',workTime:'08:00~17:00',workModel:'On-site',dday:14,site:'kowork',logo:'삼',color:'#E3F2FD',textColor:'#1565C0',duties:'· 생산 라인 조립 및 검사\n· 불량품 선별 및 품질 관리',qualifications:'· E-9 또는 H-2 비자 소지자\n· 주 5일 근무 가능자',preferred:'· 제조업 경력 1년 이상'},
+      {id:2,title:'물류센터 상하차 모집',company:'CJ대한통운',location:'인천 서구 백수로 26-16',visa:['H-2','F-4'],type:'물류·운반',employ:'계약직',salary:'월 260만원',workDays:'주야 교대',workTime:'08:00~20:00',workModel:'On-site',dday:3,site:'jobploy',logo:'C',color:'#E8F5E9',textColor:'#2E7D32',duties:'· 물류센터 입출고 상하차 업무\n· 화물 분류 및 적재',qualifications:'· H-2 또는 F-4 비자 소지자\n· 교대 근무 가능자',preferred:'· 지게차 운전 자격증 보유자'},
+      {id:3,title:'자동차 부품 조립',company:'현대모비스 협력사',location:'경기 화성시 산업로 45',visa:['E-9'],type:'제조·생산',employ:'정규직',salary:'월 245만원',workDays:'Mon ~ Fri',workTime:'09:00~18:00',workModel:'On-site',dday:21,site:'kowork',logo:'현',color:'#F3E5F5',textColor:'#6A1B9A',duties:'· 자동차 부품 조립 라인 작업\n· 품질 기준에 따른 검사',qualifications:'· E-9 비자 필수\n· 경력 무관',preferred:'· 잔업 가능자 우대'},
+      {id:4,title:'전자부품 조립 직원',company:'LG전자 협력사',location:'인천 연수구 컨벤시아대로 52',visa:['E-9','H-2','F-2'],type:'제조·생산',employ:'계약직',salary:'월 245만원',workDays:'Mon ~ Sat',workTime:'08:00~17:00',workModel:'On-site',dday:21,site:'jobploy',logo:'L',color:'#FFF3EB',textColor:'#E55A00',duties:'· 전자부품 정밀 조립\n· 불량 검사 및 양품 선별',qualifications:'· E-9, H-2, F-2 비자 소지자',preferred:'· 3개월 후 정규직 전환 희망자'},
+      {id:5,title:'농업 근로자 모집',company:'제주 감귤농장',location:'제주 서귀포시 남원읍 태위로',visa:['E-9','H-2','F-5'],type:'농업·축산',employ:'계약직',salary:'월 210만원',workDays:'Mon ~ Sat',workTime:'07:00~16:00',workModel:'On-site',dday:30,site:'kowork',logo:'제',color:'#E8F5E9',textColor:'#2E7D32',duties:'· 감귤 수확 및 선별 작업\n· 농장 시설 관리',qualifications:'· E-9, H-2, F-5 비자 소지자\n· 한국어 불필요',preferred:'· 장기 근무 가능자'},
+      {id:6,title:'건설 현장 근로자',company:'한화건설',location:'서울 강남구 테헤란로 521',visa:['H-2','F-4','F-6'],type:'건설·현장',employ:'일용직',salary:'월 300만원',workDays:'Mon ~ Sat',workTime:'07:00~17:00',workModel:'On-site',dday:10,site:'kowork',logo:'한',color:'#E3F2FD',textColor:'#1565C0',duties:'· 건설 현장 자재 운반 및 정리\n· 기초 시공 보조 작업',qualifications:'· H-2, F-4, F-6 비자 소지자',preferred:'· 건설 현장 경험자'},
+    ];
+
+    const filterTabs = [
+      {id:'visa',name:'비자',items:['E-9','H-2','E-7','E-7-1','E-7-4','F-2','F-4','F-5','F-6']},
+      {id:'job',name:'직종',items:['제조·생산','농업·축산','건설·현장','서비스·판매','음식·조리','물류·운반','IT·개발','사무·행정','청소·시설']},
+      {id:'region',name:'지역',items:['서울','경기 남부','경기 북부','인천','강원','충북','충남','대전·세종','전북','전남·광주','경북·대구','경남·울산','부산','제주']},
+      {id:'salary',name:'급여',items:['전체','100만원 미만','100~200만원','200~300만원','300~400만원','400만원 이상']},
+      {id:'employ',name:'고용형태',items:['정규직','계약직','아르바이트','일용직','인턴','파견직']},
+      {id:'cond',name:'복리후생',items:['숙소 제공','한국어 불필요','경력 무관','운전면허 무관','국적 제한 없음','내 국적 가능']},
+    ];
+
+    let curLang={code:'vi',name:'Tiếng Việt'}, selectedLang='vi', filterSelections={};
+    let recentSearches=['인천 제조 E-9','농업 H-2','서울 서비스 F-4'];
+    let currentScreen='splash', screenHistory=[], locationAllowed=false, locationRegion=null, filterSnapshot={}, currentJobId=null;
+
+    function init() {
+      buildLangList(); buildLangSheet(); buildFilterTabs();
+      setTimeout(()=>goTo('lang-select'), 2000);
+    }
+
+    function buildLangList() {
+      document.getElementById('langList').innerHTML = langs.map(l=>`
+        <div class="lang-item ${l.code===selectedLang?'selected':''}" onclick="selectLang('${l.code}')">
+          <span class="lang-name">${l.name}</span>
+          <div class="radio-btn ${l.code===selectedLang?'on':''}"><div class="radio-dot"></div></div>
+        </div>`).join('');
+    }
+
+    function buildLangSheet() {
+      document.getElementById('langSheetList').innerHTML = langs.map(l=>`
+        <div class="lang-item ${l.code===curLang.code?'selected':''}" onclick="changeLang('${l.code}','${l.name}')">
+          <span class="lang-name">${l.name}</span>
+          <div class="radio-btn ${l.code===curLang.code?'on':''}"><div class="radio-dot"></div></div>
+        </div>`).join('');
+    }
+
+    function selectLang(code) { selectedLang=code; buildLangList(); }
+
+    function changeLang(code,name) {
+      curLang={code,name};
+      document.getElementById('langPill').textContent=`${flags[code]||'🌐'} ${code.toUpperCase()}`;
+      buildLangSheet(); hideLangSheet(); showToast('언어가 변경되었어요');
+    }
+
+    function buildFilterTabs() {
+      document.getElementById('filterTabBar').innerHTML = filterTabs.map((t,i)=>`
+        <div class="tab-item ${i===0?'on':''}" id="tab-${t.id}" onclick="switchTab('${t.id}')">${t.name}</div>`).join('');
+      document.getElementById('filterContent').innerHTML = filterTabs.map((t,i)=>`
+        <div class="tab-pane ${i===0?'active':''}" id="pane-${t.id}">
+          <div class="fp-label">${t.name}</div>
+          <div class="fp-chips">${t.items.map(item=>`
+            <div class="fp-chip" onclick="toggleFilter('${t.id}','${item}',this)">${item}</div>`).join('')}
+          </div>
+        </div>`).join('');
+    }
+
+    function switchTab(id) {
+      document.querySelectorAll('.tab-item').forEach(t=>t.classList.remove('on'));
+      document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+      document.getElementById(`tab-${id}`).classList.add('on');
+      document.getElementById(`pane-${id}`).classList.add('active');
+    }
+
+    function toggleFilter(group,item,el) {
+      if(!filterSelections[group]) filterSelections[group]=new Set();
+      if(filterSelections[group].has(item)){filterSelections[group].delete(item);el.classList.remove('sel');}
+      else {
+        if(group==='salary'&&item==='전체'){filterSelections[group].clear();document.querySelectorAll(`#pane-${group} .fp-chip`).forEach(c=>c.classList.remove('sel'));}
+        filterSelections[group].add(item);el.classList.add('sel');
+      }
+      updateFilterCount();
+    }
+
+    function updateFilterCount() {
+      let total=0; Object.values(filterSelections).forEach(s=>total+=s.size);
+      document.getElementById('applyBtn').textContent=total>0?`결과보기 (${total}개 적용)`:'결과보기';
+      filterTabs.forEach(t=>{
+        const tab=document.getElementById(`tab-${t.id}`), hasDot=tab.querySelector('.tab-dot');
+        const cnt=filterSelections[t.id]?filterSelections[t.id].size:0;
+        if(cnt>0&&!hasDot){const d=document.createElement('span');d.className='tab-dot';tab.appendChild(d);}
+        else if(cnt===0&&hasDot) hasDot.remove();
+      });
+    }
+
+    function resetFilters() {
+      filterSelections={};
+      document.querySelectorAll('.fp-chip').forEach(c=>c.classList.remove('sel'));
+      document.querySelectorAll('.tab-dot').forEach(d=>d.remove());
+      document.getElementById('applyBtn').textContent='결과보기';
+    }
+
+    function applyFilters(){updateActiveChips();goBack();}
+
+    function updateActiveChips() {
+      const chips=[];
+      if(locationAllowed&&locationRegion) chips.push({label:locationRegion,group:'region',isLocation:true});
+      Object.entries(filterSelections).forEach(([g,items])=>items.forEach(item=>{
+        if(g==='region'&&item===locationRegion) return;
+        chips.push({label:item,group:g});
+      }));
+      document.getElementById('activeChips').innerHTML=chips.map(c=>`
+        <div class="active-chip">
+          <span class="active-chip-txt">${c.label}</span>
+          <span class="active-chip-x" onclick="removeChip('${c.group}','${c.label}')">×</span>
+        </div>`).join('');
+      const countEl=document.getElementById('homeFilterCount');
+      if(chips.length>0){countEl.style.display='inline';countEl.textContent=chips.length;document.getElementById('homeFilterBtn').classList.add('active');}
+      else{countEl.style.display='none';document.getElementById('homeFilterBtn').classList.remove('active');}
+    }
+
+    function removeChip(group,label) {
+      if(group==='region'&&label===locationRegion){locationAllowed=false;locationRegion=null;if(filterSelections['region'])filterSelections['region'].delete(label);}
+      else if(filterSelections[group]) filterSelections[group].delete(label);
+      updateActiveChips(); updateFilterCount();
+    }
+
+    function allowLocation() {
+      goTo('home');
+      setTimeout(()=>{
+        locationAllowed=true;locationRegion='인천';
+        if(!filterSelections['region']) filterSelections['region']=new Set();
+        filterSelections['region'].add('인천');
+        updateActiveChips();updateFilterCount();
+      },400);
+    }
+
+    function loadJobs() {
+      setTimeout(()=>{
+        document.getElementById('skeletonCards').style.display='none';
+        const el=document.getElementById('jobCards');
+        el.style.display='block';
+        el.innerHTML=`<div class="ad-banner"><span>Advertisement</span></div>`+jobs.map((j,i)=>{
+          const card=buildJobCard(j);
+          return (i+1)%3===0?card+`<div class="ad-banner"><span>Advertisement</span></div>`:card;
+        }).join('');
+      },1500);
+    }
+
+    function buildJobCard(j) {
+      const urgent=j.dday<=3;
+      const visaTags=j.visa.slice(0,2).map(v=>`<span class="tag tag-blue">${v}</span>`).join('')+(j.visa.length>2?`<span class="tag tag-gray">+${j.visa.length-2}</span>`:'');
+      const loc=j.location.split(' ').slice(0,2).join(' ');
+      return `<div class="job-card" onclick="openDetail(${j.id})">
+        <div class="jc-top">
+          <div class="jc-title">${j.title}</div>
+          <div class="site-badge"><div class="site-dot"></div><span class="site-name">${j.site}</span></div>
+        </div>
+        <div class="jc-company-row">
+          <div class="co-logo" style="background:${j.color};color:${j.textColor};">${j.logo}</div>
+          <span class="jc-company">${j.company}</span>
+          <span class="jc-loc">· ${loc}</span>
+        </div>
+        <div class="jc-tags">${visaTags}<span class="tag tag-gray">${j.type}</span><span class="tag tag-green">${j.employ}</span></div>
+        <div class="jc-bottom">
+          <span class="jc-dday ${urgent?'urgent':''}">${urgent?`D-${j.dday} 마감임박`:`D-${j.dday}`}</span>
+          <span class="jc-salary">${j.salary}</span>
+        </div>
+      </div>`;
+    }
+
+    function openDetail(id) {
+      const j=jobs.find(x=>x.id===id); if(!j) return;
+      currentJobId=id;
+      document.getElementById('detailTitle').textContent=j.title;
+      const logo=document.getElementById('detailLogo');
+      logo.style.cssText=`background:${j.color};color:${j.textColor};width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;`;
+      logo.textContent=j.logo;
+      document.getElementById('detailCompany').textContent=j.company;
+      document.getElementById('detailLoc').textContent=`· ${j.location}`;
+      document.getElementById('detailVisaChips').innerHTML=j.visa.map(v=>`<span class="visa-chip">${v}</span>`).join('');
+      document.getElementById('det-salary').textContent=j.salary;
+      document.getElementById('det-workdays').textContent=j.workDays;
+      document.getElementById('det-worktime').textContent=j.workTime;
+      document.getElementById('det-workmodel').textContent=j.workModel;
+      document.getElementById('det-employ').textContent=j.employ;
+      document.getElementById('det-jobtype').textContent=j.type;
+      document.getElementById('det-deadline').textContent=`D-${j.dday} 마감 예정`;
+      document.getElementById('det-location').textContent=j.location;
+      document.getElementById('det-source').textContent=`${j.site}.kr`;
+      document.getElementById('detailDesc').innerHTML=`
+        <div style="margin-bottom:16px;"><div class="desc-sub-title">주요 업무</div><div class="desc-txt">${j.duties.replace(/\n/g,'<br>')}</div></div>
+        <div style="margin-bottom:16px;"><div class="desc-sub-title">자격 요건</div><div class="desc-txt">${j.qualifications.replace(/\n/g,'<br>')}</div></div>
+        <div><div class="desc-sub-title">우대 사항</div><div class="desc-txt" style="margin-bottom:0">${j.preferred.replace(/\n/g,'<br>')}</div></div>`;
+      document.getElementById('detailScroll').scrollTop=0;
+      goTo('job-detail');
+    }
+
+    function openJobUrl(){const j=jobs.find(x=>x.id===currentJobId);if(j)window.open(`https://kowork.kr/post/${j.id}`,'_blank');}
+
+    let searchTimer;
+    function handleSearch(val) {
+      clearTimeout(searchTimer);
+      const def=document.getElementById('searchDefault'),res=document.getElementById('searchResultArea'),emp=document.getElementById('searchEmpty');
+      if(!val.trim()){def.style.display='block';res.style.display='none';emp.style.display='none';return;}
+      def.style.display='none';res.style.display='flex';emp.style.display='none';
+      document.getElementById('searchProgress').style.display='block';
+      searchTimer=setTimeout(()=>{
+        document.getElementById('searchProgress').style.display='none';
+        const q=val.toLowerCase();
+        const results=jobs.filter(j=>j.title.toLowerCase().includes(q)||j.company.toLowerCase().includes(q)||j.location.toLowerCase().includes(q)||j.type.toLowerCase().includes(q)||j.visa.join(' ').toLowerCase().includes(q));
+        document.getElementById('searchResultCount').textContent=results.length;
+        if(results.length===0){res.style.display='none';emp.style.display='flex';}
+        else document.getElementById('searchResults').innerHTML=results.map(j=>buildJobCard(j)).join('');
+        if(!recentSearches.includes(val)){recentSearches.unshift(val);if(recentSearches.length>5)recentSearches.pop();buildRecentList();}
+      },800);
+    }
+
+    function buildRecentList() {
+      document.getElementById('recentList').innerHTML=recentSearches.map(r=>`
+        <div class="recent-item">
+          <div class="recent-left" onclick="document.getElementById('searchInput').value='${r}';handleSearch('${r}')">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="6" stroke="#ccc" stroke-width="1.3"/><path d="M8 5v3l2 1.5" stroke="#ccc" stroke-width="1.3" stroke-linecap="round"/></svg>
+            <span class="recent-text">${r}</span>
+          </div>
+          <span class="recent-del" onclick="removeRecent('${r}')">×</span>
+        </div>`).join('');
+    }
+
+    function removeRecent(r){recentSearches=recentSearches.filter(x=>x!==r);buildRecentList();}
+    function clearRecent(){recentSearches=[];buildRecentList();}
+
+    function goTo(screenId) {
+      const cur=document.getElementById(currentScreen),next=document.getElementById(screenId);
+      if(!next) return;
+      cur.classList.add('hidden');next.classList.remove('hidden');
+      next.classList.add('slide-in');setTimeout(()=>next.classList.remove('slide-in'),300);
+      screenHistory.push(currentScreen);currentScreen=screenId;
+      if(screenId==='home') loadJobs();
+      if(screenId==='search'){buildRecentList();setTimeout(()=>document.getElementById('searchInput').focus(),300);}
+      if(screenId==='filter'){filterSnapshot={};Object.entries(filterSelections).forEach(([k,v])=>filterSnapshot[k]=new Set(v));}
+    }
+
+    function cancelFilter() {
+      filterSelections={};
+      Object.entries(filterSnapshot).forEach(([k,v])=>filterSelections[k]=new Set(v));
+      document.querySelectorAll('.fp-chip').forEach(chip=>{
+        const group=chip.closest('.tab-pane').id.replace('pane-','');
+        if(filterSelections[group]&&filterSelections[group].has(chip.textContent))chip.classList.add('sel');
+        else chip.classList.remove('sel');
+      });
+      updateFilterCount();goBack();
+    }
+
+    function goBack() {
+      if(!screenHistory.length) return;
+      const prev=screenHistory.pop();
+      document.getElementById(currentScreen).classList.add('hidden');
+      document.getElementById(prev).classList.remove('hidden');
+      currentScreen=prev;
+      if(currentScreen!=='search'){
+        document.getElementById('searchInput').value='';
+        document.getElementById('searchDefault').style.display='block';
+        document.getElementById('searchResultArea').style.display='none';
+        document.getElementById('searchEmpty').style.display='none';
+      }
+    }
+
+    function showLangSheet(){buildLangSheet();document.getElementById('overlay').classList.add('show');setTimeout(()=>document.getElementById('langSheet').classList.add('show'),10);}
+    function hideLangSheet(){document.getElementById('langSheet').classList.remove('show');setTimeout(()=>document.getElementById('overlay').classList.remove('show'),300);}
+    function setSort(el){el.closest('.sort-chips').querySelectorAll('.sort-chip').forEach(c=>c.classList.remove('on'));el.classList.add('on');}
+    function handleHomeScroll(el){document.getElementById('homeFab').classList.toggle('visible',el.scrollTop>740);}
+    function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+    init();
+</script>
+</body>
+</html>
