@@ -48,7 +48,7 @@ class AnalyticsService {
       log('visa_selected', {'visa_codes': visaCodes, 'count': visaCodes.length});
 
   void locationPermission(bool granted) =>
-      log('location_permission', {'granted': granted});
+      log(granted ? 'location_permission_granted' : 'location_permission_denied');
 
   void jobCardTap(String jobId, int position) =>
       log('job_card_tap', {'job_id': jobId, 'position': position});
@@ -90,16 +90,16 @@ class AnalyticsService {
   }) {
     // 1단계: 카테고리 사용 여부
     log('filter_categories', {
-      'visa': visaIds.isNotEmpty || visaSponsorship != null,
-      'job_type': categoryIds.isNotEmpty,
-      'employ_type': employmentTypeIds.isNotEmpty,
-      'region': regionNames.isNotEmpty,
-      'salary': salaryTypes.isNotEmpty,
-      'schedule': workScheduleIds.isNotEmpty,
-      'qualification': gender != null || educations.isNotEmpty || experiences.isNotEmpty || koreanLevelIds.isNotEmpty,
-      'benefits': benefitIds.isNotEmpty,
-      'country': countryIds.isNotEmpty,
-      'site': siteIds.isNotEmpty,
+      'visa': (visaIds.isNotEmpty || visaSponsorship != null) ? 1 : 0,
+      'job_type': categoryIds.isNotEmpty ? 1 : 0,
+      'employ_type': employmentTypeIds.isNotEmpty ? 1 : 0,
+      'region': regionNames.isNotEmpty ? 1 : 0,
+      'salary': salaryTypes.isNotEmpty ? 1 : 0,
+      'schedule': workScheduleIds.isNotEmpty ? 1 : 0,
+      'qualification': (gender != null || educations.isNotEmpty || experiences.isNotEmpty || koreanLevelIds.isNotEmpty) ? 1 : 0,
+      'benefits': benefitIds.isNotEmpty ? 1 : 0,
+      'country': countryIds.isNotEmpty ? 1 : 0,
+      'site': siteIds.isNotEmpty ? 1 : 0,
     });
 
     // 2단계: 상세 옵션
@@ -176,10 +176,15 @@ class AnalyticsService {
       log('favorites_bulk_delete', {'count': count});
 
   void addressTranslateToggled(bool showKorean) =>
-      log('address_translate_toggled', {'show_korean': showKorean});
+      log(showKorean ? 'address_show_korean' : 'address_show_english');
 
   void pageLoaded(int page) =>
       log('page_loaded', {'page': page});
+
+  void searchBarTap() => log('search_bar_tap');
+
+  void partTimeToggle(bool checked) =>
+      log('part_time_toggle', {'checked': checked});
 }
 
 final analytics = AnalyticsService();

@@ -12,6 +12,7 @@ import 'features/home/home_screen.dart';
 import 'features/search/search_screen.dart';
 import 'features/filter/filter_screen.dart';
 import 'features/job_detail/job_detail_screen.dart';
+import 'features/settings/settings_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -46,8 +47,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SearchScreen(),
       ),
       GoRoute(
+        path: '/settings',
+        builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
         path: '/filter',
-        builder: (context, state) => const FilterScreen(),
+        builder: (context, state) {
+          final tab = int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+          return FilterScreen(initialTab: tab);
+        },
       ),
       GoRoute(
         path: '/job/:id',

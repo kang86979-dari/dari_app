@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,6 +22,8 @@ import '../../data/services/analytics_service.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
+import '../../data/services/app_open_ad_service.dart';
+import '../../data/services/push_service.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -40,7 +43,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   FilterState? _lastFilter;
   String? _lastLangCode;
   int _filterGeneration = 0;
+  bool _isRefreshing = false;
   bool _showFilterTooltip = false;
+  bool _pendingAppOpenAd = false;
+  DateTime? _lastRefreshTime;
 
   @override
   void initState() {
@@ -55,6 +61,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       if (mounted) analytics.screenView('home');
     });
     _scrollController.addListener(_onScroll);
+    // 앱 시작 시 푸시 구독 동기화 (기존 사용자 업데이트 대응)
+    _syncPushSubscription();
+  }
+
+  Future<void> _syncPushSubscription() async {
+    // 이미 동기화된 적 있으면 스킵 (기존 사용자 업데이트 시 1회만)
+    if (await pushService.isSynced()) return;
+    // init 완료 대기 (권한 팝업 + 토큰 발급)
+    await pushService.waitForInit();
+    if (!mounted) return;
+    if (pushService.token == null) return;
+    final enabled = await pushService.isEnabled();
+    if (!enabled) return;
+    final filter = ref.read(filterStateProvider);
+    if (filter.isEmpty) return;
+    final langCode = ref.read(languageProvider);
+    await pushService.upsertSubscription(filter: filter, langCode: langCode);
+    await pushService.markSynced();
   }
 
   Future<void> _checkFilterTooltip() async {
@@ -62,6 +86,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     final dismissed = prefs.getBool('filter_tooltip_dismissed') ?? false;
     if (!dismissed && mounted) {
       setState(() => _showFilterTooltip = true);
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && _showFilterTooltip) _dismissFilterTooltip();
+      });
     }
   }
 
@@ -199,10 +226,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   }
 
   @override
-  @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       JobRepository.clearCountCache();
+      final isCurrent = ModalRoute.of(context)?.isCurrent == true;
+      if (kDebugMode) print('🔵 resumed: isCurrent=$isCurrent');
+      // 홈 화면이 최상단이면 갱신 + 광고
+      if (isCurrent) {
+        _forceRefresh();
+        appOpenAdService.showIfAvailable();
+      } else {
+        _pendingAppOpenAd = true;
+      }
     }
   }
 
@@ -248,6 +283,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     } catch (_) {
       if (!mounted || gen != _filterGeneration) return;
       setState(() => _isLoadingMore = false);
+    }
+  }
+
+  Future<void> _forceRefresh() async {
+    await _doRefresh();
+  }
+
+  Future<void> _onRefresh() async {
+    final now = DateTime.now();
+    if (_lastRefreshTime != null &&
+        now.difference(_lastRefreshTime!).inSeconds < 30) {
+      return;
+    }
+    _lastRefreshTime = now;
+    await _doRefresh();
+  }
+
+  Future<void> _doRefresh() async {
+    final gen = ++_filterGeneration;
+    JobRepository.clearCountCache();
+    setState(() => _isRefreshing = true);
+
+    try {
+      final repo = ref.read(jobRepositoryProvider);
+      final filter = ref.read(filterStateProvider);
+      final langCode = ref.read(languageProvider);
+      final newJobs = await repo.getJobs(filter: filter, page: 0, langCode: langCode);
+      if (!mounted || gen != _filterGeneration) return;
+      setState(() {
+        _jobs.clear();
+        _jobs.addAll(newJobs);
+        _currentPage = 0;
+        _hasMore = newJobs.length >= 20;
+        _isLoadingMore = false;
+        _isRefreshing = false;
+        if (_scrollController.hasClients) {
+          _scrollController.jumpTo(0);
+        }
+      });
+      ref.invalidate(jobTotalCountProvider);
+    } catch (e) {
+      if (mounted) setState(() => _isRefreshing = false);
     }
   }
 
@@ -304,12 +381,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
         (_lastLangCode != null && _lastLangCode != langCode)) {
       _initialLoaded = false;
       _filterGeneration++;
+      // 홈에서 필터 칩 삭제 시 서버 구독 업데이트
+      if (_lastFilter != null && _lastFilter != filter) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (filter.isEmpty) {
+            pushService.deleteSubscription();
+          } else {
+            pushService.upsertSubscription(filter: filter, langCode: langCode);
+          }
+        });
+      }
     }
     _lastFilter = filter;
     _lastLangCode = langCode;
     final langNotifier = ref.read(languageProvider.notifier);
     final s = ref.watch(stringsProvider);
 
+    // 다른 화면에서 홈으로 돌아왔을 때 대기 중인 앱 오픈 광고 표시
+    if (_pendingAppOpenAd && ModalRoute.of(context)?.isCurrent == true) {
+      _pendingAppOpenAd = false;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        appOpenAdService.showIfAvailable();
+      });
+    }
 
     return Stack(
       children: [
@@ -337,17 +431,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
-                              Icon(
-                                ref.watch(favoriteProvider).isNotEmpty
-                                    ? Icons.favorite
-                                    : Icons.favorite_border,
-                                size: 22,
-                                color: AppColors.carrot,
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.carrotLight,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  ref.watch(favoriteProvider).isNotEmpty
+                                      ? Icons.favorite
+                                      : Icons.favorite_border,
+                                  size: 21,
+                                  color: AppColors.carrot,
+                                ),
                               ),
                               if (ref.watch(favoriteProvider).isNotEmpty)
                                 Positioned(
-                                  right: -8,
-                                  top: -6,
+                                  right: -4,
+                                  top: -4,
                                   child: Container(
                                     padding: const EdgeInsets.all(2),
                                     decoration: BoxDecoration(
@@ -378,124 +480,174 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => _showLanguageSheet(context, langCode, langNotifier),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.carrotLight,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        nativeLanguageName(langCode),
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.carrotDark,
+                        onTap: () => context.push('/settings'),
+                        child: Image.asset(
+                          'assets/settings_icon.png',
+                          width: 24,
+                          height: 24,
                         ),
                       ),
-                    ),
-                  ),
                     ],
                   ),
                 ],
               ),
             ),
 
-            // 검색 + 필터 버튼
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => context.push('/search'),
+            // 검색 + 필터
+            if (filter.isEmpty) ...[
+              // 필터 미설정: 검색바 풀 + 아래 필터 바로가기
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                child: GestureDetector(
+                  onTap: () {
+                    analytics.searchBarTap();
+                    context.push('/search');
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(13),
+                    decoration: BoxDecoration(
+                      color: AppColors.gray50,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.search, size: 18, color: AppColors.gray300),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            s.searchHint,
+                            style: const TextStyle(fontSize: 14, color: AppColors.gray300),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                child: _FilterPulse(
+                  enabled: true,
+                  child: GestureDetector(
+                    onTap: () => context.push('/filter'),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.carrot,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          // 고정 요소 너비: icon(15) + gaps(8+8+6+6) + container padding 제외(LayoutBuilder 안이라 이미 제외)
+                          // "Filter:" 텍스트 너비 추정: fontSize 13 * 0.6 per char
+                          // 칩 너비 추정: padding(16) + fontSize 12 * 0.65 per char
+                          const chipPad = 16.0;
+                          const charW = 7.8; // 평균 글자 너비 (라틴+CJK 혼합)
+                          const fixedW = 15 + 8 + 8 + 6 + 6; // icon + gaps
+                          final filterLabelW = (s.filter as String).length * 6.5 + 4; // "Filter:" + ":"
+                          final baseChipsW = chipPad + s.tabVisa.length * charW  // VISA
+                              + 6 + chipPad + s.tabRegion.length * charW          // Region
+                              + 6 + chipPad + s.filterMore.length * charW;        // + More
+                          final salaryChipW = 6 + chipPad + s.tabSalary.length * charW;
+                          final baseTotal = fixedW + filterLabelW + baseChipsW;
+                          final showSalary = (baseTotal + salaryChipW) <= constraints.maxWidth;
+
+                          return Row(
+                            children: [
+                              const Icon(Icons.tune, size: 15, color: Colors.white70),
+                              const SizedBox(width: 8),
+                              Text('${s.filter}:',
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70)),
+                              const SizedBox(width: 8),
+                              _FilterShortcutChip(label: s.tabVisa, onTap: () => context.push('/filter?tab=0')),
+                              const SizedBox(width: 6),
+                              _FilterShortcutChip(label: s.tabRegion, onTap: () => context.push('/filter?tab=3')),
+                              if (showSalary) ...[
+                                const SizedBox(width: 6),
+                                _FilterShortcutChip(label: s.tabSalary, onTap: () => context.push('/filter?tab=4')),
+                              ],
+                              const SizedBox(width: 6),
+                              _FilterShortcutChip(label: s.filterMore, onTap: () => context.push('/filter')),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              // 필터 설정됨: 검색바 + 필터 버튼 나란히
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () {
+                          analytics.searchBarTap();
+                          context.push('/search');
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(13),
+                          decoration: BoxDecoration(
+                            color: AppColors.gray50,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.search, size: 18, color: AppColors.gray300),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  s.searchHint,
+                                  style: const TextStyle(fontSize: 14, color: AppColors.gray300),
+                                  overflow: TextOverflow.ellipsis,
+                                  maxLines: 1,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    GestureDetector(
+                      onTap: () => context.push('/filter'),
                       child: Container(
-                        padding: const EdgeInsets.all(13),
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: AppColors.gray50,
+                          color: AppColors.carrotDark,
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.search, size: 18, color: AppColors.gray300),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Text(
-                                s.searchHint,
-                                style: const TextStyle(
-                                    fontSize: 14, color: AppColors.gray300),
-                                overflow: TextOverflow.ellipsis,
-                                maxLines: 1,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                  GestureDetector(
-                    onTap: () {
-                      if (_showFilterTooltip) _dismissFilterTooltip();
-                      context.push('/filter');
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 12),
-                      decoration: BoxDecoration(
-                        color: filter.isEmpty
-                            ? AppColors.carrot
-                            : AppColors.carrotDark,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.tune,
-                            size: 16,
-                            color: Colors.white,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            s.filter,
-                            style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                          if (!filter.isEmpty) ...[
+                            const Icon(Icons.tune, size: 16, color: Colors.white),
+                            const SizedBox(width: 6),
+                            Text(s.filter,
+                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
                             const SizedBox(width: 6),
                             Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 7, vertical: 2),
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                               decoration: BoxDecoration(
                                 color: Colors.white,
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
                                 '${_adjustedActiveCount(filter)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.carrot,
-                                ),
+                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.carrot),
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ),
-                  ),
-                    ],
-                  ),
-                ],
+                  ],
+                ),
               ),
-            ),
+            ],
 
             // 선택된 필터 칩 (읽기 전용)
             if (!filter.isEmpty)
@@ -515,12 +667,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
 
             // 공고 목록
             Expanded(
-              child: jobsAsync.when(
-                data: (jobs) => _buildJobList(jobs, langCode),
-                loading: () => _buildSkeleton(),
-                error: (e, _) => ErrorRetry(
-                  onRetry: () => ref.invalidate(jobListProvider(0)),
-                ),
+              child: RefreshIndicator(
+                color: AppColors.carrot,
+                onRefresh: _onRefresh,
+                child: _isRefreshing
+                  ? _buildSkeleton()
+                  : jobsAsync.when(
+                      data: (jobs) => _buildJobList(jobs, langCode),
+                      loading: () => _buildSkeleton(),
+                      error: (e, _) => ErrorRetry(
+                        onRetry: () => ref.invalidate(jobListProvider(0)),
+                      ),
+                    ),
               ),
             ),
           ],
@@ -539,47 +697,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
             )
           : null,
     ),
-      // 말풍선 툴팁 (최상단 레이어)
-      if (_showFilterTooltip)
-        Positioned(
-          top: MediaQuery.of(context).padding.top + 110,
-          right: 20,
-          child: GestureDetector(
-            onTap: _dismissFilterTooltip,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                // 삼각형 꼬리
-                Padding(
-                  padding: const EdgeInsets.only(right: 30),
-                  child: CustomPaint(
-                    size: const Size(14, 8),
-                    painter: _BubbleArrowPainter(),
-                  ),
-                ),
-                // 말풍선 본체
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: AppColors.carrot,
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        s.filterTooltip,
-                        style: const TextStyle(fontSize: 12, color: Colors.white, height: 1.3, decoration: TextDecoration.none),
-                      ),
-                      const SizedBox(width: 8),
-                      const Icon(Icons.close, size: 14, color: Colors.white54),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
       ],
     );
   }
@@ -629,6 +746,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     return ListView.builder(
       key: ValueKey(langCode),
       controller: _scrollController,
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
       padding: const EdgeInsets.only(bottom: 20),
       itemCount: totalItems,
       itemBuilder: (context, index) {
@@ -843,7 +961,10 @@ class _PartTimeCheckbox extends ConsumerWidget {
     final notifier = ref.read(filterStateProvider.notifier);
 
     return GestureDetector(
-      onTap: () => notifier.toggleEmploymentType(_partTimeEmploymentId),
+      onTap: () {
+        analytics.partTimeToggle(!isChecked);
+        notifier.toggleEmploymentType(_partTimeEmploymentId);
+      },
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -852,7 +973,10 @@ class _PartTimeCheckbox extends ConsumerWidget {
             height: 20,
             child: Checkbox(
               value: isChecked,
-              onChanged: (_) => notifier.toggleEmploymentType(_partTimeEmploymentId),
+              onChanged: (_) {
+                analytics.partTimeToggle(!isChecked);
+                notifier.toggleEmploymentType(_partTimeEmploymentId);
+              },
               activeColor: AppColors.carrot,
               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
               visualDensity: VisualDensity.compact,
@@ -1208,4 +1332,83 @@ class _BubbleArrowPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FilterShortcutChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _FilterShortcutChip({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.2),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.white,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _FilterPulse extends StatefulWidget {
+  final bool enabled;
+  final Widget child;
+  const _FilterPulse({required this.enabled, required this.child});
+
+  @override
+  State<_FilterPulse> createState() => _FilterPulseState();
+}
+
+class _FilterPulseState extends State<_FilterPulse>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _animation = Tween<double>(begin: 1.0, end: 1.06).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+    if (widget.enabled) _controller.repeat(reverse: true);
+  }
+
+  @override
+  void didUpdateWidget(covariant _FilterPulse oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.enabled && !_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    } else if (!widget.enabled && _controller.isAnimating) {
+      _controller.stop();
+      _controller.reset();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.enabled) return widget.child;
+    return ScaleTransition(scale: _animation, child: widget.child);
+  }
 }

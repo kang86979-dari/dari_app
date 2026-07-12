@@ -8,6 +8,7 @@ import '../../core/utils/region_mapper.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../data/services/analytics_service.dart';
+import '../../data/services/push_service.dart';
 
 class LocationSelectScreen extends ConsumerStatefulWidget {
   const LocationSelectScreen({super.key});
@@ -23,8 +24,14 @@ class _LocationSelectScreenState extends ConsumerState<LocationSelectScreen> {
   Future<void> _finish() async {
     if (_selectedSiDos.isEmpty) {
       analytics.locationPermission(false);
+      analytics.log('onboarding_location', {'action': 'skip', 'count': 0});
     } else {
       analytics.locationPermission(true);
+      analytics.log('onboarding_location', {
+        'action': 'select',
+        'count': _selectedSiDos.length,
+        'regions': _selectedSiDos.join(', '),
+      });
       final repo = ref.read(jobRepositoryProvider);
       final notifier = ref.read(filterStateProvider.notifier);
       final allIds = <int>{};
@@ -37,6 +44,14 @@ class _LocationSelectScreenState extends ConsumerState<LocationSelectScreen> {
 
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('is_first_launch', false);
+
+    // 온보딩에서 필터 설정했으면 푸시 구독 등록
+    final filter = ref.read(filterStateProvider);
+    if (!filter.isEmpty) {
+      final langCode = ref.read(languageProvider);
+      await pushService.upsertSubscription(filter: filter, langCode: langCode);
+    }
+
     if (mounted) context.go('/home');
   }
 

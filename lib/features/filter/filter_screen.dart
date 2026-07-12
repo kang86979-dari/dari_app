@@ -8,6 +8,7 @@ import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../data/services/analytics_service.dart';
+import '../../data/services/push_service.dart';
 import '../home/widgets/ad_banner.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/utils/region_mapper.dart';
@@ -15,7 +16,8 @@ import '../../core/utils/district_names.dart';
 import '../../data/repositories/job_repository.dart';
 
 class FilterScreen extends ConsumerStatefulWidget {
-  const FilterScreen({super.key});
+  final int initialTab;
+  const FilterScreen({super.key, this.initialTab = 0});
 
   @override
   ConsumerState<FilterScreen> createState() => _FilterScreenState();
@@ -23,12 +25,13 @@ class FilterScreen extends ConsumerStatefulWidget {
 
 class _FilterScreenState extends ConsumerState<FilterScreen> {
   late FilterState _snapshot;
-  int _selectedIndex = 0;
+  late int _selectedIndex;
   final _regionKey = GlobalKey<_RegionSelectPanelState>();
 
   @override
   void initState() {
     super.initState();
+    _selectedIndex = widget.initialTab;
     _snapshot = ref.read(filterStateProvider);
     analytics.filterOpened(_snapshot.activeCount);
   }
@@ -149,7 +152,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                         children: [
                           // 왼쪽: 카테고리 목록
                           SizedBox(
-                            width: 110,
+                            width: 120,
                             child: Container(
                               color: const Color(0xFFF9F9F9),
                               child: ListView.builder(
@@ -182,7 +185,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                                                     ? FontWeight.w700
                                                     : FontWeight.w500,
                                                 color: isSelected
-                                                    ? AppColors.black
+                                                    ? AppColors.carrot
                                                     : AppColors.gray400,
                                               ),
                                               maxLines: 2,
@@ -299,6 +302,16 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                             siteIds: filter.siteIds,
                             visaSponsorship: filter.visaSponsorship,
                           );
+                          // 푸시 구독 업데이트
+                          final langCode = ref.read(languageProvider);
+                          if (filter.isEmpty) {
+                            pushService.deleteSubscription();
+                          } else {
+                            pushService.upsertSubscription(
+                              filter: filter,
+                              langCode: langCode,
+                            );
+                          }
                           context.pop();
                         },
                         child: Container(

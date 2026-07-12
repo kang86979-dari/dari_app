@@ -1926,12 +1926,11 @@ class _DetailBannerAdState extends State<_DetailBannerAd> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isLoaded || _bannerAd == null) return const SizedBox.shrink();
     return SizedBox(
       width: double.infinity,
       height: AdSize.banner.height.toDouble(),
-      child: _isLoaded && _bannerAd != null
-          ? Center(child: AdWidget(ad: _bannerAd!))
-          : null,
+      child: Center(child: AdWidget(ad: _bannerAd!)),
     );
   }
 }

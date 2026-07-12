@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/utils/ad_helper.dart';
+import '../../../data/services/analytics_service.dart';
 
 class AdBanner extends StatefulWidget {
   const AdBanner({super.key});
@@ -16,15 +17,29 @@ class _AdBannerState extends State<AdBanner> {
   @override
   void initState() {
     super.initState();
+    final adUnitId = AdHelper.bannerId;
+    print('🔵 BannerAd loading... adUnitId=$adUnitId');
     _bannerAd = BannerAd(
-      adUnitId: AdHelper.bannerId,
+      adUnitId: adUnitId,
       size: AdSize.banner,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
+          print('✅ BannerAd loaded: adUnitId=$adUnitId, responseInfo=${(ad as BannerAd).responseInfo}');
+          analytics.log('ad_banner_loaded', {'ad_unit_id': adUnitId});
           if (mounted) setState(() => _isLoaded = true);
         },
         onAdFailedToLoad: (ad, error) {
+          print('❌ BannerAd failed: code=${error.code}, message=${error.message}, domain=${error.domain}');
+          print('❌ BannerAd responseInfo: ${ad.responseInfo}');
+          analytics.log('ad_banner_failed', {
+            'ad_unit_id': adUnitId,
+            'error_code': error.code,
+            'error_message': error.message,
+            'error_domain': error.domain,
+          });
+          // 에러 코드별 이벤트 (Firebase에서 바로 확인용)
+          analytics.log('ad_fail_code_${error.code}');
           ad.dispose();
         },
       ),

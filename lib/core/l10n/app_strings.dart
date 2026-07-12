@@ -433,23 +433,109 @@ class AppStrings {
  }, 'Filter');
 
  String get filterTooltip => _t({
- 'ko': '나에게 맞는 공고를 필터링하세요',
- 'en': 'Filter jobs for you',
- 'zh': '筛选适合您的工作',
- 'hi': 'अपने लिए नौकरी फ़िल्टर करें',
- 'ja': 'あなたに合う求人を絞り込む',
- 'th': 'กรองงานสำหรับคุณ',
- 'vi': 'Lọc việc làm phù hợp',
- 'bn': 'আপনার জন্য চাকরি ফিল্টার করুন',
- 'ru': 'Подберите вакансии для себя',
- 'id': 'Filter lowongan untuk Anda',
- 'ne': 'तपाईंको लागि जागिर फिल्टर गर्नुहोस्',
- 'km': 'ត្រងការងារសម្រាប់អ្នក',
- 'my': 'သင့်အတွက် အလုပ်များ စစ်ထုတ်ပါ',
- 'si': 'ඔබට ගැළපෙන රැකියා පෙරන්න',
- 'uz': 'O\'zingizga mos ishlarni filtrlang',
- 'mn': 'Танд тохирох ажлыг шүүх',
- }, 'Filter jobs for you');
+ 'ko': '비자, 지역, 급여 등으로 검색!',
+ 'en': 'Search by visa, region, salary & more!',
+ 'zh': '按签证、地区、薪资等搜索！',
+ 'hi': 'वीज़ा, क्षेत्र, वेतन आदि से खोजें!',
+ 'ja': 'ビザ・地域・給与などで検索！',
+ 'th': 'ค้นหาตามวีซ่า พื้นที่ เงินเดือน!',
+ 'vi': 'Tìm theo visa, khu vực, lương!',
+ 'bn': 'ভিসা, এলাকা, বেতন দিয়ে খুঁজুন!',
+ 'ru': 'Поиск по визе, региону, зарплате!',
+ 'id': 'Cari berdasarkan visa, wilayah, gaji!',
+ 'ne': 'भिसा, क्षेत्र, तलब आदिले खोज्नुहोस्!',
+ 'km': 'ស្វែងរកតាមទិដ្ឋាការ តំបន់ ប្រាក់ខែ!',
+ 'my': 'ဗီဇာ၊ ဒေသ၊ လစာဖြင့် ရှာဖွေပါ!',
+ 'si': 'වීසා, ප්‍රදේශය, වැටුප් මගින් සොයන්න!',
+ 'uz': 'Viza, hudud, maosh bo\'yicha qidiring!',
+ 'mn': 'Виз, бүс, цалингаар хайх!',
+ }, 'Search by visa, region, salary & more!');
+
+ String get filterMore => _t({
+ 'ko': '+ 더보기',
+ 'en': '+ More',
+ 'zh': '+ 更多',
+ 'hi': '+ और',
+ 'ja': '+ 他',
+ 'th': '+ เพิ่ม',
+ 'vi': '+ Thêm',
+ 'bn': '+ আরও',
+ 'ru': '+ Ещё',
+ 'id': '+ Lainnya',
+ 'ne': '+ थप',
+ 'km': '+ ទៀត',
+ 'my': '+ နောက်ထပ်',
+ 'si': '+ තවත්',
+ 'uz': '+ Boshqa',
+ 'mn': '+ Бусад',
+ }, '+ More');
+
+ // ── Settings ──
+
+ String get settings => _t({
+ 'ko': '설정', 'en': 'Settings', 'zh': '设置', 'hi': 'सेटिंग्स',
+ 'ja': '設定', 'th': 'ตั้งค่า', 'vi': 'Cài đặt', 'bn': 'সেটিংস',
+ 'ru': 'Настройки', 'id': 'Pengaturan', 'ne': 'सेटिङ', 'km': 'ការកំណត់',
+ 'my': 'ဆက်တင်', 'si': 'සැකසීම්', 'uz': 'Sozlamalar', 'mn': 'Тохиргоо',
+ }, 'Settings');
+
+ String get notifications => _t({
+ 'ko': '알림', 'en': 'Notifications', 'zh': '通知', 'hi': 'सूचनाएं',
+ 'ja': '通知', 'th': 'การแจ้งเตือน', 'vi': 'Thông báo', 'bn': 'বিজ্ঞপ্তি',
+ 'ru': 'Уведомления', 'id': 'Notifikasi', 'ne': 'सूचना', 'km': 'ការជូនដំណឹង',
+ 'my': 'အသိပေးချက်', 'si': 'දැනුම්දීම්', 'uz': 'Bildirishnomalar', 'mn': 'Мэдэгдэл',
+ }, 'Notifications');
+
+ String get newJobAlerts => _t({
+ 'ko': '신규 공고 알림', 'en': 'New job alerts', 'zh': '新职位提醒', 'hi': 'नई नौकरी अलर्ट',
+ 'ja': '新着求人通知', 'th': 'แจ้งเตือนงานใหม่', 'vi': 'Thông báo việc mới', 'bn': 'নতুন চাকরির সতর্কতা',
+ 'ru': 'Уведомления о новых вакансиях', 'id': 'Notifikasi lowongan baru', 'ne': 'नयाँ जागिर सूचना', 'km': 'ការជូនដំណឹងការងារថ្មី',
+ 'my': 'အလုပ်သစ် အသိပေးချက်', 'si': 'නව රැකියා දැනුම්දීම්', 'uz': 'Yangi ish bildirishnomalari', 'mn': 'Шинэ ажлын мэдэгдэл',
+ }, 'New job alerts');
+
+ String get newJobAlertsDesc => _t({
+ 'ko': '내 필터에 맞는 신규 공고가 등록되면 알림', 'en': 'Get notified when new jobs match your filters',
+ 'zh': '当有符合筛选条件的新职位时通知', 'hi': 'जब आपके फ़िल्टर से मेल खाने वाली नई नौकरी हो तो सूचना पाएं',
+ 'ja': 'フィルターに合う新着求人があれば通知', 'th': 'รับแจ้งเตือนเมื่อมีงานใหม่ตรงกับตัวกรอง',
+ 'vi': 'Nhận thông báo khi có việc mới phù hợp bộ lọc', 'bn': 'আপনার ফিল্টারের সাথে মিলে নতুন চাকরি হলে জানান',
+ 'ru': 'Получайте уведомления о вакансиях по вашим фильтрам', 'id': 'Dapatkan notifikasi saat ada lowongan baru sesuai filter',
+ 'ne': 'तपाईंको फिल्टरसँग मिल्ने नयाँ जागिर आउँदा सूचना', 'km': 'ទទួលបានការជូនដំណឹងពេលមានការងារថ្មីត្រូវនឹងតម្រង',
+ 'my': 'သင့်စစ်ထုတ်မှုနှင့်ကိုက်ညီသော အလုပ်သစ်ရှိသောအခါ အသိပေးချက်', 'si': 'ඔබේ පෙරහන් සමඟ ගැළපෙන නව රැකියා ඇති විට දැනුම්දීම්',
+ 'uz': 'Filtringizga mos yangi ish chiqsa xabar olish', 'mn': 'Таны шүүлтүүрт тохирох шинэ ажил гарвал мэдэгдэл',
+ }, 'Get notified when new jobs match your filters');
+
+ String get language => _t({
+ 'ko': '언어', 'en': 'Language', 'zh': '语言', 'hi': 'भाषा',
+ 'ja': '言語', 'th': 'ภาษา', 'vi': 'Ngôn ngữ', 'bn': 'ভাষা',
+ 'ru': 'Язык', 'id': 'Bahasa', 'ne': 'भाषा', 'km': 'ភាសា',
+ 'my': 'ဘာသာစကား', 'si': 'භාෂාව', 'uz': 'Til', 'mn': 'Хэл',
+ }, 'Language');
+
+ String get appLanguage => _t({
+ 'ko': '앱 언어', 'en': 'App language', 'zh': '应用语言', 'hi': 'ऐप भाषा',
+ 'ja': 'アプリ言語', 'th': 'ภาษาแอป', 'vi': 'Ngôn ngữ ứng dụng', 'bn': 'অ্যাপ ভাষা',
+ 'ru': 'Язык приложения', 'id': 'Bahasa aplikasi', 'ne': 'एप भाषा', 'km': 'ភាសាកម្មវិធី',
+ 'my': 'အက်ပ်ဘာသာစကား', 'si': 'යෙදුම් භාෂාව', 'uz': 'Ilova tili', 'mn': 'Аппын хэл',
+ }, 'App language');
+
+ String get enableNotificationsInSettings => _t({
+ 'ko': '알림을 받으려면 설정에서 허용해주세요',
+ 'en': 'Please enable notifications in settings',
+ 'zh': '请在设置中开启通知',
+ 'hi': 'कृपया सेटिंग्स में सूचनाएं सक्षम करें',
+ 'ja': '設定から通知を許可してください',
+ 'th': 'กรุณาเปิดการแจ้งเตือนในตั้งค่า',
+ 'vi': 'Vui lòng bật thông báo trong cài đặt',
+ 'bn': 'অনুগ্রহ করে সেটিংসে বিজ্ঞপ্তি চালু করুন',
+ 'ru': 'Включите уведомления в настройках',
+ 'id': 'Aktifkan notifikasi di pengaturan',
+ 'ne': 'कृपया सेटिङमा सूचना सक्षम गर्नुहोस्',
+ 'km': 'សូមបើកការជូនដំណឹងក្នុងការកំណត់',
+ 'my': 'ဆက်တင်တွင် အသိပေးချက်ကို ဖွင့်ပါ',
+ 'si': 'කරුණාකර සැකසීම් තුළ දැනුම්දීම් සක්‍රීය කරන්න',
+ 'uz': 'Sozlamalarda bildirishnomalarni yoqing',
+ 'mn': 'Тохиргооноос мэдэгдлийг зөвшөөрнө үү',
+ }, 'Please enable notifications in settings');
 
  String get housingChip => _t({
  'ko': '숙소',

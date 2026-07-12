@@ -164,6 +164,10 @@ class _VisaSelectScreenState extends ConsumerState<VisaSelectScreen> {
                       child: GestureDetector(
                         onTap: () {
                           analytics.visaSelected(_selectedIds.toList());
+                          analytics.log('onboarding_visa', {
+                            'action': _selectedIds.isEmpty ? 'skip' : 'select',
+                            'count': _selectedIds.length,
+                          });
                           // 선택된 비자를 필터에 저장
                           if (_selectedIds.isNotEmpty) {
                             final notifier =
