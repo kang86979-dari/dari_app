@@ -29,9 +29,15 @@ class AppOpenAdService {
     );
   }
 
-  /// 앱 재실행 시 호출 — 하루 1회만 표시
+  /// 앱 재실행/백그라운드 복귀 시 호출 — 하루 1회만 표시
   Future<void> showIfAvailable() async {
-    if (_isShowingAd || _appOpenAd == null) return;
+    if (_isShowingAd) return;
+
+    // 광고가 없으면 다음을 위해 로드만 하고 종료
+    if (_appOpenAd == null) {
+      loadAd();
+      return;
+    }
 
     // 하루 1회 체크
     final prefs = await SharedPreferences.getInstance();

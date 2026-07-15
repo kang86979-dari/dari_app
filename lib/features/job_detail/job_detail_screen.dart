@@ -139,7 +139,20 @@ class _DetailBodyState extends State<_DetailBody> {
           _translatedHtml = result
               .replaceAll('\\r\\n', '\n')
               .replaceAll('\\n', '\n')
-              .replaceAll('\\r', '\n');
+              .replaceAll('\\r', '\n')
+              // 알바천국 워터마크 제거 (첫 줄에서만)
+              .replaceFirst(RegExp(r'^\s*(DESIGNED BY 알바천국|DESIGNED BY[^\n]*|ĐƯỢC THIẾT KẾ BỞI[^\n]*|THIẾT KẾ B[YỞ][^\n]*|ออกแบบโดย[^\n]*|由[^\n]*设计[^\n]*|ДИЗАЙН BY[^\n]*)\s*\n?', caseSensitive: false), '')
+              .replaceFirst(RegExp(r'^\s*(Alba\s*Heaven|アルバ天国|알바천국|अल्बा हेवन|আলবা হেভেন|அல்பா ஹெவன்|අල්බා හෙවන්|अल्बा स्वर्ग)[^\n]*\n?'), '')
+              .replaceFirst(RegExp(r'^\s*(විසින් නිර්මාණය කරන ලද[ීැ]?|द्वारा डिज़?ाइन[^\n]*|द्वारा डिजाइन[^\n]*|দ্বারা ডিজাইন[^\n]*)\s*\n?'), '')
+              // 번역 마커 → 실제 문자 변환
+              .replaceAll(RegExp(r'‖[^‖]*‖'), '\n')
+              .replaceAll(RegExp(r'‖(?:NL)+\s*'), '\n')
+              .replaceAll(RegExp(r'‖[A-Z]?\s*'), '')
+              .replaceAll(RegExp('["\u201C\u201D]NL["\u201C\u201D]'), '\n')
+              .replaceAll(RegExp('["\u201C\u201D]TILDE["\u201C\u201D]'), '~')
+              .replaceAll(RegExp(r'(?<![A-Za-z])NL(?![A-Za-z])'), '\n')
+              .replaceAll(RegExp(r'(?<![A-Za-z])TILDE(?![A-Za-z])'), '~')
+              .replaceAll(RegExp(r'\n{3,}'), '\n\n');
           _isTranslating = false;
         });
         return;
@@ -1016,6 +1029,8 @@ class _DescriptionText extends StatelessWidget {
       cleaned = cleaned.replaceAll(RegExp(r'\.[\w-]+[^{]*\{[^}]*\}'), '');
       cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '');
       cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\}'), '');
+      // CSS keyframe 퍼센트 블록 제거 (50% { color:#fff; } 등)
+      cleaned = cleaned.replaceAll(RegExp(r'\d+%\s*\{[^}]*\}'), '');
       cleaned = cleaned.split('\n').where((l) => !_isCssLine(l.trim())).join('\n').trim();
     }
     // WorkVisa Markdown 제거
@@ -1262,6 +1277,8 @@ class _DescriptionText extends StatelessWidget {
     cleaned = cleaned.replaceAll(RegExp(r'\.[\w-]+[^{]*\{[^}]*\}'), '');
     cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '');
     cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\}'), '');
+    // CSS keyframe 퍼센트 블록 제거 (50% { color:#fff; } 등)
+    cleaned = cleaned.replaceAll(RegExp(r'\d+%\s*\{[^}]*\}'), '');
     cleaned = cleaned.replaceAll(RegExp(r'\n{2,}'), '\n').trim();
 
     if (cleaned.isEmpty) return const SizedBox.shrink();
@@ -1594,6 +1611,8 @@ class _DescriptionText extends StatelessWidget {
     // @media 등 중첩 블록 제거
     cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '');
     cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\}'), '');
+    // CSS keyframe 퍼센트 블록 제거 (50% { color:#fff; } 등)
+    cleaned = cleaned.replaceAll(RegExp(r'\d+%\s*\{[^}]*\}'), '');
     // CSS/스타일 코드 줄 제거
     cleaned = cleaned.split('\n').where((l) => !_isCssLine(l.trim())).join('\n').trim();
 
@@ -1642,16 +1661,24 @@ class _DescriptionText extends StatelessWidget {
     final lines = cleaned.split('\n').where((l) => l.trim().isNotEmpty).toList();
     final kvLines = lines.where((l) {
       final t = l.trim();
-      if (!RegExp(r'^.+[:：]\s*.+').hasMatch(t)) return false;
-      final ci = t.indexOf(RegExp(r'[:：]'));
-      if (ci > 0 && RegExp(r'\d$').hasMatch(t.substring(0, ci).trim())) return false;
-      return true;
+      // 콜론 계열 (: ： ៖) 또는 미얀마어 하이픈 구분
+      if (RegExp('^.+[:：៖]\\s*.+').hasMatch(t)) {
+        final ci = t.indexOf(RegExp('[:：៖]'));
+        if (ci > 0 && RegExp(r'\d$').hasMatch(t.substring(0, ci).trim())) return false;
+        return true;
+      }
+      if (RegExp('[\u1000-\u109F]-\\s.+').hasMatch(t)) return true;
+      return false;
     }).length;
     // # 마커가 있으면 자유형으로 처리 (markdown 스타일 공고)
     final hasHashHeader = RegExp(r'(?:^|\n)\s*#\s+\S', multiLine: true).hasMatch(cleaned);
     if (!hasHashHeader && kvLines >= 3) {
-      final grouped = _groupKvIntoSections(cleaned);
-      if (grouped != null) return _buildSections(grouped);
+      // 비한글 텍스트(번역)는 그룹핑 키가 매칭 안 되므로 바로 key 볼드 렌더링
+      final hasKorean = RegExp(r'[\uAC00-\uD7AF]').hasMatch(cleaned);
+      if (hasKorean) {
+        final grouped = _groupKvIntoSections(cleaned);
+        if (grouped != null) return _buildSections(grouped);
+      }
       return _buildKeyValueText(cleaned);
     }
 
@@ -1787,12 +1814,15 @@ class _DescriptionText extends StatelessWidget {
         continue;
       }
 
-      // 1) 콜론 구분 key:value (시간 패턴 제외)
-      final colonIdx = cleaned.indexOf(RegExp(r'[:：]'));
+      // 1) 콜론 구분 key:value (시간 패턴 제외, 크메르 ៖ 포함)
+      final colonIdx = cleaned.indexOf(RegExp('[:：៖]'));
       final isTimePattern = colonIdx > 0 && RegExp(r'\d$').hasMatch(cleaned.substring(0, colonIdx).trim());
-      if (!isTimePattern && colonIdx > 0 && colonIdx < cleaned.length - 1) {
-        final key = cleaned.substring(0, colonIdx + 1);
-        final value = cleaned.substring(colonIdx + 1).trim().replaceFirst(RegExp(r'^[·\*]\s*'), '');
+      // 미얀마어: 콜론 없고 "key- value" 패턴 (미얀마 문자 뒤 하이픈)
+      final myDashMatch = colonIdx < 0 ? RegExp('([\u1000-\u109F\u1050-\u109F])-\\s').firstMatch(cleaned) : null;
+      final sepIdx = colonIdx > 0 ? colonIdx : myDashMatch != null ? myDashMatch.start + 1 : -1;
+      if (!isTimePattern && sepIdx > 0 && sepIdx < cleaned.length - 1) {
+        final key = cleaned.substring(0, sepIdx + 1);
+        final value = cleaned.substring(sepIdx + 1).trim().replaceFirst(RegExp(r'^[·\*]\s*'), '');
         if (value.isEmpty) continue;
         rows.add(TextSpan(children: [
           TextSpan(text: '$prefix$key', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.black, height: 1.8)),

@@ -299,12 +299,46 @@ class Job {
     // HTML → 텍스트 변환
     text = text.replaceAll(RegExp(r'<br\s*/?>'), '\n');
     text = text.replaceAll(RegExp(r'<[^>]+>'), '');
-    // 번역 줄바꿈 마커 → 실제 줄바꿈 (‖NL‖, ‖एनएल‖ 등)
+    // CSS 제거 (번역에도 CSS 포함되는 경우)
+    text = text.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '');
+    text = text.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '');
+    text = text.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\}'), '');
+    // .class / .class .class / .class:pseudo / :root / * 등 CSS 셀렉터
+    text = text.replaceAll(RegExp(r'[.#:*][\w-][^{]*\{[^}]*\}'), '');
+    // * { ... } 유니버설 셀렉터 + 번역된 CSS (세미콜론 포함 중괄호)
+    text = text.replaceAll(RegExp(r'\*\s*\{[^}]*\}'), '');
+    text = text.replaceAll(RegExp(r'\w+\s*\{[^}]*;[^}]*\}'), '');
+    // CSS 잔해 줄 제거 (중괄호+세미콜론 패턴이 있는 줄)
+    text = text.split('\n').where((l) {
+      final t = l.trim();
+      if (t.isEmpty) return true;
+      // {;} 조합이 있으면 CSS 잔해
+      final cssChars = t.replaceAll(RegExp(r'[^{};]'), '').length;
+      if (cssChars >= 3) return false;
+      return true;
+    }).join('\n');
+    text = text.replaceAll(RegExp(r'\d+%\s*\{[^}]*\}'), '');
+    // 알바천국 워터마크 제거 — 첫 줄에서만 (본문 안 언급은 유지)
+    text = text.replaceFirst(RegExp(r'^\s*(DESIGNED BY 알바천국|DESIGNED BY[^\n]*|ĐƯỢC THIẾT KẾ BỞI[^\n]*|THIẾT KẾ B[YỞ][^\n]*|ออกแบบโดย[^\n]*|由[^\n]*设计[^\n]*|ДИЗАЙН BY[^\n]*)\s*\n?', caseSensitive: false), '');
+    text = text.replaceFirst(RegExp(r'^\s*(Alba\s*Heaven|アルバ天国|알바천국|अल्बा हेवन|আলবা হেভেন|அல்பா ஹெவன்|අල්බා හෙවන්|अल्बा स्वर्ग)[^\n]*\n?'), '');
+    text = text.replaceFirst(RegExp(r'^\s*(විසින් නිර්මාණය කරන ලද[ීැ]?|द्वारा डिज़?ाइन[^\n]*|द्वारा डिजाइन[^\n]*|দ্বারা ডিজাইন[^\n]*)\s*\n?'), '');
+    // 번역 줄바꿈 마커 → 실제 줄바꿈
     text = text.replaceAll(RegExp(r'‖[^‖]*‖'), '\n');
+    // ‖NL 변형 (NLNL, NL+공백 등) + ‖ 뒤 잔해(L 등) 제거 + 단독 ‖ 제거
+    text = text.replaceAll(RegExp(r'‖(?:NL)+\s*'), '\n');
+    text = text.replaceAll(RegExp(r'‖[A-Z]?\s*'), '');  // ‖L, ‖ 등
+    // "NL" / "TILDE" 마커 변환 (유니코드 따옴표 포함)
+    text = text.replaceAll(RegExp('["\u201C\u201D]NL["\u201C\u201D]'), '\n');
+    text = text.replaceAll(RegExp('["\u201C\u201D]TILDE["\u201C\u201D]'), '~');
+    // 단독 NL/TILDE (앞뒤가 알파벳 아닌 경우)
+    text = text.replaceAll(RegExp(r'(?<![A-Za-z])NL(?![A-Za-z])'), '\n');
+    text = text.replaceAll(RegExp(r'(?<![A-Za-z])TILDE(?![A-Za-z])'), '~');
     // 이스케이프된 줄바꿈 → 실제 줄바꿈
     text = text.replaceAll('\\r\\n', '\n');
     text = text.replaceAll('\\n', '\n');
     text = text.replaceAll('\\r', '\n');
+    // 마커 잔해 줄 제거 (단독 알파벳 1~2자 줄)
+    text = text.replaceAll(RegExp(r'^\s*[A-Z]{1,2}\s*$', multiLine: true), '');
     // 연속 줄바꿈 정리
     text = text.replaceAll(RegExp(r'\n{3,}'), '\n\n');
     return text.trim();
