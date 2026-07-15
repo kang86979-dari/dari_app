@@ -308,6 +308,8 @@ class Job {
     // * { ... } 유니버설 셀렉터 + 번역된 CSS (세미콜론 포함 중괄호)
     text = text.replaceAll(RegExp(r'\*\s*\{[^}]*\}'), '');
     text = text.replaceAll(RegExp(r'\w+\s*\{[^}]*;[^}]*\}'), '');
+    // 인라인 CSS 블록 제거 (한 줄에 여러 CSS 규칙이 있는 경우)
+    text = text.replaceAll(RegExp(r'\.[\w-]+\s*\{[^}]*\}'), '');
     // CSS 잔해 줄 제거 (중괄호+세미콜론 패턴이 있는 줄)
     text = text.split('\n').where((l) {
       final t = l.trim();

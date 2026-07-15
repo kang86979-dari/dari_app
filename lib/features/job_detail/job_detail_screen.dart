@@ -134,12 +134,18 @@ class _DetailBodyState extends State<_DetailBody> {
     try {
       final result = await JobRepository().translateDescription(widget.job.id, langCode);
       if (!mounted || langCode != widget.langCode) return;
-      if (result.isNotEmpty && result != widget.job.description) {
+      if (result.isNotEmpty) {
         setState(() {
           _translatedHtml = result
               .replaceAll('\\r\\n', '\n')
               .replaceAll('\\n', '\n')
               .replaceAll('\\r', '\n')
+              // CSS 제거
+              .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
+              .replaceAll(RegExp(r'\.[\w-]+\s*\{[^}]*\}'), '')
+              .replaceAll(RegExp(r'[.#:*][\w-][^{]*\{[^}]*\}'), '')
+              .replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '')
+              .replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\}'), '')
               // 알바천국 워터마크 제거 (첫 줄에서만)
               .replaceFirst(RegExp(r'^\s*(DESIGNED BY 알바천국|DESIGNED BY[^\n]*|ĐƯỢC THIẾT KẾ BỞI[^\n]*|THIẾT KẾ B[YỞ][^\n]*|ออกแบบโดย[^\n]*|由[^\n]*设计[^\n]*|ДИЗАЙН BY[^\n]*)\s*\n?', caseSensitive: false), '')
               .replaceFirst(RegExp(r'^\s*(Alba\s*Heaven|アルバ天国|알바천국|अल्बा हेवन|আলবা হেভেন|அல்பா ஹெவன்|අල්බා හෙවන්|अल्बा स्वर्ग)[^\n]*\n?'), '')
@@ -157,7 +163,22 @@ class _DetailBodyState extends State<_DetailBody> {
         });
         return;
       }
-    } catch (_) {}
+    } catch (_) {
+      // Edge Function 실패 시 DB 캐시 확인 (서버에서 저장 성공했을 수 있음)
+      if (!mounted || langCode != widget.langCode) return;
+      try {
+        final job = await JobRepository().getJobById(widget.job.id);
+        if (!mounted || langCode != widget.langCode) return;
+        final cached = job?.descriptionTranslations[langCode]?.toString();
+        if (cached != null && cached.isNotEmpty) {
+          setState(() {
+            _translatedHtml = cached;
+            _isTranslating = false;
+          });
+          return;
+        }
+      } catch (_) {}
+    }
     if (mounted) setState(() => _isTranslating = false);
   }
 
@@ -1039,7 +1060,7 @@ class _DescriptionText extends StatelessWidget {
     }
     final meaningful = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (meaningful.isEmpty) return true;
-    if (RegExp(r'^(지원하기\s*)+$').hasMatch(meaningful)) return true;
+    if (_isApplyOnly(meaningful)) return true;
     return false;
   }
 
@@ -1618,36 +1639,67 @@ class _DescriptionText extends StatelessWidget {
 
     // CSS 제거 후 의미 있는 내용이 없으면 빈 위젯
     final meaningful = cleaned.replaceAll(RegExp(r'\s+'), ' ').trim();
-    if (meaningful.isEmpty || RegExp(r'^(지원하기\s*)+$').hasMatch(meaningful)) {
+    if (meaningful.isEmpty || _isApplyOnly(meaningful)) {
       return const SizedBox.shrink();
     }
 
     // 알바천국 템플릿: 채용정보/근무조건/접수내용 섹션 (독립된 줄에서만 매칭)
-    final albaSections = ['채용정보', '근무조건', '접수내용 및 문의', '접수내용'];
-    // 줄 시작(또는 앞 공백) + 키워드 + 줄 끝(또는 뒤 공백/줄바꿈) — 다른 한글이 붙으면 매칭 안 됨
-    final pattern = RegExp('(?:^|\\n)\\s*(${albaSections.join('|')})\\s*(?=\\n|\$)', multiLine: true);
+    // 한국어 + 15개 언어 번역 헤더
+    final albaSections = [
+      // 채용정보
+      '채용정보', 'Recruitment information', '招聘信息', 'Thông tin tuyển dụng',
+      'ข้อมูลการรับสมัคร', 'भर्ती की जानकारी', 'බඳවා ගැනීමේ තොරතුරු',
+      'စုဆောင်းရေးအချက်အလက်', 'ព័ត៌មានជ្រើសរើសបុគ្គលិក', 'নিয়োগের তথ্য',
+      'भर्ती जानकारी', 'Ажилд авах мэдээлэл', '採用情報',
+      'Информация о наборе персонала', 'Informasi perekrutan',
+      'බඳවා ගැනීම් පිළිබඳ තොරතුරු', 'សហការ បដិវត្តន៍ គោលនយោបាយ',
+      // 근무조건
+      '근무조건', 'working conditions', 'Working conditions', '工作条件',
+      'điều kiện làm việc', 'สภาพการทำงาน', 'काम करने की स्थिति',
+      'සේවා කොන්දේසි', 'အလုပ်အခြေအနေများ', 'លក្ខខណ្ឌការងារ',
+      'কাজের অবস্থা', 'काम गर्ने अवस्था', 'ажлын нөхцөл',
+      '労働条件', 'условия труда', 'kondisi kerja',
+      'လုပ်ငန်းခွင်အခြေအနေများ',
+      // 접수내용 및 문의
+      '접수내용 및 문의', 'Application details and inquiries', '申请详情及查询',
+      'Chi tiết ứng dụng và yêu cầu', 'รายละเอียดการสมัครและสอบถามข้อมูล',
+      'आवेदन विवरण और पूछताछ', 'අයදුම්පත් විස්තර සහ විමසීම්',
+      'ព័ត៌មានលម្អិតនៃការដាក់ពាក្យ និងការសាកសួរ', 'আবেদন বিবরণ এবং অনুসন্ধান',
+      'आवेदन विवरण र सोधपुछ', 'Өргөдлийн дэлгэрэнгүй мэдээлэл, лавлагаа',
+      '受付内容およびお問い合わせ', 'Детали заявки и вопросы', 'Detail aplikasi dan pertanyaan',
+      // 접수내용
+      '접수내용', 'Application details', '申请详情',
+      'Chi tiết ứng dụng', 'รายละเอียดการสมัคร',
+      'आवेदन विवरण', 'අයදුම්පත් විස්තර',
+      'လျှောက်လွှာအသေးစိတ်', 'ព័ត៌មានលម្អិតអំពីកម្មវិធី',
+      'আবেদন বিবরণ', 'Өргөдлийн дэлгэрэнгүй',
+      '受付内容', 'Детали приложения', 'Detail aplikasi',
+    ];
+    // 긴 키워드 먼저 매칭 (접수내용 및 문의 > 접수내용)
+    albaSections.sort((a, b) => b.length.compareTo(a.length));
+    final pattern = RegExp('(?:^|\\n)\\s*(${albaSections.map((s) => RegExp.escape(s)).join('|')})\\s*(?=\\n|\$)', multiLine: true, caseSensitive: false);
     final matches = pattern.allMatches(cleaned).toList();
     final hasAlbaFormat = matches.isNotEmpty;
 
     if (hasAlbaFormat) {
       final sections = <_DescSection>[];
+      final hasKorean = RegExp(r'[\uAC00-\uD7AF]').hasMatch(cleaned);
 
       // 섹션 헤더 전 텍스트 (매장명/제목 등)
       if (matches.isNotEmpty) {
         final before = cleaned.substring(0, matches.first.start).trim();
         if (before.isNotEmpty) {
           final beforeCleaned = before.replaceAll(RegExp(r'\n{2,}'), '\n');
-          sections.add(_DescSection(title: '상세내용', content: beforeCleaned));
+          sections.add(_DescSection(title: '', content: beforeCleaned));
         }
       }
 
       for (int i = 0; i < matches.length; i++) {
-        final title = matches[i].group(1)!;
+        final title = _normalizeAlbaTitle(matches[i].group(1)!, isKorean: hasKorean);
         final start = matches[i].end;
         final end = i + 1 < matches.length ? matches[i + 1].start : cleaned.length;
         var content = cleaned.substring(start, end).trim();
         content = content.replaceAll(RegExp(r'\n{2,}'), '\n');
-        // 앞의 줄바꿈/공백 정리
         content = content.replaceFirst(RegExp(r'^[\n\s]+'), '');
         if (content.isNotEmpty) {
           sections.add(_DescSection(title: title, content: content));
@@ -1673,16 +1725,46 @@ class _DescriptionText extends StatelessWidget {
     // # 마커가 있으면 자유형으로 처리 (markdown 스타일 공고)
     final hasHashHeader = RegExp(r'(?:^|\n)\s*#\s+\S', multiLine: true).hasMatch(cleaned);
     if (!hasHashHeader && kvLines >= 3) {
-      // 비한글 텍스트(번역)는 그룹핑 키가 매칭 안 되므로 바로 key 볼드 렌더링
-      final hasKorean = RegExp(r'[\uAC00-\uD7AF]').hasMatch(cleaned);
-      if (hasKorean) {
-        final grouped = _groupKvIntoSections(cleaned);
-        if (grouped != null) return _buildSections(grouped);
-      }
+      final grouped = _groupKvIntoSections(cleaned);
+      if (grouped != null) return _buildSections(grouped);
       return _buildKeyValueText(cleaned);
     }
 
     return null; // 자유형 → 기본 plaintext
+  }
+
+  /// 번역된 알바천국 섹션 헤더를 정규화 (한국어/비한글 구분)
+  static String _normalizeAlbaTitle(String title, {bool isKorean = true}) {
+    final t = title.trim().toLowerCase();
+    // 채용정보 계열
+    if (t == '채용정보' || t.contains('recruitment') || t.contains('招聘') ||
+        t.contains('tuyển dụng') || t.contains('รับสมัคร') || t.contains('भर्ती') ||
+        t.contains('බඳවා') || t.contains('စုဆောင်း') || t.contains('ជ្រើសរើស') ||
+        t.contains('নিয়োগ') || t.contains('採用') || t.contains('набор') ||
+        t.contains('perekrutan') || t.contains('авах')) {
+      return isKorean ? '채용정보' : title.trim();
+    }
+    // 근무조건 계열
+    if (t == '근무조건' || t.contains('working condition') || t.contains('工作条件') ||
+        t.contains('điều kiện làm việc') || t.contains('สภาพการทำงาน') ||
+        t.contains('काम करने') || t.contains('සේවා කොන්දේසි') ||
+        t.contains('အလုပ်အခြေအနေ') || t.contains('លក្ខខណ្ឌការងារ') ||
+        t.contains('কাজের অবস্থা') || t.contains('काम गर्ने') ||
+        t.contains('нөхцөл') || t.contains('労働条件') ||
+        t.contains('условия труда') || t.contains('kondisi kerja')) {
+      return isKorean ? '근무조건' : title.trim();
+    }
+    // 접수내용 및 문의 계열
+    if (t == '접수내용 및 문의' || t == '접수내용' ||
+        t.contains('application detail') || t.contains('申请详情') ||
+        t.contains('ứng dụng') || t.contains('การสมัคร') ||
+        t.contains('आवेदन विवरण') || t.contains('අයදුම්පත්') ||
+        t.contains('លម្អិត') || t.contains('আবেদন') ||
+        t.contains('Өргөдлийн') || t.contains('受付') ||
+        t.contains('заявк') || t.contains('aplikasi')) {
+      return isKorean ? '접수내용' : title.trim();
+    }
+    return title.trim();
   }
 
   // 접두 기호 제거 패턴
@@ -1694,15 +1776,46 @@ class _DescriptionText extends StatelessWidget {
   /// key:value를 채용정보/근무조건/기타 섹션으로 그룹핑
   List<_DescSection>? _groupKvIntoSections(String text) {
     const recruitKeys = {
+      // 한국어
       '모집마감', '학력', '모집인원', '우대조건', '기타조건',
       '성별', '경력', '나이', '연령', '지원자격', '자격요건',
       '접수방법', '담당자', '담당자명',
+      // 영어
+      'Recruitment deadline', 'deadline', 'Education', 'Educational background',
+      'Number of recruits', 'Number of people recruited', 'Preferential conditions',
+      'Preferences', 'Other conditions', 'Gender', 'Experience', 'Age',
+      'Qualifications', 'Qualifications for application', 'Eligibility',
+      'How to apply', 'Contact', 'contact information', 'Manager',
+      // 중국어
+      '招聘截止日期', '学历', '招聘人数', '招募人数', '优先条件', '其他条件',
+      '性别', '经验', '年龄', '申请资格', '如何申请', '联系方式',
+      // 일본어
+      '募集締め切り', '学歴', '募集人数', '優遇事項', '応募資格', '支援方法', '連絡先',
     };
     const workKeys = {
+      // 한국어
       '근무기간', '근무요일', '근무시간', '고용형태', '복리후생', '급여',
       '시급', '월급', '담당업무', '업무',
+      // 영어
+      'Working period', 'Period of work', 'Working days', 'Working hours',
+      'Work hours', 'Employment type', 'Welfare benefits', 'Benefits',
+      'Welfare and benefits', 'Salary', 'Hourly wage', 'Monthly salary',
+      'Work details', 'Duties',
+      // 중국어
+      '工作期限', '工作天数', '工作时间', '就业类型', '用工类型', '福利待遇', '工资', '薪资',
+      // 일본어
+      '勤務期間', '勤務曜日', '勤務時間', '雇用形態', '福利厚生', '給与', '時給', '月給',
     };
-    const etcKeys = {'모집직종', '모집부문', '모집분야', '태그'};
+    const etcKeys = {
+      // 한국어
+      '모집직종', '모집부문', '모집분야', '태그',
+      // 영어
+      'Recruitment type', 'Job type', 'Tag', 'Tags',
+      // 중국어
+      '招聘类型', '标签',
+      // 일본어
+      '募集職種', 'タグ',
+    };
 
     final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
     final recruit = <String>[];
@@ -1710,15 +1823,20 @@ class _DescriptionText extends StatelessWidget {
     final etc = <String>[];
     final rest = <String>[];
 
+    // 대소문자 무시 매칭용 lowercase 셋
+    final recruitLower = recruitKeys.map((k) => k.toLowerCase()).toSet();
+    final workLower = workKeys.map((k) => k.toLowerCase()).toSet();
+    final etcLower = etcKeys.map((k) => k.toLowerCase()).toSet();
+
     for (final line in lines) {
       final stripped = _stripPrefix(line.trim());
-      final m = RegExp(r'^(.+?)[:：]\s*').firstMatch(stripped);
-      final key = m?.group(1)?.trim() ?? '';
-      if (recruitKeys.contains(key)) {
+      final m = RegExp('(^.+?)[:：៖]\\s*').firstMatch(stripped);
+      final key = m?.group(1)?.trim().toLowerCase() ?? '';
+      if (recruitLower.contains(key)) {
         recruit.add(line.trim());
-      } else if (workKeys.contains(key)) {
+      } else if (workLower.contains(key)) {
         work.add(line.trim());
-      } else if (etcKeys.contains(key)) {
+      } else if (etcLower.contains(key)) {
         etc.add(line.trim());
       } else {
         rest.add(line.trim());
@@ -1729,15 +1847,16 @@ class _DescriptionText extends StatelessWidget {
     final filled = [recruit, work, etc].where((s) => s.isNotEmpty).length;
     if (filled < 2) return null;
 
+    final isKorean = RegExp(r'[\uAC00-\uD7AF]').hasMatch(text);
     final sections = <_DescSection>[];
     if (recruit.isNotEmpty) {
-      sections.add(_DescSection(title: '채용정보', content: recruit.join('\n')));
+      sections.add(_DescSection(title: isKorean ? '채용정보' : 'Recruitment Info', content: recruit.join('\n')));
     }
     if (work.isNotEmpty) {
-      sections.add(_DescSection(title: '근무조건', content: work.join('\n')));
+      sections.add(_DescSection(title: isKorean ? '근무조건' : 'Working Conditions', content: work.join('\n')));
     }
     if (etc.isNotEmpty) {
-      sections.add(_DescSection(title: '기타', content: etc.join('\n')));
+      sections.add(_DescSection(title: isKorean ? '기타' : 'Others', content: etc.join('\n')));
     }
     if (rest.isNotEmpty) {
       sections.add(_DescSection(title: '', content: rest.join('\n')));
@@ -1780,6 +1899,18 @@ class _DescriptionText extends StatelessWidget {
   };
 
   // CSS/스타일 코드 줄 판별 (한글 포함 줄은 실제 콘텐츠이므로 제외)
+  /// "지원하기" 또는 그 번역만 반복되는 텍스트인지 판별
+  static bool _isApplyOnly(String text) {
+    const applyWords = {
+      '지원하기', 'apply', 'áp dụng', '申请', 'นำมาใช้',
+      'आवेदन करना', 'අයදුම් කරන්න', 'လျှောက်ထားပါ။', 'អនុវត្ត',
+      'আবেদন করুন', 'आवेदन दिनुहोस्', 'өргөдөл гаргах', 'murojaat qiling',
+      'サポートする', 'применять', 'menerapkan',
+    };
+    final words = text.toLowerCase().split(RegExp(r'\s+'));
+    return words.every((w) => w.isEmpty || applyWords.any((a) => a == w || w.contains(a)));
+  }
+
   static bool _isCssLine(String line) {
     if (RegExp(r'[\uAC00-\uD7AF]').hasMatch(line)) return false;
     if (line.contains('{') && (line.contains(';') || line.contains('}'))) return true;
