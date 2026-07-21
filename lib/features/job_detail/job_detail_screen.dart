@@ -16,6 +16,41 @@ import '../../data/repositories/job_repository.dart';
 import '../../data/services/analytics_service.dart';
 import '../../core/widgets/error_retry.dart';
 
+/// K-HIRE 알바천국 브랜드명 — 원문 + 실제 GT 번역 변형 (translate-description 실측 기반)
+/// zh 阿尔巴天堂 / ja アルバ天国 / th อัลบาเฮเว่น / uz Alba osmoni
+/// hi·ne(अल्बा)·bn(আলবা)은 음차 어근만 매칭 (हेवेन/हेभन/स्वर्ग/হেভেন 등 표기 흔들림 대응)
+/// 주의: ja는 アルバ 단독 사용 금지 (アルバイト 오폭)
+const _albaBrand =
+    r'(알바천국|Alba\s?(Heaven|Surga|osmon\w*)|阿尔巴天堂|アルバ天国|আলবা|अल्बा|อัลบาเฮเว่น)';
+
+/// 워터마크 구문 제거 (접두어 + 브랜드, 같은 줄에 실내용이 붙은 케이스 대응)
+final _albaWatermarkRe = RegExp(
+  r'(DESIGNED BY|DIRANCANG OLEH|THIẾT KẾ BỞI|រចនាដោយ)\s*' '$_albaBrand' r'\s*',
+  caseSensitive: false,
+);
+
+/// 구문 제거 후에도 브랜드 언급이 남은 줄 통째 제거
+/// (워터마크 변형 + 번역된 전화 안내문: "I saw this on Alba Heaven..." 등)
+final _albaWatermarkLineRe = RegExp(
+  r'(?:^|\n)[^\n]*' '$_albaBrand' r'[^\n]*(?=\n|$)',
+  caseSensitive: false,
+);
+
+/// K-HIRE 하단 전화 안내 문구 — 원문 + 영어 번역 변형
+final _albaPhoneNoticeRe = RegExp(r'\(전화 문의시.*?\)');
+final _albaPhoneNoticeEnRe =
+    RegExp(r'\((When|For)[^)]{0,120}(phone|call)[^)]*\)', caseSensitive: false);
+
+/// K-HIRE 워터마크/안내문 일괄 제거
+String _stripAlbaGarbage(String text) {
+  var cleaned = text;
+  cleaned = cleaned.replaceAll(_albaPhoneNoticeRe, '');
+  cleaned = cleaned.replaceAll(_albaPhoneNoticeEnRe, '');
+  cleaned = cleaned.replaceAll(_albaWatermarkRe, '');
+  cleaned = cleaned.replaceAll(_albaWatermarkLineRe, '\n');
+  return cleaned;
+}
+
 class JobDetailScreen extends ConsumerWidget {
   final String jobId;
   const JobDetailScreen({super.key, required this.jobId});
@@ -166,18 +201,24 @@ class _DetailBodyState extends State<_DetailBody> {
     } catch (_) {
       // Edge Function 실패 시 DB 캐시 확인 (서버에서 저장 성공했을 수 있음)
       if (!mounted || langCode != widget.langCode) return;
-      try {
-        final job = await JobRepository().getJobById(widget.job.id);
+      // 클라이언트 타임아웃이어도 서버는 번역을 완료해 DB에 저장했을 수 있음
+      // → 지연을 두고 DB 캐시를 2회 재확인 (3초 후, 8초 후)
+      for (final delay in const [Duration(seconds: 3), Duration(seconds: 5)]) {
+        await Future.delayed(delay);
         if (!mounted || langCode != widget.langCode) return;
-        final cached = job?.descriptionTranslations[langCode]?.toString();
-        if (cached != null && cached.isNotEmpty) {
-          setState(() {
-            _translatedHtml = cached;
-            _isTranslating = false;
-          });
-          return;
-        }
-      } catch (_) {}
+        try {
+          final job = await JobRepository().getJobById(widget.job.id);
+          if (!mounted || langCode != widget.langCode) return;
+          final cached = job?.descriptionTranslations[langCode]?.toString();
+          if (cached != null && cached.isNotEmpty) {
+            setState(() {
+              _translatedHtml = cached;
+              _isTranslating = false;
+            });
+            return;
+          }
+        } catch (_) {}
+      }
     }
     if (mounted) setState(() => _isTranslating = false);
   }
@@ -286,25 +327,23 @@ class _DetailBodyState extends State<_DetailBody> {
   bool _hasSectionFormat(String? siteName, String text) {
     if (siteName == 'Jobploy') {
       // _parseJobploySections와 동일 필터 적용
-      return RegExp(r'\[(.+?)\]').allMatches(text).any((m) {
-        final t = m.group(1)!;
-        return !t.contains('>') && !t.contains(':') && !t.contains('：') && t.length <= 15;
+      return RegExp(r'[\[【](.+?)[\]】]').allMatches(text).any((m) {
+        final t = m.group(1)!.trim();
+        return !t.contains('>') && !t.contains(':') && !t.contains('：') && t.length <= 40;
       });
     }
     if (siteName == 'KoMate') {
-      return RegExp(r'📋|🏠|🎁|🚀|🛎️|\[모집분야\]|\[복리후생\]').hasMatch(text);
+      return RegExp(r'📋|🏠|🎁|🚀|🛎️|[\[【](모집분야|복리후생|Recruitment field|Welfare benefits|Welfare and Benefits)[\]】]').hasMatch(text);
     }
     if (siteName == 'Kowork') {
-      return RegExp(r'\[.+\]').hasMatch(text);
+      return RegExp(r'[\[【].+[\]】]').hasMatch(text);
     }
-    if (siteName == 'WorkOn') return text.contains('[모집부문') || text.contains('[근무조건') || text.contains('[복지혜택');
-    if (siteName == 'TalentLink') return text.contains('[담당업무]');
+    if (siteName == 'WorkOn') return RegExp(r'[\[【](주요업무|자격요건|우대사항|복지혜택|모집직무|모집부문|근무조건|직무소개|기타|Main tasks|Main duties|Qualifications|Qualification|Preferential|Welfare|Working conditions|Recruitment|Job introduction)').hasMatch(text);
+    if (siteName == 'TalentLink') return RegExp(r'[\[【](담당업무|Duties|Responsibilities|Company Introduction|Working conditions|Qualifications|Preferential|Recruitment Procedure|Other)').hasMatch(text);
     if (siteName == 'K-Work') return false;
     if (siteName == 'WorkVisa') return false;
     if (siteName == 'K-HIRE') {
-      var cleaned = text;
-      cleaned = cleaned.replaceAll(RegExp(r'DESIGNED BY 알바천국\s*'), '');
-      cleaned = cleaned.replaceAll(RegExp(r"\(전화 문의시.*?\)"), '').trim();
+      var cleaned = _stripAlbaGarbage(text).trim();
       // 알바천국 템플릿 (독립된 줄에서만 매칭)
       const albaSections = ['채용정보', '근무조건', '접수내용 및 문의', '접수내용'];
       final albaPattern = RegExp('(?:^|\\n)\\s*(${albaSections.join('|')})\\s*(?=\\n|\$)', multiLine: true);
@@ -1044,8 +1083,7 @@ class _DescriptionText extends StatelessWidget {
     var cleaned = text;
     // K-HIRE CSS/가비지 제거
     if (siteName == 'K-HIRE') {
-      cleaned = cleaned.replaceAll(RegExp(r'DESIGNED BY 알바천국\s*'), '');
-      cleaned = cleaned.replaceAll(RegExp(r"\(전화 문의시.*?\)"), '');
+      cleaned = _stripAlbaGarbage(cleaned);
       cleaned = cleaned.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '');
       cleaned = cleaned.replaceAll(RegExp(r'\.[\w-]+[^{]*\{[^}]*\}'), '');
       cleaned = cleaned.replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '');
@@ -1112,17 +1150,16 @@ class _DescriptionText extends StatelessWidget {
       if (sections != null) return _buildWorkonSections(sections);
     }
     if (siteName == 'WorkVisa') {
-      // Markdown 클린업 후 자유형으로 표시
+      // 섹션 파서 시도 → 실패 시 key:value 볼드 렌더링
+      final wvResult = _parseWorkVisa(text);
+      if (wvResult != null) return wvResult;
       final wvCleaned = _cleanMarkdown(text).replaceAll(RegExp(r'\n{2,}'), '\n').trim();
       if (wvCleaned.isEmpty) return const SizedBox.shrink();
-      return SelectableText(
-        wvCleaned,
-        style: const TextStyle(fontSize: 14, color: AppColors.gray500, height: 1.8),
-      );
+      return _buildSectionContent(wvCleaned);
     }
 
     // 자유형: Markdown 클린업 + 연속 빈 줄 제거
-    var cleaned = siteName == 'WorkVisa' ? _cleanMarkdown(text) : text;
+    var cleaned = siteName == 'WorkVisa' ? _cleanMarkdown(text) : _stripMdText(text);
     cleaned = cleaned.replaceAll(RegExp(r'\n{2,}'), '\n').trim();
     return SelectableText(
       cleaned,
@@ -1134,19 +1171,24 @@ class _DescriptionText extends StatelessWidget {
     );
   }
 
-  /// Jobploy [섹션명] 파싱
+  /// Jobploy [섹션명] / 【섹션명】 파싱
   List<_DescSection>? _parseJobploySections(String text) {
-    final pattern = RegExp(r'\[(.+?)\]');
-    // NCS 스킬코드(> 포함), 콜론 포함, 15자 초과는 섹션 헤더가 아님
+    final pattern = RegExp(r'[\[【](.+?)[\]】]');
+    // NCS 스킬코드(> 포함), 콜론 포함, 40자 초과는 섹션 헤더가 아님
     final matches = pattern.allMatches(text)
         .where((m) {
-          final t = m.group(1)!;
-          return !t.contains('>') && !t.contains(':') && !t.contains('：') && t.length <= 15;
+          final t = m.group(1)!.trim();
+          return !t.contains('>') && !t.contains(':') && !t.contains('：') && t.length <= 40;
         })
         .toList();
     if (matches.isEmpty) return null;
 
     final sections = <_DescSection>[];
+    // 첫 인정 헤더 이전 텍스트 보존 (번역 헤더가 필터 탈락해도 본문 유실 방지)
+    final before = text.substring(0, matches.first.start).trim();
+    if (before.isNotEmpty) {
+      sections.add(_DescSection(title: '', content: before.replaceAll(RegExp(r'\n{2,}'), '\n')));
+    }
     for (int i = 0; i < matches.length; i++) {
       final title = matches[i].group(1)!;
       final start = matches[i].end;
@@ -1159,17 +1201,46 @@ class _DescriptionText extends StatelessWidget {
     return sections.isEmpty ? null : sections;
   }
 
-  /// Workon 서브 헤더 목록
+  /// Workon 서브 헤더 목록 (한국어 + 번역)
   static const _workonSubHeaders = {
+    // 한국어
     '직무내용', '상세 근무시간', '조직소개', '직무상세', '우대사항',
     '자격요건', '지원 자격', '전형단계', '근무 예정지', '담당업무',
     '모집직무', '주요업무', '전형방법', '접수방법', '제출서류',
     '제출 서류', '접수 방법', '기타', '교대제',
+    // 영어
+    'Job description', 'Job Description', 'Detailed working hours',
+    'Shift system', 'Organization introduction', 'Job details',
+    'Preferential treatment', 'Qualifications', 'Eligibility to apply',
+    'Selection stage', 'Place of work', 'Responsibilities',
+    'Recruitment job', 'Main tasks', 'Selection method',
+    'How to apply', 'Documents to be submitted', 'Etc', 'Others',
+    // 중국어
+    '职位描述', '详细工作时间', '轮班制度', '组织介绍', '职位详情',
+    '优惠待遇', '资格', '申请资格', '选拔阶段', '工作地点',
+    '职责', '招聘职位', '主要任务', '选型方法', '如何申请',
+    '需提交的文件', '其他',
+    // 일본어
+    '職務内容', '詳細な勤務時間', '交代制', '組織紹介', '職務詳細',
+    '優遇事項', '資格要件', '選考段階', '勤務予定地', '担当業務',
+    '募集職務', '主な仕事', '選考方法', '受付方法', '提出書類', 'その他',
+    // 기타 타깃 언어 (직무내용 / 상세 근무시간 계열 — GT 추정 표기)
+    'Nội dung công việc', 'Thời gian làm việc chi tiết',           // vi
+    'รายละเอียดงาน', 'เวลาทำงานโดยละเอียด',                          // th
+    'কাজের বিবরণ', 'বিস্তারিত কাজের সময়',                            // bn
+    'රැකියා විස්තර', 'සවිස්තරාත්මක වැඩ කරන වේලාව',                    // si
+    'လုပ်ငန်းအကြောင်းအရာ', 'အသေးစိတ်အလုပ်ချိန်',                        // my
+    'ខ្លឹមសារការងារ', 'ម៉ោងធ្វើការលម្អិត',                              // km
+    'कामको विवरण', 'विस्तृत काम गर्ने समय',                            // ne
+    'Ish mazmuni', 'Batafsil ish vaqti',                            // uz
+    'Ажлын агуулга', 'Дэлгэрэнгүй ажиллах цаг',                     // mn
+    'Deskripsi pekerjaan', 'Jam kerja terperinci',                  // id
+    'Содержание работы', 'Подробное рабочее время',                 // ru
   };
 
-  /// Workon [섹션명] 파싱
+  /// Workon [섹션명] / 【섹션명】 파싱 (중국어/일본어 번역 대응)
   List<_DescSection>? _parseWorkon(String text) {
-    final pattern = RegExp(r'\[(.+?)\]');
+    final pattern = RegExp(r'[\[【](.+?)[\]】]');
     final matches = pattern.allMatches(text).toList();
     if (matches.isEmpty) return null;
 
@@ -1179,8 +1250,8 @@ class _DescriptionText extends StatelessWidget {
       final start = matches[i].end;
       final end = i + 1 < matches.length ? matches[i + 1].start : text.length;
       var content = text.substring(start, end).trim().replaceAll(RegExp(r'\n{2,}'), '\n');
-      // 빈 섹션 (`-`만) 숨김
-      if (content == '-' || content.isEmpty) continue;
+      // 빈 섹션 (`-`/`None`/`없음`만) 숨김 — 크롤러가 빈 필드를 'None' 문자열로 저장하는 케이스 포함
+      if (content == '-' || content == 'None' || content == '없음' || content.isEmpty) continue;
       sections.add(_DescSection(title: title, content: content));
     }
     return sections.isEmpty ? null : sections;
@@ -1197,17 +1268,21 @@ class _DescriptionText extends StatelessWidget {
           children: [
             if (section.title.isNotEmpty) ...[
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 3, height: 16,
-                    margin: const EdgeInsets.only(right: 8),
+                    margin: const EdgeInsets.only(right: 8, top: 2),
                     decoration: BoxDecoration(
                       color: AppColors.carrot,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  Text(section.title,
-                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.black)),
+                  // 번역된 긴 제목 오버플로우 방지 — 줄바꿈 허용
+                  Expanded(
+                    child: Text(section.title,
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700, color: AppColors.black)),
+                  ),
                 ],
               ),
               const SizedBox(height: 4),
@@ -1226,7 +1301,7 @@ class _DescriptionText extends StatelessWidget {
     final lines = content.split('\n');
     final spans = <InlineSpan>[];
     for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+      final line = _stripMdLine(lines[i].trim()).trim();
       if (line.isEmpty) continue;
 
       if (i > 0 && spans.isNotEmpty) spans.add(const TextSpan(text: '\n'));
@@ -1234,8 +1309,8 @@ class _DescriptionText extends StatelessWidget {
       // 접두 기호 제거 후 체크
       final stripped = line.replaceFirst(RegExp(r'^[◇◆○●▶※·•⦁◎■◈☆★▷→►□▣▲△\-\*\s]+'), '').trim();
 
-      // 서브 헤더 체크 (정확 매칭)
-      if (_workonSubHeaders.contains(line) || _workonSubHeaders.contains(stripped)) {
+      // 서브 헤더 체크 (대소문자 무시)
+      if (_workonSubHeaders.any((h) => h.toLowerCase() == line.toLowerCase() || h.toLowerCase() == stripped.toLowerCase())) {
         if (spans.isNotEmpty) spans.add(const TextSpan(text: '\n'));
         spans.add(TextSpan(
           text: stripped,
@@ -1284,6 +1359,11 @@ class _DescriptionText extends StatelessWidget {
     // JSON/API 가비지 제거
     cleaned = cleaned.replaceAll(RegExp(r'"[a-zA-Z_]+"\s*:\s*"[^"]*"'), '');
     cleaned = cleaned.replaceAll(RegExp(r'"type"\s*:\s*"template"'), '');
+    // JSON 상태 덤프 줄 제거 ("key":숫자/불리언 등 패턴이 3개 이상인 줄 — React Query 덤프)
+    cleaned = cleaned
+        .split('\n')
+        .where((l) => RegExp(r'"[a-zA-Z_]+"\s*:').allMatches(l).length < 3)
+        .join('\n');
     // HTML 태그 잔해 제거 (" style="...", " style='...', class="..." 등)
     cleaned = cleaned.replaceAll(RegExp(r'''"\s*style=["'][^"']*["'][^>]*>'''), '');
     cleaned = cleaned.replaceAll(RegExp(r'''"\s*class=["'][^"']*["'][^>]*>'''), '');
@@ -1316,7 +1396,13 @@ class _DescriptionText extends StatelessWidget {
     );
 
     final matches = headerPattern.allMatches(cleaned).toList();
-    if (matches.isEmpty) return null;
+    if (matches.isEmpty) {
+      // 구조 없음 → 원문 raw 노출 대신 클린업된 텍스트로 렌더링
+      return SelectableText(
+        cleaned,
+        style: const TextStyle(fontSize: 14, color: AppColors.gray500, height: 1.8),
+      );
+    }
 
     final sections = <_DescSection>[];
 
@@ -1346,7 +1432,13 @@ class _DescriptionText extends StatelessWidget {
       }
     }
 
-    if (sections.isEmpty) return null;
+    if (sections.isEmpty) {
+      // 헤더만 있고 내용 없음 → 클린업된 텍스트로 렌더링
+      return SelectableText(
+        cleaned,
+        style: const TextStyle(fontSize: 14, color: AppColors.gray500, height: 1.8),
+      );
+    }
     return _buildSections(sections);
   }
 
@@ -1359,8 +1451,8 @@ class _DescriptionText extends StatelessWidget {
 
     if (cleaned.isEmpty) return null;
 
-    // [섹션명] 패턴 파싱
-    final pattern = RegExp(r'\[([^\]]+)\]');
+    // [섹션명] / 【섹션명】 패턴 파싱
+    final pattern = RegExp(r'[\[【]([^\]】]+)[\]】]');
     final matches = pattern.allMatches(cleaned).toList();
     if (matches.isEmpty) return null;
 
@@ -1392,12 +1484,14 @@ class _DescriptionText extends StatelessWidget {
     cleaned = cleaned.replaceAll('\r\n', '\n');
     cleaned = cleaned.replaceAll('\xa0', ' ');
 
-    // [자격요건] 이후 전부 제거 (100% 가비지)
-    final qualIdx = cleaned.indexOf('[자격요건]');
-    if (qualIdx > 0) cleaned = cleaned.substring(0, qualIdx).trim();
+    // [자격요건]/[Qualifications] 이후 전부 제거 (100% 가비지, zh/ja 번역 포함)
+    final qualPattern = RegExp(r'\[(자격요건|Qualifications|资格要求|資格要件)\]');
+    final qualMatch = qualPattern.firstMatch(cleaned);
+    if (qualMatch != null && qualMatch.start > 0) cleaned = cleaned.substring(0, qualMatch.start).trim();
 
-    // 가비지 제거
+    // 가비지 제거 — ※ 괄호 작성 안내문은 언어 무관 제거 (번역판 대응)
     cleaned = cleaned.replaceAll(RegExp(r'\(※\s*각 항목에 대해 상세히 작성.*?바랍니다\.\)\s*'), '');
+    cleaned = cleaned.replaceAll(RegExp(r'[（(]\s*※[^)）]*[)）]\s*'), '');
     cleaned = cleaned.replaceAll(RegExp(r'(매칭지원센터|기업인력애로센터)\s*[:：]\s*1899-3001[^\n]*\n?'), '');
     cleaned = cleaned.replaceAll(RegExp(r'매칭플랫폼\s*(채널|채팅)?\s*URL\s*[:：][^\n]*\n?'), '');
     cleaned = cleaned.replaceAll(RegExp(r'문의처\s*\n'), '');
@@ -1408,14 +1502,24 @@ class _DescriptionText extends StatelessWidget {
 
     if (cleaned.isEmpty) return null;
 
-    // [담당업무]로 헤더/본문 분리
-    final bodyIdx = cleaned.indexOf('[담당업무]');
-    if (bodyIdx < 0) {
+    // [담당업무]/[Duties in charge]/[Duties]로 헤더/본문 분리
+    final bodyPattern = RegExp(r'\[(담당업무|Duties in charge|Duties|负责业务|担当業務)\]');
+    var bodyMatch = bodyPattern.firstMatch(cleaned);
+    // 다른 언어로 번역된 브래킷: 첫 브래킷 뒤에 □ 구조가 있으면 분리점으로 사용 (□는 언어 무관)
+    if (bodyMatch == null) {
+      final anyBracket = RegExp(r'\[[^\]]{1,25}\]').firstMatch(cleaned);
+      if (anyBracket != null && cleaned.substring(anyBracket.end).contains('□')) {
+        bodyMatch = anyBracket;
+      }
+    }
+    if (bodyMatch == null) {
       return _buildSectionContent(cleaned.replaceAll(RegExp(r'\n{2,}'), '\n'));
     }
 
-    final header = cleaned.substring(0, bodyIdx).trim();
-    var body = cleaned.substring(bodyIdx + '[담당업무]'.length).trim();
+    // 매칭된 브래킷 텍스트를 기본 섹션 제목으로 (번역된 언어 유지)
+    final bodyTitle = cleaned.substring(bodyMatch.start + 1, bodyMatch.end - 1).trim();
+    final header = cleaned.substring(0, bodyMatch.start).trim();
+    var body = cleaned.substring(bodyMatch.end).trim();
     body = body.replaceAll(RegExp(r'\n{2,}'), '\n');
 
     // ◦ 서브헤더 + 고아 값 병합 (◦ 급여정보 \n - 협의 → ◦ 급여정보 : 협의)
@@ -1451,15 +1555,15 @@ class _DescriptionText extends StatelessWidget {
     final sectionMatches = sectionPattern.allMatches(body).toList();
 
     if (sectionMatches.isEmpty) {
-      // □ 없으면 담당업무 하나로
+      // □ 없으면 담당업무(번역 제목) 하나로
       if (body.isNotEmpty) {
-        sections.add(_DescSection(title: '담당업무', content: body));
+        sections.add(_DescSection(title: bodyTitle, content: body));
       }
     } else {
-      // □ 첫 번째 전 텍스트 → 담당업무
+      // □ 첫 번째 전 텍스트 → 담당업무(번역 제목)
       final before = body.substring(0, sectionMatches.first.start).trim();
       if (before.isNotEmpty) {
-        sections.add(_DescSection(title: '담당업무', content: before));
+        sections.add(_DescSection(title: bodyTitle, content: before));
       }
       for (int i = 0; i < sectionMatches.length; i++) {
         final title = sectionMatches[i].group(1)!.trim();
@@ -1496,16 +1600,16 @@ class _DescriptionText extends StatelessWidget {
       (m) => '${m.group(1)}\n${m.group(2)}',
     );
 
-    // 헤더 블록 제거 (첫 번째 [ 이전의 key:value 블록)
-    final firstBracket = cleaned.indexOf('[');
-    if (firstBracket > 0) {
-      cleaned = cleaned.substring(firstBracket).trim();
+    // 헤더 블록 제거 (첫 번째 [ 이전의 key:value 블록) — GT가 전각 【 로 바꾸는 케이스 포함
+    final firstBracket = RegExp(r'[\[【]').firstMatch(cleaned);
+    if (firstBracket != null && firstBracket.start > 0) {
+      cleaned = cleaned.substring(firstBracket.start).trim();
     }
 
     if (cleaned.isEmpty) return null;
 
-    // [섹션] 파싱
-    final pattern = RegExp(r'\[([^\]]*)\]');
+    // [섹션] / 【섹션】 파싱
+    final pattern = RegExp(r'[\[【]([^\]】]*)[\]】]');
     final matches = pattern.allMatches(cleaned).toList();
     if (matches.isEmpty) return null;
 
@@ -1538,16 +1642,25 @@ class _DescriptionText extends StatelessWidget {
   /// Markdown 클린업 (WorkVisa용)
   static String _cleanMarkdown(String text) {
     var s = text;
-    // 이미지 제거 ![alt](url)
+    // 이미지 제거 ![alt](url) + 불완전 이미지 태그
     s = s.replaceAll(RegExp(r'!\[[^\]]*\]\([^)]*\)'), '');
+    s = s.replaceAll(RegExp(r'!\['), '');
     // 이스케이프 해제
     s = s.replaceAllMapped(RegExp(r'\\([,\-\(\)\.\+\*\_\>\!\|\#])'), (m) => m.group(1)!);
-    // 헤더 마커 제거 (텍스트 유지)
-    s = s.replaceAllMapped(RegExp(r'^#{1,6}\s*', multiLine: true), (m) => '');
-    // 볼드 마커 제거
-    s = s.replaceAllMapped(RegExp(r'\*\*(.+?)\*\*'), (m) => m.group(1)!);
+    // 헤더 마커 제거 (텍스트 유지, 앞 공백 포함)
+    s = s.replaceAllMapped(RegExp(r'^\s*#{1,6}\s*', multiLine: true), (m) => '');
+    // 볼드/이탤릭 마커 제거 (***bold italic***, **bold**, *italic*)
+    s = s.replaceAllMapped(RegExp(r'\*{1,3}([^\*]+)\*{1,3}'), (m) => m.group(1)!);
+    // 잔여 연속 * 제거
+    s = s.replaceAll(RegExp(r'\*{2,}'), '');
     // 수평선 제거
     s = s.replaceAll(RegExp(r'^[\*\-]{3,}\s*$', multiLine: true), '');
+    // Markdown 테이블 구분선 제거 (| ---- | ---- |)
+    s = s.replaceAll(RegExp(r'^\s*\|[\s\-:]+\|\s*$', multiLine: true), '');
+    // Markdown 테이블 데이터 줄 → 파이프 제거 (| cell | cell | → cell  cell)
+    s = s.replaceAllMapped(RegExp(r'^\s*\|(.+)\|\s*$', multiLine: true), (m) {
+      return m.group(1)!.replaceAll('|', '  ').trim();
+    });
     // 연속 빈 줄 정리
     s = s.replaceAll(RegExp(r'\n{2,}'), '\n');
     return s.trim();
@@ -1560,17 +1673,18 @@ class _DescriptionText extends StatelessWidget {
 
     // 섹션 헤더 패턴들:
     // ◈ 헤더, ✅/💼/🎁 이모지 헤더, ※ 헤더, ▶ 헤더, 1. 번호 헤더
+    // 번호 헤더는 콜론 포함 줄(1. 근무지 : 이천) 및 25자 초과 제외 — key:value/본문 줄이 삼켜지는 유실 방지
     final headerPattern = RegExp(
       r'(?:^|\n)\s*(?:'
       r'(◈)\s*(.+)'          // ◈ 마커
       r'|'
-      r'(✅|💼|🎁|📌|🏠|🚀|🛎️|📋)\s*(.+)'  // 이모지 마커
+      r'(✅|💼|🎁|📌|🏠|🚀|🛎️|📋|📝|⭐)\s*(.+)'  // 이모지 마커
       r'|'
       r'(※)\s*(.+)'          // ※ 마커
       r'|'
       r'(▶)\s*(.+)'          // ▶ 마커
       r'|'
-      r'(\d+)\.\s*(.+)'      // 번호 마커
+      r'(\d+)\.\s*([^:：\n]{1,25})'  // 번호 마커 (콜론 없는 짧은 제목만)
       r')\s*(?=\n|$)',
       multiLine: true,
     );
@@ -1607,7 +1721,8 @@ class _DescriptionText extends StatelessWidget {
       var content = cleaned.substring(start, end).trim();
       content = content.replaceAll(RegExp(r'\n{2,}'), '\n');
 
-      if (content.isNotEmpty) {
+      // 내용이 없어도 제목은 유지 (※ 안내문 등 헤더 자체가 정보인 경우 유실 방지)
+      if (content.isNotEmpty || title.isNotEmpty) {
         sections.add(_DescSection(title: title, content: content));
       }
     }
@@ -1618,12 +1733,8 @@ class _DescriptionText extends StatelessWidget {
 
   /// K-HIRE 파싱 (알바천국 템플릿 / key:value / 자유형)
   Widget? _parseKHire(String text) {
-    var cleaned = text;
-
-    // 알바천국 워터마크 제거
-    cleaned = cleaned.replaceAll(RegExp(r'DESIGNED BY 알바천국\s*'), '');
-    // 하단 안내 문구 제거
-    cleaned = cleaned.replaceAll(RegExp(r"\(전화 문의시.*?\)"), '');
+    // 알바천국 워터마크(다국어 변형) + 하단 안내 문구 제거
+    var cleaned = _stripAlbaGarbage(text);
     // CSS 블록 통째 제거 (한 줄 인라인 CSS 포함)
     // /* 주석 */ 제거
     cleaned = cleaned.replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '');
@@ -1653,13 +1764,14 @@ class _DescriptionText extends StatelessWidget {
       'भर्ती जानकारी', 'Ажилд авах мэдээлэл', '採用情報',
       'Информация о наборе персонала', 'Informasi perekrutan',
       'බඳවා ගැනීම් පිළිබඳ තොරතුරු', 'សហការ បដិវត្តន៍ គោលនយោបាយ',
+      "Ishga qabul qilish haqida ma'lumot", "Ishga qabul qilish ma'lumotlari",
       // 근무조건
       '근무조건', 'working conditions', 'Working conditions', '工作条件',
       'điều kiện làm việc', 'สภาพการทำงาน', 'काम करने की स्थिति',
       'සේවා කොන්දේසි', 'အလုပ်အခြေအနေများ', 'លក្ខខណ្ឌការងារ',
       'কাজের অবস্থা', 'काम गर्ने अवस्था', 'ажлын нөхцөл',
       '労働条件', 'условия труда', 'kondisi kerja',
-      'လုပ်ငန်းခွင်အခြေအနေများ',
+      'လုပ်ငန်းခွင်အခြေအနေများ', 'Ish sharoitlari',
       // 접수내용 및 문의
       '접수내용 및 문의', 'Application details and inquiries', '申请详情及查询',
       'Chi tiết ứng dụng và yêu cầu', 'รายละเอียดการสมัครและสอบถามข้อมูล',
@@ -1667,6 +1779,8 @@ class _DescriptionText extends StatelessWidget {
       'ព័ត៌មានលម្អិតនៃការដាក់ពាក្យ និងការសាកសួរ', 'আবেদন বিবরণ এবং অনুসন্ধান',
       'आवेदन विवरण र सोधपुछ', 'Өргөдлийн дэлгэрэнгүй мэдээлэл, лавлагаа',
       '受付内容およびお問い合わせ', 'Детали заявки и вопросы', 'Detail aplikasi dan pertanyaan',
+      'Nội dung tiếp nhận và thắc mắc', 'လျှောက်လွှာအသေးစိတ်နှင့် စုံစမ်းမေးမြန်းမှုများ',
+      "Ariza tafsilotlari va so'rovlar",
       // 접수내용
       '접수내용', 'Application details', '申请详情',
       'Chi tiết ứng dụng', 'รายละเอียดการสมัคร',
@@ -1730,7 +1844,13 @@ class _DescriptionText extends StatelessWidget {
       return _buildKeyValueText(cleaned);
     }
 
-    return null; // 자유형 → 기본 plaintext
+    // 자유형: 클린업된 텍스트로 표시 (원문 raw 폴백 시 워터마크/CSS 재노출 방지)
+    final plain = _stripMdText(cleaned).replaceAll(RegExp(r'\n{2,}'), '\n').trim();
+    if (plain.isEmpty) return const SizedBox.shrink();
+    return SelectableText(
+      plain,
+      style: const TextStyle(fontSize: 14, color: AppColors.gray500, height: 1.8),
+    );
   }
 
   /// 번역된 알바천국 섹션 헤더를 정규화 (한국어/비한글 구분)
@@ -1919,11 +2039,23 @@ class _DescriptionText extends StatelessWidget {
     return false;
   }
 
+  /// \uD45C\uC2DC\uC6A9 Markdown \uB9C8\uCEE4 \uC81C\uAC70 (\uC904 \uB2E8\uC704) \u2014 **\uBCFC\uB4DC**, \uC904 \uC120\uB450 # \uD5E4\uB354, \uC794\uC5EC **, \uACE0\uC544 # \uC904
+  static String _stripMdLine(String line) {
+    var s = line.replaceAllMapped(RegExp(r'\*{1,3}([^*]+)\*{1,3}'), (m) => m.group(1)!);
+    s = s.replaceFirst(RegExp(r'^#{1,6}\s+'), '');
+    s = s.replaceFirst(RegExp(r'^#{1,6}\s*$'), '');
+    return s.replaceAll(RegExp(r'\*{2,}'), '');
+  }
+
+  /// \uD45C\uC2DC\uC6A9 Markdown \uB9C8\uCEE4 \uC81C\uAC70 (\uD14D\uC2A4\uD2B8 \uC804\uCCB4)
+  static String _stripMdText(String text) =>
+      text.split('\n').map(_stripMdLine).join('\n');
+
   Widget _buildSectionContent(String content) {
     final lines = content.split('\n');
     final rows = <InlineSpan>[]; // 한 줄 단위
     for (int i = 0; i < lines.length; i++) {
-      final line = lines[i].trim();
+      final line = _stripMdLine(lines[i].trim()).trim();
       if (line.isEmpty) continue;
       if (_isCssLine(line)) continue;
 
@@ -1962,8 +2094,35 @@ class _DescriptionText extends StatelessWidget {
       }
       // 2) 공백 구분 key value
       else if (_matchSectionKey(cleaned) case (final key, final value)?) {
-        final cleanValue = value.replaceFirst(RegExp(r'^[·\*]\s*'), '');
-        if (cleanValue.isEmpty) continue;
+        final cleanValue = value.replaceFirst(RegExp(r'^[·\*:：]\s*'), '');
+        if (cleanValue.isEmpty) {
+          // 값 없는 라벨: 다음 줄에 불릿 값이 오는 서브헤더면 볼드 표시, 아니면 숨김 (빈 필드)
+          final p = prefix.trim();
+          String next = '';
+          for (int j = i + 1; j < lines.length; j++) {
+            final t = lines[j].trim();
+            if (t.isNotEmpty) { next = t; break; }
+          }
+          // 다음 줄이 불릿(①-⑳ 포함)이거나 key:value면 그룹핑 서브헤더로 판단
+          final nextIsBullet = RegExp(r'^[ㆍ·•\-–—◦○▪*①-⑳❶-❿]').hasMatch(next) ||
+              RegExp(r'^[^:：]{1,20}[:：]').hasMatch(next);
+          if (p == '◦' || p == '○' || nextIsBullet) {
+            rows.add(TextSpan(
+              text: '$prefix$key',
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.black, height: 2.0),
+            ));
+          }
+          continue;
+        }
+        // "직종 1 : 생산직" 같은 번호+콜론 값은 원줄 그대로 (이중 콜론 방지)
+        // 시간 값(05:30)은 제외 — 콜론 앞 공백이 있는 경우만
+        if (RegExp(r'^\d+\s+[:：]').hasMatch(cleanValue)) {
+          rows.add(TextSpan(
+            text: line,
+            style: const TextStyle(fontSize: 14, color: AppColors.gray500, height: 1.8),
+          ));
+          continue;
+        }
         rows.add(TextSpan(children: [
           TextSpan(text: '$prefix$key:', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.black, height: 1.8)),
           TextSpan(text: ' $cleanValue', style: const TextStyle(fontSize: 14, color: AppColors.gray500, height: 1.8)),
@@ -2011,22 +2170,26 @@ class _DescriptionText extends StatelessWidget {
             // 헤더 (title이 있을 때만)
             if (section.title.isNotEmpty) ...[
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 3,
                     height: 16,
-                    margin: const EdgeInsets.only(right: 8),
+                    margin: const EdgeInsets.only(right: 8, top: 2),
                     decoration: BoxDecoration(
                       color: AppColors.carrot,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  Text(
-                    section.title,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.black,
+                  // 번역된 긴 제목 오버플로우 방지 — 줄바꿈 허용
+                  Expanded(
+                    child: Text(
+                      section.title,
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.black,
+                      ),
                     ),
                   ),
                 ],

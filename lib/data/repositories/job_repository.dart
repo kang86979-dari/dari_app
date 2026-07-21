@@ -671,10 +671,11 @@ class JobRepository {
 
   /// 공고 설명 Lazy 번역 (Edge Function: 캐시 히트 시 즉시, 미스 시 Google Translate 호출)
   Future<String> translateDescription(String jobId, String langCode) async {
-    final response = await _t(_client.functions.invoke(
+    // 번역은 긴 설명 + 콜드스타트 시 15초를 넘길 수 있어 전용 타임아웃 사용
+    final response = await _client.functions.invoke(
       'translate-description',
       body: {'job_id': jobId, 'lang': langCode},
-    ));
+    ).timeout(const Duration(seconds: 30));
     if (response.status != 200) throw Exception('Translation failed: ${response.status}');
     final data = response.data as Map<String, dynamic>;
     final description = data['description'] as String?;
