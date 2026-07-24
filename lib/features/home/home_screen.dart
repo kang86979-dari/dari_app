@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show FloatingHeaderSnapConfiguration;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -511,27 +512,38 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                   controller: _scrollController,
                   physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
                   slivers: [
-                    // 스크롤되는 검색 영역
-                    SliverToBoxAdapter(
-                      child: filter.isEmpty
-                          ? Column(
-                              children: [
-                                Padding(
-                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                                  child: _searchGrayBox(s),
-                                ),
-                                _filterShortcutBar(s),
-                              ],
-                            )
-                          : _searchWithFilterButton(s, filter),
+                    // 검색 영역: 아래로 스크롤 시 사라지고, 위로 스크롤하면
+                    // (맨 위까지 안 가도) 즉시 다시 나타남 (floating).
+                    // 리스트 위에 겹쳐 나타나므로 흰 배경 필수.
+                    SliverPersistentHeader(
+                      floating: true,
+                      delegate: _FixedHeaderDelegate(
+                        height: _searchHeaderHeight(context, filter.isEmpty),
+                        snap: true,
+                        child: Container(
+                          color: Colors.white,
+                          child: filter.isEmpty
+                              ? Column(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                                      child: _searchGrayBox(s),
+                                    ),
+                                    _filterShortcutBar(s),
+                                  ],
+                                )
+                              : _searchWithFilterButton(s, filter),
+                        ),
+                      ),
                     ),
                     // 고정 영역 (결과 행 / 필터 있을 땐 선택 칩 포함)
                     SliverPersistentHeader(
                       pinned: true,
-                      delegate: _PinnedHeaderDelegate(
+                      delegate: _FixedHeaderDelegate(
                         // 결과 행은 글꼴 확대 시 커지므로 textScaler 반영 (칩 38 고정)
+                        // +20 slack: 오버플로우 방지
                         height: (filter.isEmpty ? 0.0 : 38.0)
-                            + MediaQuery.textScalerOf(context).scale(20) + 14,
+                            + MediaQuery.textScalerOf(context).scale(20) + 20,
                         child: Container(
                           color: Colors.white,
                           child: Column(
@@ -568,6 +580,23 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     ),
       ],
     );
+  }
+
+  // floating 검색 헤더의 고정 높이 (글꼴 확대까지 대응해 넉넉하게 산정)
+  // +slack: 실제 폰트 메트릭/펄스 애니메이션 오차로 인한 BOTTOM OVERFLOW 방지
+  double _searchHeaderHeight(BuildContext context, bool filterEmpty) {
+    final ts = MediaQuery.textScalerOf(context);
+    double lh(double fs) => ts.scale(fs) * 1.45; // 넉넉한 라인 높이
+    double maxD(double a, double b) => a > b ? a : b;
+    const slack = 8.0;
+    // 검색바 박스: padding 13*2 + max(아이콘 18, 텍스트 14)
+    final searchBox = 26 + maxD(18.0, lh(14));
+    if (filterEmpty) {
+      final chip = 8 + lh(12);                       // 칩 padding v4*2 + 텍스트 12
+      final filterBar = 20 + maxD(24.0, chip) + 10;  // 컨테이너 v10*2 + 하단여백 10
+      return (searchBox + 8) + filterBar + slack;    // 검색바 하단여백 8 + 필터바
+    }
+    return searchBox + 10 + slack;                    // Row 하단여백 10
   }
 
   // 검색바 회색 박스 (필터 유무 공통)
@@ -1449,11 +1478,12 @@ class _FilterPulseState extends State<_FilterPulse>
   }
 }
 
-// 상단 고정 슬리버 헤더 (결과 행 / 선택 필터 칩)
-class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+// 고정 높이 슬리버 헤더 델리게이트 (floating 검색 영역 / pinned 결과 행 공용)
+class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double height;
   final Widget child;
-  const _PinnedHeaderDelegate({required this.height, required this.child});
+  final bool snap; // floating 헤더 부드러운 스냅 (스크롤 멈추면 완전히 열림/닫힘)
+  const _FixedHeaderDelegate({required this.height, required this.child, this.snap = false});
 
   @override
   double get minExtent => height;
@@ -1462,10 +1492,20 @@ class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => height;
 
   @override
+  FloatingHeaderSnapConfiguration? get snapConfiguration => snap
+      ? FloatingHeaderSnapConfiguration(
+          curve: Curves.easeOutCubic,
+          duration: const Duration(milliseconds: 220),
+        )
+      : null;
+
+  @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
       SizedBox.expand(child: child);
 
   @override
-  bool shouldRebuild(covariant _PinnedHeaderDelegate oldDelegate) =>
-      oldDelegate.height != height || oldDelegate.child != child;
+  bool shouldRebuild(covariant _FixedHeaderDelegate oldDelegate) =>
+      oldDelegate.height != height ||
+      oldDelegate.snap != snap ||
+      oldDelegate.child != child;
 }

@@ -13,6 +13,7 @@ class AdBanner extends StatefulWidget {
 class _AdBannerState extends State<AdBanner> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -41,6 +42,7 @@ class _AdBannerState extends State<AdBanner> {
           // 에러 코드별 이벤트 (Firebase에서 바로 확인용)
           analytics.log('ad_fail_code_${error.code}');
           ad.dispose();
+          if (mounted) setState(() => _failed = true); // 실패 시 예약 공간 회수
         },
         onAdClicked: (_) => AdHelper.markAdClicked(),
         onAdOpened: (_) => AdHelper.markAdClicked(),
@@ -56,11 +58,15 @@ class _AdBannerState extends State<AdBanner> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isLoaded || _bannerAd == null) return const SizedBox.shrink();
+    // 로드 실패 시에만 공간 회수. 로드 전(로딩 중)에도 높이를 예약해
+    // 배너가 뒤늦게 뜰 때 리스트가 밀리는 점프(멀미)를 방지.
+    if (_failed) return const SizedBox.shrink();
     return SizedBox(
       width: double.infinity,
       height: AdSize.banner.height.toDouble(),
-      child: Center(child: AdWidget(ad: _bannerAd!)),
+      child: (_isLoaded && _bannerAd != null)
+          ? Center(child: AdWidget(ad: _bannerAd!))
+          : null,
     );
   }
 }
