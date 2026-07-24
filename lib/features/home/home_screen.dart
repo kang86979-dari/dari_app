@@ -12,6 +12,7 @@ import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/language_provider.dart';
+import '../../core/utils/ad_helper.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/utils/district_names.dart';
 import '../../data/repositories/job_repository.dart';
@@ -228,6 +229,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // 광고 클릭 후 복귀: 리스트 위치 유지 (갱신/앱오픈광고 스킵)
+      if (AdHelper.consumeAdClicked()) {
+        if (kDebugMode) print('🔵 resumed: ad click return, skip refresh');
+        return;
+      }
       JobRepository.clearCountCache();
       final isCurrent = ModalRoute.of(context)?.isCurrent == true;
       if (kDebugMode) print('🔵 resumed: isCurrent=$isCurrent');
@@ -493,192 +499,55 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               ),
             ),
 
-            // 검색 + 필터
-            if (filter.isEmpty) ...[
-              // 필터 미설정: 검색바 풀 + 아래 필터 바로가기
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-                child: GestureDetector(
-                  onTap: () {
-                    analytics.searchBarTap();
-                    context.push('/search');
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.all(13),
-                    decoration: BoxDecoration(
-                      color: AppColors.gray50,
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.search, size: 18, color: AppColors.gray300),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            s.searchHint,
-                            style: const TextStyle(fontSize: 14, color: AppColors.gray300),
-                            overflow: TextOverflow.ellipsis,
-                            maxLines: 1,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                child: _FilterPulse(
-                  enabled: true,
-                  child: GestureDetector(
-                    onTap: () => context.push('/filter'),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                      decoration: BoxDecoration(
-                        color: AppColors.carrot,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: LayoutBuilder(
-                        builder: (context, constraints) {
-                          // 고정 요소 너비: icon(15) + gaps(8+8+6+6) + container padding 제외(LayoutBuilder 안이라 이미 제외)
-                          // "Filter:" 텍스트 너비 추정: fontSize 13 * 0.6 per char
-                          // 칩 너비 추정: padding(16) + fontSize 12 * 0.65 per char
-                          const chipPad = 16.0;
-                          const charW = 7.8; // 평균 글자 너비 (라틴+CJK 혼합)
-                          const fixedW = 15 + 8 + 8 + 6 + 6; // icon + gaps
-                          final filterLabelW = (s.filter as String).length * 6.5 + 4; // "Filter:" + ":"
-                          final baseChipsW = chipPad + s.tabVisa.length * charW  // VISA
-                              + 6 + chipPad + s.tabRegion.length * charW          // Region
-                              + 6 + chipPad + s.filterMore.length * charW;        // + More
-                          final salaryChipW = 6 + chipPad + s.tabSalary.length * charW;
-                          final baseTotal = fixedW + filterLabelW + baseChipsW;
-                          final showSalary = (baseTotal + salaryChipW) <= constraints.maxWidth;
-
-                          return Row(
-                            children: [
-                              const Icon(Icons.tune, size: 15, color: Colors.white70),
-                              const SizedBox(width: 8),
-                              Text('${s.filter}:',
-                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70)),
-                              const SizedBox(width: 8),
-                              _FilterShortcutChip(label: s.tabVisa, onTap: () => context.push('/filter?tab=0')),
-                              const SizedBox(width: 6),
-                              _FilterShortcutChip(label: s.tabRegion, onTap: () => context.push('/filter?tab=3')),
-                              if (showSalary) ...[
-                                const SizedBox(width: 6),
-                                _FilterShortcutChip(label: s.tabSalary, onTap: () => context.push('/filter?tab=4')),
-                              ],
-                              const SizedBox(width: 6),
-                              _FilterShortcutChip(label: s.filterMore, onTap: () => context.push('/filter')),
-                            ],
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ] else ...[
-              // 필터 설정됨: 검색바 + 필터 버튼 나란히
-              Padding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          analytics.searchBarTap();
-                          context.push('/search');
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(13),
-                          decoration: BoxDecoration(
-                            color: AppColors.gray50,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Row(
-                            children: [
-                              const Icon(Icons.search, size: 18, color: AppColors.gray300),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  s.searchHint,
-                                  style: const TextStyle(fontSize: 14, color: AppColors.gray300),
-                                  overflow: TextOverflow.ellipsis,
-                                  maxLines: 1,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    GestureDetector(
-                      onTap: () => context.push('/filter'),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        decoration: BoxDecoration(
-                          color: AppColors.carrotDark,
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.tune, size: 16, color: Colors.white),
-                            const SizedBox(width: 6),
-                            Text(s.filter,
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-                            const SizedBox(width: 6),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Text(
-                                '${_adjustedActiveCount(filter)}',
-                                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.carrot),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-
-            // 선택된 필터 칩 (읽기 전용)
-            if (!filter.isEmpty)
-              _ReadOnlyFilterChips(filter: filter, ref: ref),
-
-            // 결과 행
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
-              child: Row(
-                children: [
-                  _TotalCount(s: s),
-                  const Spacer(),
-                  _PartTimeCheckbox(s: s),
-                ],
-              ),
-            ),
-
-            // 공고 목록
+            // 검색/필터 영역 + 목록
+            // 검색바(및 필터 없을 때 필터 바로가기 바 / 필터 있을 때 필터 버튼)는
+            // 스크롤 시 함께 올라가고, 결과 행(+선택 필터 칩)은 상단 고정.
             Expanded(
               child: RefreshIndicator(
                 color: AppColors.carrot,
                 onRefresh: _onRefresh,
-                child: _isRefreshing
-                  ? _buildSkeleton()
-                  : jobsAsync.when(
-                      data: (jobs) => _buildJobList(jobs, langCode),
-                      loading: () => _buildSkeleton(),
-                      error: (e, _) => ErrorRetry(
-                        onRetry: () => ref.invalidate(jobListProvider(0)),
+                child: CustomScrollView(
+                  key: ValueKey(langCode),
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+                  slivers: [
+                    // 스크롤되는 검색 영역
+                    SliverToBoxAdapter(
+                      child: filter.isEmpty
+                          ? Column(
+                              children: [
+                                Padding(
+                                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
+                                  child: _searchGrayBox(s),
+                                ),
+                                _filterShortcutBar(s),
+                              ],
+                            )
+                          : _searchWithFilterButton(s, filter),
+                    ),
+                    // 고정 영역 (결과 행 / 필터 있을 땐 선택 칩 포함)
+                    SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _PinnedHeaderDelegate(
+                        // 결과 행은 글꼴 확대 시 커지므로 textScaler 반영 (칩 38 고정)
+                        height: (filter.isEmpty ? 0.0 : 38.0)
+                            + MediaQuery.textScalerOf(context).scale(20) + 14,
+                        child: Container(
+                          color: Colors.white,
+                          child: Column(
+                            children: [
+                              if (!filter.isEmpty)
+                                _ReadOnlyFilterChips(filter: filter, ref: ref),
+                              _resultRow(s),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
+                    // 공고 목록
+                    ..._buildListSlivers(jobsAsync, langCode),
+                  ],
+                ),
               ),
             ),
           ],
@@ -701,104 +570,271 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     );
   }
 
-  Widget _buildSkeleton() {
-    return Column(
-      children: [
-        SizedBox(
-          height: 3,
-          child: LinearProgressIndicator(
-            backgroundColor: const Color(0xFFF0F0F0),
-            valueColor: const AlwaysStoppedAnimation(AppColors.carrot),
+  // 검색바 회색 박스 (필터 유무 공통)
+  Widget _searchGrayBox(dynamic s) {
+    return GestureDetector(
+      onTap: () {
+        analytics.searchBarTap();
+        context.push('/search');
+      },
+      child: Container(
+        padding: const EdgeInsets.all(13),
+        decoration: BoxDecoration(
+          color: AppColors.gray50,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.search, size: 18, color: AppColors.gray300),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                s.searchHint,
+                style: const TextStyle(fontSize: 14, color: AppColors.gray300),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 필터 미설정 시: 검색바 아래 필터 바로가기 바
+  Widget _filterShortcutBar(dynamic s) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+      child: _FilterPulse(
+        enabled: true,
+        child: GestureDetector(
+          onTap: () => context.push('/filter'),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            decoration: BoxDecoration(
+              color: AppColors.carrot,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                // 고정 요소 너비: icon(15) + gaps(8+8+6+6) + container padding 제외(LayoutBuilder 안이라 이미 제외)
+                // "Filter:" 텍스트 너비 추정: fontSize 13 * 0.6 per char
+                // 칩 너비 추정: padding(16) + fontSize 12 * 0.65 per char
+                const chipPad = 16.0;
+                const charW = 7.8; // 평균 글자 너비 (라틴+CJK 혼합)
+                const fixedW = 15 + 8 + 8 + 6 + 6; // icon + gaps
+                final filterLabelW = (s.filter as String).length * 6.5 + 4; // "Filter:" + ":"
+                final baseChipsW = chipPad + s.tabVisa.length * charW  // VISA
+                    + 6 + chipPad + s.tabRegion.length * charW          // Region
+                    + 6 + chipPad + s.filterMore.length * charW;        // + More
+                final salaryChipW = 6 + chipPad + s.tabSalary.length * charW;
+                final baseTotal = fixedW + filterLabelW + baseChipsW;
+                final showSalary = (baseTotal + salaryChipW) <= constraints.maxWidth;
+
+                return Row(
+                  children: [
+                    const Icon(Icons.tune, size: 15, color: Colors.white70),
+                    const SizedBox(width: 8),
+                    Text('${s.filter}:',
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70)),
+                    const SizedBox(width: 8),
+                    _FilterShortcutChip(label: s.tabVisa, onTap: () => context.push('/filter?tab=0')),
+                    const SizedBox(width: 6),
+                    _FilterShortcutChip(label: s.tabRegion, onTap: () => context.push('/filter?tab=3')),
+                    if (showSalary) ...[
+                      const SizedBox(width: 6),
+                      _FilterShortcutChip(label: s.tabSalary, onTap: () => context.push('/filter?tab=4')),
+                    ],
+                    const SizedBox(width: 6),
+                    _FilterShortcutChip(label: s.filterMore, onTap: () => context.push('/filter')),
+                  ],
+                );
+              },
+            ),
           ),
         ),
-        const Expanded(
-          child: SingleChildScrollView(
-            child: Column(
-              children: [
-                SkeletonCard(),
-                SkeletonCard(),
-                SkeletonCard(),
-              ],
+      ),
+    );
+  }
+
+  // 필터 설정 시: 검색바 + 필터 버튼 나란히
+  Widget _searchWithFilterButton(dynamic s, FilterState filter) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+      child: Row(
+        children: [
+          Expanded(child: _searchGrayBox(s)),
+          const SizedBox(width: 10),
+          GestureDetector(
+            onTap: () => context.push('/filter'),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppColors.carrotDark,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.tune, size: 16, color: Colors.white),
+                  const SizedBox(width: 6),
+                  Text(s.filter,
+                    style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '${_adjustedActiveCount(filter)}',
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.carrot),
+                    ),
+                  ),
+                ],
+              ),
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // 결과 행 (Total 건수 + 알바만 체크)
+  Widget _resultRow(dynamic s) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+      child: Row(
+        children: [
+          _TotalCount(s: s),
+          const Spacer(),
+          _PartTimeCheckbox(s: s),
+        ],
+      ),
+    );
+  }
+
+  // 목록 영역 슬리버 (상태별)
+  List<Widget> _buildListSlivers(AsyncValue<List<Job>> jobsAsync, String langCode) {
+    if (_isRefreshing) return _skeletonSlivers();
+    return jobsAsync.when(
+      data: (jobs) => _jobListSlivers(jobs, langCode),
+      loading: () => _skeletonSlivers(),
+      error: (e, _) => [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: ErrorRetry(
+            onRetry: () => ref.invalidate(jobListProvider(0)),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildJobList(List<Job> initialJobs, String langCode) {
+  List<Widget> _skeletonSlivers() {
+    return [
+      SliverToBoxAdapter(
+        child: SizedBox(
+          height: 3,
+          child: LinearProgressIndicator(
+            backgroundColor: const Color(0xFFF0F0F0),
+            valueColor: const AlwaysStoppedAnimation(AppColors.carrot),
+          ),
+        ),
+      ),
+      const SliverToBoxAdapter(
+        child: Column(
+          children: [
+            SkeletonCard(),
+            SkeletonCard(),
+            SkeletonCard(),
+          ],
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _jobListSlivers(List<Job> initialJobs, String langCode) {
     // 초기 로드 시 리셋
     if (!_initialLoaded) {
       _resetAndLoad(initialJobs);
     }
 
     if (_jobs.isEmpty) {
-      return Center(
-        child: Text(
-          ref.read(stringsProvider).noJobs,
-          style: const TextStyle(fontSize: 16, color: AppColors.gray400),
+      return [
+        SliverFillRemaining(
+          hasScrollBody: false,
+          child: Center(
+            child: Text(
+              ref.read(stringsProvider).noJobs,
+              style: const TextStyle(fontSize: 16, color: AppColors.gray400),
+            ),
+          ),
         ),
-      );
+      ];
     }
 
     final totalItems = _jobs.length + (_jobs.length ~/ 3) + 1 + (_isLoadingMore ? 1 : 0);
 
-    return ListView.builder(
-      key: ValueKey(langCode),
-      controller: _scrollController,
-      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-      padding: const EdgeInsets.only(bottom: 20),
-      itemCount: totalItems,
-      itemBuilder: (context, index) {
-        // 로딩 인디케이터 (마지막)
-        if (_isLoadingMore && index == totalItems - 1) {
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: 16),
-            child: Center(child: CircularProgressIndicator(color: AppColors.carrot)),
-          );
-        }
+    return [
+      SliverPadding(
+        padding: const EdgeInsets.only(bottom: 20),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) {
+              // 로딩 인디케이터 (마지막)
+              if (_isLoadingMore && index == totalItems - 1) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(child: CircularProgressIndicator(color: AppColors.carrot)),
+                );
+              }
 
-        if (index == 0) return const AdBanner();
+              if (index == 0) return const AdBanner();
 
-        final adjustedIndex = index - 1;
-        final isAd = (adjustedIndex + 1) % 4 == 0 && adjustedIndex > 0;
+              final adjustedIndex = index - 1;
+              final isAd = (adjustedIndex + 1) % 4 == 0 && adjustedIndex > 0;
 
-        if (isAd) return const AdBanner();
+              if (isAd) return const AdBanner();
 
-        final adCount = adjustedIndex ~/ 4;
-        final jobIndex = adjustedIndex - adCount;
-        if (jobIndex >= _jobs.length) return const SizedBox.shrink();
+              final adCount = adjustedIndex ~/ 4;
+              final jobIndex = adjustedIndex - adCount;
+              if (jobIndex >= _jobs.length) return const SizedBox.shrink();
 
-        final job = _jobs[jobIndex];
-        return JobCard(
-          job: job,
-          langCode: langCode,
-          alwaysOpen: ref.read(stringsProvider).alwaysOpen,
-          salaryFallback: ref.read(stringsProvider).salaryByCompany,
-          strings: ref.read(stringsProvider),
-          isFavorite: ref.watch(isFavoriteProvider(job.id)),
-          onTap: () {
-            analytics.jobCardTap(job.id, jobIndex);
-            context.push('/job/${job.id}');
-          },
-          onFavoriteToggle: () {
-            final isFav = ref.read(isFavoriteProvider(job.id));
-            if (isFav) {
-              analytics.favoriteRemoved(job.id);
-            } else {
-              analytics.favoriteAdded(job.id, 'home');
-            }
-            ref.read(favoriteProvider.notifier).toggle(job.id);
-            final s = ref.read(stringsProvider);
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-              duration: const Duration(seconds: 1),
-              behavior: SnackBarBehavior.floating,
-            ));
-          },
-        );
-      },
-    );
+              final job = _jobs[jobIndex];
+              return JobCard(
+                job: job,
+                langCode: langCode,
+                alwaysOpen: ref.read(stringsProvider).alwaysOpen,
+                salaryFallback: ref.read(stringsProvider).salaryByCompany,
+                strings: ref.read(stringsProvider),
+                isFavorite: ref.watch(isFavoriteProvider(job.id)),
+                onTap: () {
+                  analytics.jobCardTap(job.id, jobIndex);
+                  context.push('/job/${job.id}');
+                },
+                onFavoriteToggle: () {
+                  final isFav = ref.read(isFavoriteProvider(job.id));
+                  if (isFav) {
+                    analytics.favoriteRemoved(job.id);
+                  } else {
+                    analytics.favoriteAdded(job.id, 'home');
+                  }
+                  ref.read(favoriteProvider.notifier).toggle(job.id);
+                  final s = ref.read(stringsProvider);
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
+                    duration: const Duration(seconds: 1),
+                    behavior: SnackBarBehavior.floating,
+                  ));
+                },
+              );
+            },
+            childCount: totalItems,
+          ),
+        ),
+      ),
+    ];
   }
 }
 
@@ -1411,4 +1447,25 @@ class _FilterPulseState extends State<_FilterPulse>
     if (!widget.enabled) return widget.child;
     return ScaleTransition(scale: _animation, child: widget.child);
   }
+}
+
+// 상단 고정 슬리버 헤더 (결과 행 / 선택 필터 칩)
+class _PinnedHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double height;
+  final Widget child;
+  const _PinnedHeaderDelegate({required this.height, required this.child});
+
+  @override
+  double get minExtent => height;
+
+  @override
+  double get maxExtent => height;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      SizedBox.expand(child: child);
+
+  @override
+  bool shouldRebuild(covariant _PinnedHeaderDelegate oldDelegate) =>
+      oldDelegate.height != height || oldDelegate.child != child;
 }

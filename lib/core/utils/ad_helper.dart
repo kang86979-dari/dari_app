@@ -5,6 +5,18 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class AdHelper {
   AdHelper._();
 
+  // 광고 클릭 → 외부 이탈 → 복귀 시 홈 리스트 갱신/앱오픈광고 스킵용 플래그
+  static bool _adClicked = false;
+
+  static void markAdClicked() => _adClicked = true;
+
+  /// resume 시 1회 소비 — true면 광고 클릭으로 인한 복귀
+  static bool consumeAdClicked() {
+    final v = _adClicked;
+    _adClicked = false;
+    return v;
+  }
+
   static String get bannerId => kDebugMode
       ? dotenv.env['AD_BANNER_ID_TEST']!
       : dotenv.env['AD_BANNER_ID']!;

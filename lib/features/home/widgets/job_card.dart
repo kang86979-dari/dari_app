@@ -27,10 +27,10 @@ class JobCard extends StatelessWidget {
     this.expiredLabel,
   });
 
-  // 긴 단어 언어는 폰트 축소하여 2줄 유지
+  // CJK는 제목이 짧아 16 유지, 번역 언어는 텍스트가 길어져 축소 (2줄 내 표시)
   static double _titleFontSize(String langCode) {
-    const compact = {'ru', 'bn', 'hi', 'ne', 'si', 'my'};
-    return compact.contains(langCode) ? 14.5 : 16.0;
+    const cjk = {'ko', 'ja', 'zh', 'zh-yue'};
+    return cjk.contains(langCode) ? 16.0 : 14.5;
   }
 
   String _displaySalary() {

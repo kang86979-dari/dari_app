@@ -42,6 +42,8 @@ class _AdBannerState extends State<AdBanner> {
           analytics.log('ad_fail_code_${error.code}');
           ad.dispose();
         },
+        onAdClicked: (_) => AdHelper.markAdClicked(),
+        onAdOpened: (_) => AdHelper.markAdClicked(),
       ),
     )..load();
   }
