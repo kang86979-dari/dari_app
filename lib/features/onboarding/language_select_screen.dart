@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,7 +30,8 @@ class LanguageSelectScreen extends ConsumerWidget {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) async {
-        if (!didPop) await SystemNavigator.pop();
+        // Android: 백키 = 앱 종료. iOS: 프로그래매틱 종료는 심사 가이드 위반 → 무시
+        if (!didPop && Platform.isAndroid) await SystemNavigator.pop();
       },
       child: Scaffold(
         body: SafeArea(

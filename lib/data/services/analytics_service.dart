@@ -5,17 +5,18 @@ class AnalyticsService {
   factory AnalyticsService() => _instance;
   AnalyticsService._();
 
-  late final FirebaseAnalytics _ga;
+  // Firebase 초기화 실패 시 null 유지 → 모든 호출 no-op (iOS plist 미배치 등)
+  FirebaseAnalytics? _ga;
   String _langCode = 'en';
 
   void init() {
     _ga = FirebaseAnalytics.instance;
-    _ga.setAnalyticsCollectionEnabled(true);
+    _ga?.setAnalyticsCollectionEnabled(true);
   }
 
   void setLangCode(String code) {
     _langCode = code;
-    _ga.setUserProperty(name: 'app_language', value: code);
+    _ga?.setUserProperty(name: 'app_language', value: code);
   }
 
   Future<void> log(String eventName, [Map<String, dynamic>? data]) async {
@@ -32,14 +33,14 @@ class AnalyticsService {
           }
         }
       }
-      await _ga.logEvent(name: eventName, parameters: params);
+      await _ga?.logEvent(name: eventName, parameters: params);
     } catch (_) {}
   }
 
   // ── 편의 메서드 ──
 
   void screenView(String screenName) =>
-      _ga.logEvent(name: 'screen_view', parameters: {'screen_name': screenName});
+      _ga?.logEvent(name: 'screen_view', parameters: {'screen_name': screenName});
 
   void languageSelected(String langCode) =>
       log('language_selected', {'lang_code': langCode});

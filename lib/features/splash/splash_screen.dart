@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'package:app_tracking_transparency/app_tracking_transparency.dart';
+import 'package:facebook_app_events/facebook_app_events.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -22,8 +25,29 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     _navigate();
   }
 
+  /// iOS ATT(앱 추적 투명성) 동의 요청 — 광고 요청 전에 1회 (Apple 심사 필수)
+  Future<void> _requestTrackingIfNeeded() async {
+    if (!Platform.isIOS) return;
+    try {
+      final status = await AppTrackingTransparency.trackingAuthorizationStatus;
+      if (status == TrackingStatus.notDetermined) {
+        // 스플래시 렌더 후 요청해야 다이얼로그가 표시됨
+        await Future.delayed(const Duration(milliseconds: 300));
+        final result =
+            await AppTrackingTransparency.requestTrackingAuthorization();
+        analytics.log('att_result', {'status': result.name});
+        if (result == TrackingStatus.authorized) {
+          FacebookAppEvents().setAdvertiserTracking(enabled: true);
+        }
+      } else if (status == TrackingStatus.authorized) {
+        FacebookAppEvents().setAdvertiserTracking(enabled: true);
+      }
+    } catch (_) {}
+  }
+
   Future<void> _navigate() async {
     analytics.screenView('splash');
+    await _requestTrackingIfNeeded();
     await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
 

@@ -43,7 +43,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   }
 
   Future<void> _loadPushSetting() async {
-    final settings = await FirebaseMessaging.instance.getNotificationSettings();
+    // Firebase 미초기화(iOS plist 미배치 등) 시 푸시 설정 비활성 표시
+    NotificationSettings? settings;
+    try {
+      settings = await FirebaseMessaging.instance.getNotificationSettings();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _pushEnabled = false;
+        _loaded = true;
+      });
+      return;
+    }
     final osAllowed = settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional;
     final appEnabled = await pushService.isEnabled();
@@ -73,8 +84,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     }
 
     if (value) {
-      // OS 권한 확인
-      final settings = await FirebaseMessaging.instance.requestPermission();
+      // OS 권한 확인 (Firebase 미초기화 시 무시)
+      NotificationSettings settings;
+      try {
+        settings = await FirebaseMessaging.instance.requestPermission();
+      } catch (_) {
+        return;
+      }
       if (settings.authorizationStatus != AuthorizationStatus.authorized &&
           settings.authorizationStatus != AuthorizationStatus.provisional) {
         // 권한 거부됨 → 다이얼로그로 OS 설정 안내

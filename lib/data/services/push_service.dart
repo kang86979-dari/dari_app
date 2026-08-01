@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:ui';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -46,8 +47,17 @@ class PushService {
   Future<void> _doInit() async {
     final messaging = FirebaseMessaging.instance;
 
-    // 알림 채널 생성 (Android)
-    await _createNotificationChannel();
+    if (Platform.isAndroid) {
+      // 알림 채널 생성 (Android 전용)
+      await _createNotificationChannel();
+    } else if (Platform.isIOS) {
+      // iOS: 포그라운드 수신 시 OS가 알림을 직접 표시 (로컬 알림 불필요)
+      await messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    }
 
     final settings = await messaging.requestPermission(
       alert: true,
@@ -59,7 +69,20 @@ class PushService {
       return;
     }
 
-    _token = await messaging.getToken();
+    // iOS: APNs 토큰 준비 전 getToken() 호출 시 예외 발생 (시뮬레이터는 APNs 미지원)
+    try {
+      if (Platform.isIOS) {
+        final apns = await messaging.getAPNSToken();
+        if (apns == null) {
+          if (kDebugMode) print('🟡 APNs 토큰 없음 (시뮬레이터?) — FCM 토큰 발급 생략');
+          return;
+        }
+      }
+      _token = await messaging.getToken();
+    } catch (e) {
+      if (kDebugMode) print('🔴 FCM 토큰 발급 실패: $e');
+      return;
+    }
     if (_token != null) {
       final prefs = await SharedPreferences.getInstance();
       final oldToken = prefs.getString(_tokenKey);
@@ -83,8 +106,10 @@ class PushService {
       }
     });
 
-    // 포그라운드 메시지 핸들러
-    FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+    // 포그라운드 메시지 핸들러 (Android만 — iOS는 setForegroundNotificationPresentationOptions가 처리)
+    if (Platform.isAndroid) {
+      FirebaseMessaging.onMessage.listen(_showForegroundNotification);
+    }
   }
 
   /// Android 알림 채널 생성 (HIGH importance → 헤드업 + 잠금화면 표시)
@@ -198,9 +223,13 @@ class PushService {
     required FilterState filter,
     required String langCode,
   }) async {
-    // 토큰이 아직 없으면 발급 시도
+    // 토큰이 아직 없으면 발급 시도 (iOS 시뮬레이터 등 APNs 미지원 환경은 예외 무시)
     if (_token == null) {
-      _token = await FirebaseMessaging.instance.getToken();
+      try {
+        _token = await FirebaseMessaging.instance.getToken();
+      } catch (_) {
+        return;
+      }
       if (_token == null) return;
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_tokenKey, _token!);

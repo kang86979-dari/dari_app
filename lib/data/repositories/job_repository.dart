@@ -17,20 +17,25 @@ class JobRepository {
   /// 타임아웃 래퍼
   Future<T> _t<T>(Future<T> future) => future.timeout(_timeout);
 
-  /// Performance 트레이스 래퍼
+  /// Performance 트레이스 래퍼 (Firebase 미초기화 시 트레이스 없이 실행)
   Future<T> _traced<T>(String name, Future<T> Function() fn) async {
-    final trace = FirebasePerformance.instance.newTrace(name);
-    await trace.start();
+    Trace? trace;
+    try {
+      trace = FirebasePerformance.instance.newTrace(name);
+      await trace.start();
+    } catch (_) {
+      trace = null; // Firebase 미초기화 (iOS plist 미배치 등) → 트레이스 생략
+    }
     try {
       final result = await fn();
-      trace.putAttribute('status', 'success');
+      trace?.putAttribute('status', 'success');
       return result;
     } catch (e) {
-      trace.putAttribute('status', 'error');
-      trace.putAttribute('error', e.runtimeType.toString());
+      trace?.putAttribute('status', 'error');
+      trace?.putAttribute('error', e.runtimeType.toString());
       rethrow;
     } finally {
-      await trace.stop();
+      await trace?.stop();
     }
   }
 

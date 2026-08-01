@@ -7,7 +7,41 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Korea Job</string>
+	<string>Dari</string>
+	<key>NSUserTrackingUsageDescription</key>
+	<string>This allows us to show you more relevant job ads and keep the app free.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to show jobs near you.</string>
+	<key>GADApplicationIdentifier</key>
+	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>FacebookAppID</key>
+	<string>983463687782706</string>
+	<key>FacebookClientToken</key>
+	<string>3a0434df512b839137374a6a2739a8b3</string>
+	<key>FacebookDisplayName</key>
+	<string>Dari</string>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<true/>
+	<key>FacebookAdvertiserIDCollectionEnabled</key>
+	<true/>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>fbapi</string>
+		<string>fb-messenger-share-api</string>
+	</array>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fb983463687782706</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
