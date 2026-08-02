@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -228,6 +229,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     ),
                     onTap: _showLanguageSheet,
                   ),
+
+                  // [DEV] 디버그 전용 진입점 (릴리즈 빌드엔 미노출)
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'DEV'),
+                    _SettingsTile(
+                      title: 'Apply WebView 분석',
+                      subtitle: 'K-HIRE 로그인/폼 HTML 덤프 도구',
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
+                      onTap: () => context.push('/dev/apply-webview'),
+                    ),
+                  ],
                 ],
               ),
             ),

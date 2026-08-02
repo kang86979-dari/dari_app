@@ -13,6 +13,7 @@ import 'features/search/search_screen.dart';
 import 'features/filter/filter_screen.dart';
 import 'features/job_detail/job_detail_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/dev/apply_webview_debug_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
@@ -63,6 +64,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final id = state.pathParameters['id']!;
           return JobDetailScreen(jobId: id);
         },
+      ),
+      // [DEV] 지원하기 WebView 분석 도구
+      GoRoute(
+        path: '/dev/apply-webview',
+        builder: (context, state) => const ApplyWebViewDebugScreen(),
       ),
     ],
   );
