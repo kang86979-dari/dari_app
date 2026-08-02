@@ -102,6 +102,7 @@ class JobRepository {
     required int limit,
     required int offset,
     String sortBy = 'latest',
+    bool includeTesting = false,
   }) async {
     final params = <String, dynamic>{
       'p_lang': langCode,
@@ -109,6 +110,8 @@ class JobRepository {
       'p_offset': offset,
       'p_sort_by': sortBy,
     };
+    // 테스트 모드: testing 사이트(JobnShop 등) 포함. 생략(false) 시 기존과 동일.
+    if (includeTesting) params['p_include_testing'] = true;
 
     if (filter.visaIds.isNotEmpty) {
       params['p_visa_ids'] = filter.visaIds.toList();
@@ -188,6 +191,7 @@ class JobRepository {
     FilterState filter = FilterState.empty,
     int page = 0,
     String langCode = 'ko',
+    bool includeTesting = false,
   }) async {
     // 첫 페이지 요청 시 캐시된 total_count 리셋
     if (page == 0) _lastTotalCount = null;
@@ -197,6 +201,7 @@ class JobRepository {
       langCode: langCode,
       limit: _pageSize,
       offset: page * _pageSize,
+      includeTesting: includeTesting,
     );
 
     try {
@@ -245,8 +250,10 @@ class JobRepository {
   Future<int> getJobCount({
     FilterState filter = FilterState.empty,
     String langCode = 'ko',
+    bool includeTesting = false,
   }) async {
-    final cacheKey = jsonEncode(filter.toJson());
+    // 캐시 키에 includeTesting 포함 — 토글 시 다른 값이 나와야 하므로
+    final cacheKey = '${jsonEncode(filter.toJson())}|t:$includeTesting';
     if (_countCache.containsKey(cacheKey)) {
       return _countCache[cacheKey]!;
     }
@@ -256,6 +263,7 @@ class JobRepository {
         langCode: langCode,
         limit: 1,
         offset: 0,
+        includeTesting: includeTesting,
       );
       // count 전용 파라미터만 전달 (p_lang, p_limit, p_offset, p_sort_by 제외)
       params.remove('p_lang');
@@ -271,7 +279,7 @@ class JobRepository {
     }
   }
 
-  Future<List<Job>> searchJobs(String queryText, {int page = 0, String langCode = 'en', String sortBy = 'relevance'}) async {
+  Future<List<Job>> searchJobs(String queryText, {int page = 0, String langCode = 'en', String sortBy = 'relevance', bool includeTesting = false}) async {
     final q = queryText.trim();
     if (q.isEmpty) return [];
 
@@ -282,6 +290,7 @@ class JobRepository {
       'sort_by': sortBy,
       'result_limit': _pageSize,
       'result_offset': offset,
+      if (includeTesting) 'include_testing': true, // 테스트 모드 (search는 p_ 없음)
     })));
 
     final rows = data as List;
@@ -320,12 +329,13 @@ class JobRepository {
         .toList();
   }
 
-  Future<int> searchJobsCount(String queryText, {String langCode = 'en'}) async {
+  Future<int> searchJobsCount(String queryText, {String langCode = 'en', bool includeTesting = false}) async {
     final q = queryText.trim();
     if (q.isEmpty) return 0;
     final data = await _t(_client.rpc('search_jobs_count', params: {
       'search_query': q,
       'lang_code': langCode,
+      if (includeTesting) 'include_testing': true,
     }));
     return (data as int?) ?? 0;
   }
@@ -664,8 +674,9 @@ class JobRepository {
   }
 
   /// 필터 옵션별 공고 건수 조회 (RPC)
-  Future<FilterCounts> getFilterCounts() async {
-    final data = await _t(_client.rpc('get_filter_counts'));
+  Future<FilterCounts> getFilterCounts({bool includeTesting = false}) async {
+    final data = await _t(_client.rpc('get_filter_counts',
+        params: {if (includeTesting) 'p_include_testing': true}));
     return FilterCounts.fromJson(data as Map<String, dynamic>);
   }
 
