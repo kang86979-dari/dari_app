@@ -5,6 +5,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/utils/ad_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../apply/apply_webview_screen.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -317,11 +318,18 @@ class _DetailBodyState extends State<_DetailBody> {
 
   void _navigateToUrl() {
     if (_pendingUrl == null || _pendingUrl!.isEmpty) return;
-    final uri = Uri.tryParse(_pendingUrl!);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+    final url = _pendingUrl!;
+    _pendingUrl = null;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (uri.scheme == 'http' || uri.scheme == 'https') {
+      // 인앱 WebView로 지원 (사용자 언어 자동 번역)
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
+      ));
+    } else {
       launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-    _pendingUrl = null;
   }
 
   bool _hasSectionFormat(String? siteName, String text) {
