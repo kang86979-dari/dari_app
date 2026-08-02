@@ -34,6 +34,39 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     _selectedIndex = widget.initialTab;
     _snapshot = ref.read(filterStateProvider);
     analytics.filterOpened(_snapshot.activeCount);
+    // 필터 진입 시, 이전(네트워크 실패 등)에 에러/실패로 캐시된 필터 데이터만 재조회.
+    // 홈의 "다시시도"는 공고 목록만 갱신하므로, 필터용 옵션/카운트는 여기서 복구한다.
+    // 정상 상태는 건드리지 않아(불필요한 재조회 없음) 사이드이펙트 없음.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recoverFailedFilterData());
+  }
+
+  /// 에러 상태이거나 네트워크 실패값(-1)으로 캐시된 필터 프로바이더만 무효화하여 재조회한다.
+  void _recoverFailedFilterData() {
+    if (!mounted) return;
+    // 옵션 프로바이더 (모두 FutureProvider<List<FilterOption>>, autoDispose 아님)
+    final optionProviders = <FutureProvider<List<FilterOption>>>[
+      visaOptionsProvider,
+      categoryOptionsProvider,
+      employmentTypeOptionsProvider,
+      workScheduleOptionsProvider,
+      koreanLevelOptionsProvider,
+      benefitOptionsProvider,
+      countryOptionsProvider,
+      siteOptionsProvider,
+      siDoOptionsProvider,
+    ];
+    for (final p in optionProviders) {
+      if (ref.read(p).hasError) ref.invalidate(p);
+    }
+    // 필터 옵션별 건수
+    if (ref.read(filterCountsProvider).hasError) {
+      ref.invalidate(filterCountsProvider);
+    }
+    // "결과보기" 전체 건수: 에러 또는 실패값(-1)이면 재조회
+    final total = ref.read(jobTotalCountProvider);
+    if (total.hasError || total.valueOrNull == -1) {
+      ref.invalidate(jobTotalCountProvider);
+    }
   }
 
   void _cancel() {
