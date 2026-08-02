@@ -595,9 +595,11 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                       if (job.visaSponsorship == true)
                         _InfoRow(label: s.tabVisaSponsorship, value: 'Yes'),
+                      // 사이트명 없으면(RLS로 숨겨진 testing 사이트) 출처 행 생략 — UUID 노출 방지
+                      if (job.siteName != null && job.siteName!.isNotEmpty)
                         _SourceRow(
                           label: s.infoSource,
-                          siteName: job.siteName ?? job.siteId,
+                          siteName: job.siteName!,
                           url: job.siteUrl,
                           onTap: job.siteUrl != null
                               ? () => _onSourceTap(job.siteUrl!)

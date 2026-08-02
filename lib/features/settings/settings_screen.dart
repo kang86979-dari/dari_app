@@ -11,6 +11,7 @@ import 'package:app_settings/app_settings.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../providers/job_provider.dart';
+import '../../providers/test_mode_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +23,21 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   bool _pushEnabled = true;
   bool _loaded = false;
+
+  // 테스트 모드 숨김 스위치: 버전 7탭으로 잠금 해제
+  static const _appVersion = '1.1.2';
+  int _versionTapCount = 0;
+  bool _testUnlocked = false;
+
+  void _onVersionTap() {
+    _versionTapCount++;
+    if (_versionTapCount >= 7 && !_testUnlocked) {
+      setState(() => _testUnlocked = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('테스트 모드 잠금 해제됨'), duration: Duration(seconds: 1)),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -153,6 +169,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
     final langCode = ref.watch(languageProvider);
+    final testMode = ref.watch(testModeProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -229,6 +246,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     ),
                     onTap: _showLanguageSheet,
                   ),
+
+                  const SizedBox(height: 16),
+
+                  // App 섹션 — 버전(7탭) + 테스트 모드 토글(잠금해제 시)
+                  _SectionHeader(title: 'App'),
+                  _SettingsTile(
+                    title: '버전',
+                    trailing: const Text(
+                      _appVersion,
+                      style: TextStyle(fontSize: 14, color: AppColors.gray400),
+                    ),
+                    onTap: _onVersionTap,
+                  ),
+                  if (_testUnlocked || testMode)
+                    _SettingsTile(
+                      title: '테스트 모드',
+                      subtitle: 'testing 사이트(JobnShop) 포함 표시',
+                      trailing: Switch(
+                        value: testMode,
+                        onChanged: (v) => ref.read(testModeProvider.notifier).set(v),
+                        activeColor: AppColors.carrot,
+                      ),
+                    ),
 
                   // [DEV] 디버그 전용 진입점 (릴리즈 빌드엔 미노출)
                   if (kDebugMode) ...[
