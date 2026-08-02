@@ -47,6 +47,13 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
       (function(){
         var lang='$_lang';
         document.cookie='googtrans=/auto/'+lang+';path=/';
+        // Google 번역 상단 바 숨김 (번역은 유지, 바만 제거)
+        if(!document.getElementById('dari-gte-css')){
+          var st=document.createElement('style'); st.id='dari-gte-css';
+          st.textContent='.goog-te-banner-frame,.goog-te-banner-frame.skiptranslate,#goog-gt-tt,.goog-tooltip,.goog-te-balloon-frame{display:none!important;visibility:hidden!important;}'
+            +'body{top:0!important;position:static!important;}.skiptranslate{display:none!important;}';
+          (document.head||document.documentElement).appendChild(st);
+        }
         if(!document.querySelector('.goog-te-combo')){
           window.googleTranslateElementInit=function(){
             new google.translate.TranslateElement({pageLanguage:'auto', autoDisplay:false}, 'dari-gte');
