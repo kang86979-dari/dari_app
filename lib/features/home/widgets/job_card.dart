@@ -103,13 +103,17 @@ class JobCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // 회사명
+            // 회사명 (없으면 '비공개' placeholder — 옅은 회색)
             Text(
-              job.company ?? '',
-              style: const TextStyle(
+              (job.company != null && job.company!.isNotEmpty)
+                  ? job.company!
+                  : (strings?.companyUndisclosed ?? 'Undisclosed'),
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.gray600,
+                color: (job.company != null && job.company!.isNotEmpty)
+                    ? AppColors.gray600
+                    : AppColors.gray400,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,

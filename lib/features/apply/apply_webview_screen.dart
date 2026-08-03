@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
+import '../../core/l10n/app_strings.dart';
 
 /// 지원하기 인앱 WebView (프로덕션).
 ///
@@ -89,6 +90,7 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final s = AppStrings.of(widget.langCode);
     return PopScope(
       // 하드웨어 백키: WebView 내부 history 우선, 없으면 화면 종료(다리 복귀)
       canPop: false,
@@ -109,11 +111,11 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
           elevation: 0.5,
           leading: IconButton(
             icon: const Icon(Icons.close),
-            tooltip: '닫기',
+            tooltip: s.close,
             onPressed: () => Navigator.of(context).pop(), // 즉시 다리 복귀
           ),
           title: Text(
-            widget.title ?? '지원하기',
+            widget.title ?? s.apply,
             style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
           ),
           bottom: (_progress > 0 && _progress < 1)

@@ -507,11 +507,16 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Text(job.company ?? '',
-                          style: const TextStyle(
+                      Text(
+                          (job.company != null && job.company!.isNotEmpty)
+                              ? job.company!
+                              : s.companyUndisclosed,
+                          style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.gray600)),
+                              color: (job.company != null && job.company!.isNotEmpty)
+                                  ? AppColors.gray600
+                                  : AppColors.gray400)),
                       if (job.visas.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -723,6 +728,10 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 값이 없거나 '-'면 행 자체를 숨김 (상세 정보 테이블 깔끔하게)
+    if (value.trim().isEmpty || value.trim() == '-') {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
