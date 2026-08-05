@@ -13,6 +13,7 @@ import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/test_mode_provider.dart';
 import '../../core/utils/ad_helper.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/utils/district_names.dart';
@@ -425,9 +426,32 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Image.asset(
-                    'assets/wordmark.png',
-                    height: 22,
+                  Row(
+                    children: [
+                      Image.asset(
+                        'assets/wordmark.png',
+                        height: 22,
+                      ),
+                      // 테스트 모드 배지 (켜진 것 잊지 않게)
+                      if (ref.watch(testModeProvider)) ...[
+                        const SizedBox(width: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: AppColors.carrot,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'TEST',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
                   Row(
                     children: [

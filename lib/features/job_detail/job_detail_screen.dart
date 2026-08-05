@@ -5,6 +5,7 @@ import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../core/utils/ad_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../apply/apply_webview_screen.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -317,11 +318,18 @@ class _DetailBodyState extends State<_DetailBody> {
 
   void _navigateToUrl() {
     if (_pendingUrl == null || _pendingUrl!.isEmpty) return;
-    final uri = Uri.tryParse(_pendingUrl!);
-    if (uri != null && (uri.scheme == 'http' || uri.scheme == 'https')) {
+    final url = _pendingUrl!;
+    _pendingUrl = null;
+    final uri = Uri.tryParse(url);
+    if (uri == null) return;
+    if (uri.scheme == 'http' || uri.scheme == 'https') {
+      // 인앱 WebView로 지원 (사용자 언어 자동 번역)
+      Navigator.of(context).push(MaterialPageRoute(
+        builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
+      ));
+    } else {
       launchUrl(uri, mode: LaunchMode.externalApplication);
     }
-    _pendingUrl = null;
   }
 
   bool _hasSectionFormat(String? siteName, String text) {
@@ -499,11 +507,16 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                       ),
                       const SizedBox(height: 10),
-                      Text(job.company ?? '',
-                          style: const TextStyle(
+                      Text(
+                          (job.company != null && job.company!.isNotEmpty)
+                              ? job.company!
+                              : s.companyUndisclosed,
+                          style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: AppColors.gray600)),
+                              color: (job.company != null && job.company!.isNotEmpty)
+                                  ? AppColors.gray600
+                                  : AppColors.gray400)),
                       if (job.visas.isNotEmpty) ...[
                         const SizedBox(height: 12),
                         Wrap(
@@ -587,9 +600,11 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                       if (job.visaSponsorship == true)
                         _InfoRow(label: s.tabVisaSponsorship, value: 'Yes'),
+                      // 사이트명 없으면(RLS로 숨겨진 testing 사이트) 출처 행 생략 — UUID 노출 방지
+                      if (job.siteName != null && job.siteName!.isNotEmpty)
                         _SourceRow(
                           label: s.infoSource,
-                          siteName: job.siteName ?? job.siteId,
+                          siteName: job.siteName!,
                           url: job.siteUrl,
                           onTap: job.siteUrl != null
                               ? () => _onSourceTap(job.siteUrl!)
@@ -713,6 +728,10 @@ class _InfoRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 값이 없거나 '-'면 행 자체를 숨김 (상세 정보 테이블 깔끔하게)
+    if (value.trim().isEmpty || value.trim() == '-') {
+      return const SizedBox.shrink();
+    }
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
       decoration: BoxDecoration(
@@ -1148,6 +1167,25 @@ class _DescriptionText extends StatelessWidget {
     if (siteName == 'WorkOn') {
       final sections = _parseWorkon(text);
       if (sections != null) return _buildWorkonSections(sections);
+    }
+    if (siteName == 'JobnShop') {
+      // 키:값 줄 구조 → 키 볼드 + 값 회색 (다른 사이트 공통 렌더러 재사용)
+      // 값 없이 구분자로 끝나는 "라벨만" 줄은 정보가 없어 제거.
+      //   전 언어 대응: 콜론(:／：), 하이픈(-–—), 슬래시(/) 등 어떤 구분자로 끝나든 제거
+      //   예: "문의:", "Contact us:", "お問い合わせ：", 미얀마어 "…ပါ-", "문의: /"
+      final kept = _stripMdText(text).split('\n').where((line) {
+        final l = line.trim();
+        if (l.isEmpty) return true; // 빈 줄은 아래 정규화에서 정리
+        // 뒤쪽 공백+구분자(:：/-–— · •)를 제거한 본문
+        final body = l.replaceAll(RegExp(r'[\s:：/·•\-–—]+$'), '');
+        if (body.isEmpty) return false; // 구분자만 있는 줄
+        // 잘려나간 꼬리에 실제 구분자가 있으면(=값 없는 라벨) 제거
+        final tail = l.substring(body.length);
+        return !RegExp(r'[:：/·•\-–—]').hasMatch(tail);
+      }).join('\n');
+      final cleaned = kept.replaceAll(RegExp(r'\n{2,}'), '\n').trim();
+      if (cleaned.isEmpty) return const SizedBox.shrink();
+      return _buildSectionContent(cleaned);
     }
     if (siteName == 'WorkVisa') {
       // 섹션 파서 시도 → 실패 시 key:value 볼드 렌더링

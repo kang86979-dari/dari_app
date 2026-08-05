@@ -51,12 +51,15 @@ class AppOpenAdService {
         _isShowingAd = false;
         ad.dispose();
         _appOpenAd = null;
+        // 광고 닫힘 → resumed 발생 → 홈이 불필요하게 리로드하는 것 방지
+        AdHelper.markAdClicked();
         loadAd(); // 다음을 위해 다시 로드
       },
       onAdFailedToShowFullScreenContent: (ad, _) {
         _isShowingAd = false;
         ad.dispose();
         _appOpenAd = null;
+        AdHelper.markAdClicked();
         loadAd();
       },
     );

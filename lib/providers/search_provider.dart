@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/job.dart';
 import '../data/repositories/job_repository.dart';
 import 'language_provider.dart';
+import 'test_mode_provider.dart';
 
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
@@ -17,7 +18,8 @@ final searchResultProvider = FutureProvider<List<Job>>((ref) async {
   final lang = ref.watch(languageProvider);
   final sortBy = ref.watch(searchSortProvider);
   final repo = ref.watch(_searchRepoProvider);
-  return repo.searchJobs(query, langCode: lang, sortBy: sortBy);
+  final includeTesting = ref.watch(testModeProvider);
+  return repo.searchJobs(query, langCode: lang, sortBy: sortBy, includeTesting: includeTesting);
 });
 
 final searchTotalCountProvider = FutureProvider<int>((ref) async {
@@ -25,7 +27,8 @@ final searchTotalCountProvider = FutureProvider<int>((ref) async {
   if (query.trim().isEmpty) return 0;
   final lang = ref.watch(languageProvider);
   final repo = ref.watch(_searchRepoProvider);
-  return repo.searchJobsCount(query, langCode: lang);
+  final includeTesting = ref.watch(testModeProvider);
+  return repo.searchJobsCount(query, langCode: lang, includeTesting: includeTesting);
 });
 
 final _searchRepoProvider = Provider<JobRepository>((ref) => JobRepository());

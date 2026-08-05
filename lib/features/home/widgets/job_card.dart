@@ -103,13 +103,17 @@ class JobCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // 회사명
+            // 회사명 (없으면 '비공개' placeholder — 옅은 회색)
             Text(
-              job.company ?? '',
-              style: const TextStyle(
+              (job.company != null && job.company!.isNotEmpty)
+                  ? job.company!
+                  : (strings?.companyUndisclosed ?? 'Undisclosed'),
+              style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: AppColors.gray600,
+                color: (job.company != null && job.company!.isNotEmpty)
+                    ? AppColors.gray600
+                    : AppColors.gray400,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
@@ -226,11 +230,13 @@ class JobCard extends StatelessWidget {
           ],
         ),
             // 사이트 뱃지 (카드 기준 오른쪽 상단, 세로 정렬)
-            Positioned(
-              top: 0,
-              right: 0,
-              child: _SiteBadge(name: job.siteName ?? job.siteId),
-            ),
+            // 사이트명 없으면(예: RLS로 숨겨진 testing 사이트) 뱃지 생략 — UUID 노출 방지
+            if (job.siteName != null && job.siteName!.isNotEmpty)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: _SiteBadge(name: job.siteName!),
+              ),
           ],
         ),
       ),

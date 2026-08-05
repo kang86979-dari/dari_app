@@ -6,6 +6,7 @@ import '../data/models/job.dart';
 import '../data/models/filter_state.dart';
 import '../data/repositories/job_repository.dart';
 import 'language_provider.dart';
+import 'test_mode_provider.dart';
 
 final jobRepositoryProvider = Provider<JobRepository>((ref) {
   return JobRepository();
@@ -204,7 +205,8 @@ final jobListProvider =
   final repo = ref.watch(jobRepositoryProvider);
   final filter = ref.watch(filterStateProvider);
   final langCode = ref.watch(languageProvider);
-  return repo.getJobs(filter: filter, page: page, langCode: langCode);
+  final includeTesting = ref.watch(testModeProvider);
+  return repo.getJobs(filter: filter, page: page, langCode: langCode, includeTesting: includeTesting);
 });
 
 // [DEV] 사이트 목록
@@ -217,7 +219,8 @@ final jobTotalCountProvider = FutureProvider<int>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
   final filter = ref.watch(filterStateProvider);
   final langCode = ref.watch(languageProvider);
-  return repo.getJobCount(filter: filter, langCode: langCode);
+  final includeTesting = ref.watch(testModeProvider);
+  return repo.getJobCount(filter: filter, langCode: langCode, includeTesting: includeTesting);
 });
 
 final jobDetailProvider =
@@ -230,7 +233,8 @@ final jobDetailProvider =
 
 final filterCountsProvider = FutureProvider<FilterCounts>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
-  return repo.getFilterCounts();
+  final includeTesting = ref.watch(testModeProvider);
+  return repo.getFilterCounts(includeTesting: includeTesting);
 });
 
 // ── 필터 옵션 (DB 동적 로드) ──

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,6 +11,7 @@ import 'package:app_settings/app_settings.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../providers/job_provider.dart';
+import '../../providers/test_mode_provider.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -21,6 +23,20 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   bool _pushEnabled = true;
   bool _loaded = false;
+
+  // 테스트 모드 숨김 스위치: 설정 제목 7탭으로 잠금 해제
+  int _versionTapCount = 0;
+  bool _testUnlocked = false;
+
+  void _onVersionTap() {
+    _versionTapCount++;
+    if (_versionTapCount >= 7 && !_testUnlocked) {
+      setState(() => _testUnlocked = true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('테스트 모드 잠금 해제됨'), duration: Duration(seconds: 1)),
+      );
+    }
+  }
 
   @override
   void initState() {
@@ -168,6 +184,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
     final langCode = ref.watch(languageProvider);
+    final testMode = ref.watch(testModeProvider);
 
     return Scaffold(
       body: SafeArea(
@@ -189,13 +206,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     ),
                   ),
                   Expanded(
-                    child: Text(
+                    child: GestureDetector(
+                      // 숨김: 제목 7탭 → 테스트 모드 잠금해제
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _onVersionTap,
+                      child: Text(
                       s.settings,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.black,
+                      ),
                       ),
                     ),
                   ),
@@ -244,6 +266,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     ),
                     onTap: _showLanguageSheet,
                   ),
+
+                  // 테스트 모드 토글 (제목 7탭으로 잠금해제됐거나 이미 ON일 때만 노출)
+                  if (_testUnlocked || testMode) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'TEST'),
+                    _SettingsTile(
+                      title: '테스트 모드',
+                      subtitle: 'testing 사이트(JobnShop) 포함 표시',
+                      trailing: Switch(
+                        value: testMode,
+                        onChanged: (v) => ref.read(testModeProvider.notifier).set(v),
+                        activeColor: AppColors.carrot,
+                      ),
+                    ),
+                  ],
+
+                  // [DEV] 디버그 전용 진입점 (릴리즈 빌드엔 미노출)
+                  if (kDebugMode) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'DEV'),
+                    _SettingsTile(
+                      title: 'Apply WebView 분석',
+                      subtitle: 'K-HIRE 로그인/폼 HTML 덤프 도구',
+                      trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
+                      onTap: () => context.push('/dev/apply-webview'),
+                    ),
+                  ],
                 ],
               ),
             ),

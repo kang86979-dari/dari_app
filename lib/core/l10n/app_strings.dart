@@ -902,23 +902,23 @@ class AppStrings {
  }, 'Clear all');
 
  String get searchGuide => _t({
- 'ko': '회사명은 한국어 또는 영어로 검색해주세요',
- 'en': 'Search company name in Korean or English',
- 'zh': '公司名称请用韩语或英语搜索',
- 'hi': 'कंपनी का नाम कोरियाई या अंग्रेज़ी में खोजें',
- 'ja': '会社名は韓国語または英語で検索してください',
- 'th': 'ค้นหาชื่อบริษัทเป็นภาษาเกาหลีหรืออังกฤษ',
- 'vi': 'Tìm tên công ty bằng tiếng Hàn hoặc tiếng Anh',
- 'bn': 'কোম্পানির নাম কোরিয়ান বা ইংরেজিতে খুঁজুন',
- 'ru': 'Название компании ищите на корейском или английском',
- 'id': 'Cari nama perusahaan dalam bahasa Korea atau Inggris',
- 'ne': 'कम्पनीको नाम कोरियाली वा अंग्रेजीमा खोज्नुहोस्',
- 'km': 'ស្វែងរកឈ្មោះក្រុមហ៊ុនជាភាសាកូរ៉េ ឬអង់គ្លេស',
- 'my': 'ကုမ္ပဏီအမည်ကို ကိုရီးယား သို့မဟုတ် အင်္ဂလိပ်ဘာသာဖြင့် ရှာဖွေပါ',
- 'si': 'සමාගම් නම කොරියානු හෝ ඉංග්‍රීසි භාෂාවෙන් සොයන්න',
- 'uz': 'Kompaniya nomini koreys yoki ingliz tilida qidiring',
- 'mn': 'Компанийн нэрийг солонгос эсвэл англиар хайна уу',
- }, 'Search company name in Korean or English');
+ 'ko': '직종·회사명 등 무엇이든 검색 (회사명은 한국어/영어로)',
+ 'en': 'Search job type, company & more (company names in Korean/English)',
+ 'zh': '搜索职位、公司等 (公司名请用韩语/英语)',
+ 'hi': 'नौकरी, कंपनी आदि खोजें (कंपनी नाम कोरियाई/अंग्रेज़ी में)',
+ 'ja': '職種・会社名など何でも検索 (会社名は韓国語/英語で)',
+ 'th': 'ค้นหาตำแหน่งงาน บริษัท ฯลฯ (ชื่อบริษัทเป็นภาษาเกาหลี/อังกฤษ)',
+ 'vi': 'Tìm ngành nghề, công ty... (tên công ty bằng tiếng Hàn/Anh)',
+ 'bn': 'চাকরি, কোম্পানি ইত্যাদি খুঁজুন (কোম্পানির নাম কোরিয়ান/ইংরেজিতে)',
+ 'ru': 'Ищите вакансии, компании и др. (название компании на корейском/английском)',
+ 'id': 'Cari pekerjaan, perusahaan, dll (nama perusahaan dalam Korea/Inggris)',
+ 'ne': 'पेशा, कम्पनी आदि खोज्नुहोस् (कम्पनीको नाम कोरियाली/अंग्रेजीमा)',
+ 'km': 'ស្វែងរកមុខរបរ ក្រុមហ៊ុន ។ល។ (ឈ្មោះក្រុមហ៊ុនជាភាសាកូរ៉េ/អង់គ្លេស)',
+ 'my': 'အလုပ်အကိုင်၊ ကုမ္ပဏီ စသည် ရှာဖွေပါ (ကုမ္ပဏီအမည်ကို ကိုရီးယား/အင်္ဂလိပ်)',
+ 'si': 'රැකියා, සමාගම් ආදිය සොයන්න (සමාගම් නම කොරියානු/ඉංග්‍රීසියෙන්)',
+ 'uz': 'Kasb, kompaniya va h.k. qidiring (kompaniya nomi koreys/ingliz tilida)',
+ 'mn': 'Мэргэжил, компани зэргийг хайна уу (компанийн нэр солонгос/англиар)',
+ }, 'Search job type, company & more (company names in Korean/English)');
 
  String get searchEmptyHint => _t({
  'ko': '비자, 직종, 회사명을 검색해보세요',
@@ -2399,6 +2399,46 @@ class AppStrings {
  'uz': 'Arizaga o\'tish',
  'mn': 'Өргөдөл рүү очих',
  }, 'Move to Apply');
+
+ // ── 회사명 비공개 (company NULL) ──
+ String get companyUndisclosed => _t({
+ 'ko': '비공개',
+ 'en': 'Undisclosed',
+ 'zh': '未公开',
+ 'hi': 'गोपनीय',
+ 'ja': '非公開',
+ 'th': 'ไม่เปิดเผย',
+ 'vi': 'Không tiết lộ',
+ 'bn': 'অপ্রকাশিত',
+ 'ru': 'Не указано',
+ 'id': 'Tidak diungkap',
+ 'ne': 'सार्वजनिक छैन',
+ 'km': 'មិនបង្ហាញ',
+ 'my': 'မဖော်ပြထား',
+ 'si': 'හෙළි නොකළ',
+ 'uz': 'Oshkor etilmagan',
+ 'mn': 'Нээлттэй бус',
+ }, 'Undisclosed');
+
+ // ── 닫기 (WebView 등) ──
+ String get close => _t({
+ 'ko': '닫기',
+ 'en': 'Close',
+ 'zh': '关闭',
+ 'hi': 'बंद करें',
+ 'ja': '閉じる',
+ 'th': 'ปิด',
+ 'vi': 'Đóng',
+ 'bn': 'বন্ধ করুন',
+ 'ru': 'Закрыть',
+ 'id': 'Tutup',
+ 'ne': 'बन्द गर्नुहोस्',
+ 'km': 'បិទ',
+ 'my': 'ပိတ်ရန်',
+ 'si': 'වසන්න',
+ 'uz': 'Yopish',
+ 'mn': 'Хаах',
+ }, 'Close');
 
  // ── 상시채용 ──
  String get alwaysOpen => _t({
