@@ -114,9 +114,11 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
             tooltip: s.close,
             onPressed: () => Navigator.of(context).pop(), // 즉시 다리 복귀
           ),
-          title: Text(
-            widget.title ?? s.apply,
-            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+          centerTitle: true,
+          // Dari 워드마크 — 탭하면 Dari로 복귀 ("Dari로 이동" 개념)
+          title: GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Image.asset('assets/wordmark.png', height: 20),
           ),
           bottom: (_progress > 0 && _progress < 1)
               ? PreferredSize(
@@ -129,7 +131,12 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
                 )
               : null,
         ),
-        body: _failed ? _errorView() : _webView(),
+        // 하단 SafeArea: OS 내비게이션 바가 사이트 하단을 가려 안 눌리는 문제 방지
+        body: SafeArea(
+          top: false,
+          bottom: true,
+          child: _failed ? _errorView() : _webView(),
+        ),
       ),
     );
   }

@@ -1168,6 +1168,25 @@ class _DescriptionText extends StatelessWidget {
       final sections = _parseWorkon(text);
       if (sections != null) return _buildWorkonSections(sections);
     }
+    if (siteName == 'JobnShop') {
+      // 키:값 줄 구조 → 키 볼드 + 값 회색 (다른 사이트 공통 렌더러 재사용)
+      // 값 없이 구분자로 끝나는 "라벨만" 줄은 정보가 없어 제거.
+      //   전 언어 대응: 콜론(:／：), 하이픈(-–—), 슬래시(/) 등 어떤 구분자로 끝나든 제거
+      //   예: "문의:", "Contact us:", "お問い合わせ：", 미얀마어 "…ပါ-", "문의: /"
+      final kept = _stripMdText(text).split('\n').where((line) {
+        final l = line.trim();
+        if (l.isEmpty) return true; // 빈 줄은 아래 정규화에서 정리
+        // 뒤쪽 공백+구분자(:：/-–— · •)를 제거한 본문
+        final body = l.replaceAll(RegExp(r'[\s:：/·•\-–—]+$'), '');
+        if (body.isEmpty) return false; // 구분자만 있는 줄
+        // 잘려나간 꼬리에 실제 구분자가 있으면(=값 없는 라벨) 제거
+        final tail = l.substring(body.length);
+        return !RegExp(r'[:：/·•\-–—]').hasMatch(tail);
+      }).join('\n');
+      final cleaned = kept.replaceAll(RegExp(r'\n{2,}'), '\n').trim();
+      if (cleaned.isEmpty) return const SizedBox.shrink();
+      return _buildSectionContent(cleaned);
+    }
     if (siteName == 'WorkVisa') {
       // 섹션 파서 시도 → 실패 시 key:value 볼드 렌더링
       final wvResult = _parseWorkVisa(text);

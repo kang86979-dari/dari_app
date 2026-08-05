@@ -24,8 +24,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   bool _pushEnabled = true;
   bool _loaded = false;
 
-  // 테스트 모드 숨김 스위치: 버전 7탭으로 잠금 해제
-  static const _appVersion = '1.1.2';
+  // 테스트 모드 숨김 스위치: 설정 제목 7탭으로 잠금 해제
   int _versionTapCount = 0;
   bool _testUnlocked = false;
 
@@ -191,13 +190,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     ),
                   ),
                   Expanded(
-                    child: Text(
+                    child: GestureDetector(
+                      // 숨김: 제목 7탭 → 테스트 모드 잠금해제
+                      behavior: HitTestBehavior.opaque,
+                      onTap: _onVersionTap,
+                      child: Text(
                       s.settings,
                       textAlign: TextAlign.center,
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w700,
                         color: AppColors.black,
+                      ),
                       ),
                     ),
                   ),
@@ -247,19 +251,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     onTap: _showLanguageSheet,
                   ),
 
-                  const SizedBox(height: 16),
-
-                  // App 섹션 — 버전(7탭) + 테스트 모드 토글(잠금해제 시)
-                  _SectionHeader(title: 'App'),
-                  _SettingsTile(
-                    title: '버전',
-                    trailing: const Text(
-                      _appVersion,
-                      style: TextStyle(fontSize: 14, color: AppColors.gray400),
-                    ),
-                    onTap: _onVersionTap,
-                  ),
-                  if (_testUnlocked || testMode)
+                  // 테스트 모드 토글 (제목 7탭으로 잠금해제됐거나 이미 ON일 때만 노출)
+                  if (_testUnlocked || testMode) ...[
+                    const SizedBox(height: 16),
+                    _SectionHeader(title: 'TEST'),
                     _SettingsTile(
                       title: '테스트 모드',
                       subtitle: 'testing 사이트(JobnShop) 포함 표시',
@@ -269,6 +264,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                         activeColor: AppColors.carrot,
                       ),
                     ),
+                  ],
 
                   // [DEV] 디버그 전용 진입점 (릴리즈 빌드엔 미노출)
                   if (kDebugMode) ...[
