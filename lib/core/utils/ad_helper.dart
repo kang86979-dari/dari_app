@@ -25,7 +25,6 @@ class AdHelper {
 
   static String get bannerId {
     if (Platform.isIOS) {
-      // TODO(iOS): AdMob iOS 앱 생성 후 .env에 AD_BANNER_ID_IOS 추가
       return kDebugMode
           ? _iosTestBanner
           : dotenv.env['AD_BANNER_ID_IOS'] ?? _iosTestBanner;
@@ -37,7 +36,6 @@ class AdHelper {
 
   static String get interstitialId {
     if (Platform.isIOS) {
-      // TODO(iOS): AdMob iOS 앱 생성 후 .env에 AD_INTERSTITIAL_ID_IOS 추가
       return kDebugMode
           ? _iosTestInterstitial
           : dotenv.env['AD_INTERSTITIAL_ID_IOS'] ?? _iosTestInterstitial;
@@ -49,7 +47,6 @@ class AdHelper {
 
   static String get appOpenId {
     if (Platform.isIOS) {
-      // TODO(iOS): AdMob iOS 앱 생성 후 .env에 AD_APP_OPEN_ID_IOS 추가
       return kDebugMode
           ? _iosTestAppOpen
           : dotenv.env['AD_APP_OPEN_ID_IOS'] ?? _iosTestAppOpen;

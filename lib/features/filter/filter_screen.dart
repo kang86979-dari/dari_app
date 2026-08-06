@@ -1037,41 +1037,28 @@ class _VisaListPanel extends StatelessWidget {
         }
         final allItems = [...popular, ...rest];
 
-        // +2 for visa sponsorship header + Yes row
+        // +1: 최상단 비자 지원 행 (비자 항목과 동일한 선택박스 한 줄)
         return ListView.builder(
           padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-          itemCount: allItems.length + 2,
+          itemCount: allItems.length + 1,
           itemBuilder: (context, index) {
-            if (index < allItems.length) {
-              final opt = allItems[index];
-              final isPopular = index < popular.length;
-              final isSelected = selected.contains(opt.id);
-              final label = isPopular ? '\u{1F525} ${opt.label}' : opt.label;
+            // 최상단: 비자 지원 (인기 비자와 동일하게 🔥 + 라벨 + 우측 체크박스)
+            if (index == 0) {
               return _filterListRow(
-                label: label,
-                isSelected: isSelected,
-                onTap: () => onToggle(opt.id),
+                label: '\u{1F525} ${s.tabVisaSponsorship}',
+                isSelected: visaSponsorship == true,
+                onTap: () => onVisaSponsorshipChanged(visaSponsorship == true ? null : true),
               );
             }
-            // Visa sponsorship section header
-            if (index == allItems.length) {
-              return Padding(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 4),
-                child: Text(
-                  s.tabVisaSponsorship as String,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.carrot,
-                  ),
-                ),
-              );
-            }
-            // Yes
+            // 그 아래: 비자 목록 (인기 비자 상단)
+            final opt = allItems[index - 1];
+            final isPopular = (index - 1) < popular.length;
+            final isSelected = selected.contains(opt.id);
+            final label = isPopular ? '\u{1F525} ${opt.label}' : opt.label;
             return _filterListRow(
-              label: 'Yes',
-              isSelected: visaSponsorship == true,
-              onTap: () => onVisaSponsorshipChanged(visaSponsorship == true ? null : true),
+              label: label,
+              isSelected: isSelected,
+              onTap: () => onToggle(opt.id),
             );
           },
         );

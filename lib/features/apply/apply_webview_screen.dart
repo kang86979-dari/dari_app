@@ -40,7 +40,8 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
 
   String get _lang => ApplyWebViewScreen.gtLang(widget.langCode);
 
-  /// 현재 페이지를 사용자 언어로 번역 (위젯 있으면 구동, 없으면 주입)
+  /// 현재 페이지를 사용자 언어로 번역 (Android 전용 — Google 번역 위젯 주입 후 구동).
+  /// iOS는 이 화면을 쓰지 않고 인앱 사파리(SFSafariViewController)로 열어 네이티브 번역 사용.
   Future<void> _translate() async {
     final c = _controller;
     if (c == null || _lang == 'ko') return; // 한국어면 번역 불필요
@@ -153,7 +154,7 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
         useShouldOverrideUrlLoading: true,
       ),
       onWebViewCreated: (c) => _controller = c,
-      // 새창 요청은 같은 웹뷰에서 열어 지원 흐름 유지 (iOS에서 특히 필요)
+      // 새창 요청은 같은 웹뷰에서 열어 지원 흐름 유지
       onCreateWindow: (c, createWindowAction) async {
         final u = createWindowAction.request.url;
         if (u != null) {

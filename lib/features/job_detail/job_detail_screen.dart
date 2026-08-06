@@ -1,7 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../core/utils/ad_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -323,10 +325,19 @@ class _DetailBodyState extends State<_DetailBody> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     if (uri.scheme == 'http' || uri.scheme == 'https') {
-      // 인앱 WebView로 지원 (사용자 언어 자동 번역)
-      Navigator.of(context).push(MaterialPageRoute(
-        builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
-      ));
+      if (Platform.isIOS) {
+        // iOS: 인앱 사파리(SFSafariViewController) — 네이티브 번역(aA→번역)·로그인 세션 정상.
+        // WKWebView는 구글 번역 위젯 주입이 안 되고 시스템 번역도 없어 Safari 계열을 사용.
+        ChromeSafariBrowser().open(
+          url: WebUri(url),
+          settings: ChromeSafariBrowserSettings(barCollapsingEnabled: true),
+        );
+      } else {
+        // Android: 인앱 WebView + 사용자 언어 자동 번역(Google 번역 위젯 주입)
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
+        ));
+      }
     } else {
       launchUrl(uri, mode: LaunchMode.externalApplication);
     }
