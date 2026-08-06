@@ -147,9 +147,20 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         javaScriptCanOpenWindowsAutomatically: true,
-        supportMultipleWindows: false,
+        // iOS: 새창(target=_blank/window.open) 링크가 죽지 않도록 onCreateWindow로 받음
+        supportMultipleWindows: true,
+        // iOS/WKWebView: 이 플래그가 true여야 shouldOverrideUrlLoading 호출됨 (Android는 자동)
+        useShouldOverrideUrlLoading: true,
       ),
       onWebViewCreated: (c) => _controller = c,
+      // 새창 요청은 같은 웹뷰에서 열어 지원 흐름 유지 (iOS에서 특히 필요)
+      onCreateWindow: (c, createWindowAction) async {
+        final u = createWindowAction.request.url;
+        if (u != null) {
+          await c.loadUrl(urlRequest: URLRequest(url: u));
+        }
+        return false;
+      },
       onProgressChanged: (c, p) {
         if (mounted) setState(() => _progress = p / 100);
       },

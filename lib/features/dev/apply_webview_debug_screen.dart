@@ -53,7 +53,10 @@ class _ApplyWebViewDebugScreenState extends State<ApplyWebViewDebugScreen> {
       final url = (await c.getUrl())?.toString() ?? _currentUrl;
       final title = (await c.getTitle()) ?? '';
       final html = await c.evaluateJavascript(source: 'document.documentElement.outerHTML');
-      final dir = await getExternalStorageDirectory(); // /sdcard/Android/data/<pkg>/files
+      // iOS는 getExternalStorageDirectory 미지원(null/예외) → Documents로 폴백
+      final dir = Platform.isIOS
+          ? await getApplicationDocumentsDirectory()
+          : await getExternalStorageDirectory(); // /sdcard/Android/data/<pkg>/files
       _dumpSeq++;
       // 파일명에 타임스탬프 포함 → 화면 재진입/카운터 리셋에도 덮어쓰기 없음 (가입은 1회성)
       final t = DateTime.now();

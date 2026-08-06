@@ -48,6 +48,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   Future<void> _navigate() async {
     analytics.screenView('splash');
     await _requestTrackingIfNeeded();
+    // iOS: ATT 응답 이후에 앱오픈 광고 로드 (요청이 ATT 전에 나가지 않도록)
+    if (Platform.isIOS) appOpenAdService.loadAd();
     await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
 

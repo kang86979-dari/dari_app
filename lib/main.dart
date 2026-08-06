@@ -48,7 +48,8 @@ Future<void> main() async {
   final adapterInfo = status.adapterStatuses.map((k, v) => MapEntry(k, '${v.state}'));
   if (kDebugMode) print('🔵 MobileAds initialized: $adapterInfo');
   analytics.log('ad_sdk_initialized', {'adapters': adapterInfo.toString()});
-  appOpenAdService.loadAd();
+  // iOS: 광고 '요청'은 ATT 응답 이후에만 (Apple 5.1.2). 앱오픈 광고 로드는 스플래시에서 ATT 후 수행.
+  if (!Platform.isIOS) appOpenAdService.loadAd();
   runApp(const ProviderScope(child: DariApp()));
   // 앱 렌더링 후 FCM 초기화 (UI 블로킹 방지)
   if (firebaseReady) pushService.init();
