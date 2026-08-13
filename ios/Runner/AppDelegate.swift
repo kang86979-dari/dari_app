@@ -22,7 +22,13 @@ import FirebaseMessaging
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
-    Messaging.messaging().apnsToken = deviceToken
+    // APNs 토큰 환경을 자동감지에 맡기면 TestFlight/App Store(production) 빌드에서
+    // sandbox로 오판돼 BadEnvironmentKeyInToken 발생 → 빌드 구성에 맞춰 명시적으로 지정.
+    #if DEBUG
+    Messaging.messaging().setAPNSToken(deviceToken, type: .sandbox)
+    #else
+    Messaging.messaging().setAPNSToken(deviceToken, type: .prod)
+    #endif
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
   }
 
