@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
+import '../../../core/constants/colors.dart';
 import '../../../core/utils/ad_helper.dart';
 import '../../../data/services/analytics_service.dart';
 
@@ -27,18 +28,11 @@ class _AdBannerState extends State<AdBanner> {
     _loadAd();
   }
 
-  Future<void> _loadAd() async {
+  void _loadAd() {
     final adUnitId = AdHelper.bannerId;
-    // 화면 폭에 맞춘 적응형 배너 — 양옆 검은 여백(iOS 레터박스) 없이 꽉 참.
-    final width = MediaQuery.of(context).size.width.truncate();
-    final size = await AdSize.getAnchoredAdaptiveBannerAdSize(
-      Orientation.portrait,
-      width,
-    );
-    if (size == null) {
-      if (mounted) setState(() => _failed = true);
-      return;
-    }
+    // 표준 배너(320x50) 양 플랫폼 공통. 가운데 정렬 + 여백은 앱 배경색으로 채워
+    // iOS 양옆 검은 여백 없이 깔끔하게.
+    const size = AdSize.banner;
     _adSize = size;
     if (kDebugMode) {
       print('🔵 BannerAd loading... adUnitId=$adUnitId, size=${size.width}x${size.height}');
@@ -91,10 +85,11 @@ class _AdBannerState extends State<AdBanner> {
     // 배너가 뒤늦게 뜰 때 리스트가 밀리는 점프(멀미)를 방지.
     if (_failed) return const SizedBox.shrink();
     final reservedHeight = _adSize?.height.toDouble() ?? AdSize.banner.height.toDouble();
-    return SizedBox(
+    return Container(
       width: double.infinity,
       height: reservedHeight,
-      // 적응형 배너는 화면 폭에 맞춰지므로 Center 불필요 — 그대로 꽉 채움.
+      color: AppColors.background, // 배너 양옆 여백을 앱 배경색으로 채움(검은 여백 방지)
+      alignment: Alignment.center,
       child: (_isLoaded && _bannerAd != null)
           ? AdWidget(ad: _bannerAd!)
           : null,
