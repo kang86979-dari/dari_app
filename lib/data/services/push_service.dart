@@ -64,7 +64,6 @@ class PushService {
       badge: true,
       sound: true,
     );
-
     if (settings.authorizationStatus == AuthorizationStatus.denied) {
       return;
     }
@@ -74,8 +73,8 @@ class PushService {
       if (Platform.isIOS) {
         // APNs 토큰은 등록 직후 비동기로 준비됨 — 콜드 스타트 첫 호출은 null이 잦아 잠깐 재시도.
         String? apns = await messaging.getAPNSToken();
-        for (int i = 0; i < 10 && apns == null; i++) {
-          await Future.delayed(const Duration(milliseconds: 500));
+        for (int i = 0; i < 20 && apns == null; i++) {
+          await Future.delayed(const Duration(seconds: 1));
           apns = await messaging.getAPNSToken();
         }
         if (apns == null) {

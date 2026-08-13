@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/utils/ad_helper.dart';
@@ -39,20 +40,26 @@ class _AdBannerState extends State<AdBanner> {
       return;
     }
     _adSize = size;
-    print('🔵 BannerAd loading... adUnitId=$adUnitId, size=${size.width}x${size.height}');
+    if (kDebugMode) {
+      print('🔵 BannerAd loading... adUnitId=$adUnitId, size=${size.width}x${size.height}');
+    }
     final ad = BannerAd(
       adUnitId: adUnitId,
       size: size,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
-          print('✅ BannerAd loaded: adUnitId=$adUnitId, responseInfo=${(ad as BannerAd).responseInfo}');
+          if (kDebugMode) {
+            print('✅ BannerAd loaded: adUnitId=$adUnitId, responseInfo=${(ad as BannerAd).responseInfo}');
+          }
           analytics.log('ad_banner_loaded', {'ad_unit_id': adUnitId});
           if (mounted) setState(() => _isLoaded = true);
         },
         onAdFailedToLoad: (ad, error) {
-          print('❌ BannerAd failed: code=${error.code}, message=${error.message}, domain=${error.domain}');
-          print('❌ BannerAd responseInfo: ${ad.responseInfo}');
+          if (kDebugMode) {
+            print('❌ BannerAd failed: code=${error.code}, message=${error.message}, domain=${error.domain}');
+            print('❌ BannerAd responseInfo: ${ad.responseInfo}');
+          }
           analytics.log('ad_banner_failed', {
             'ad_unit_id': adUnitId,
             'error_code': error.code,
