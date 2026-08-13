@@ -181,6 +181,11 @@ class Job {
   final int? koreanLevelId;
   final bool? visaSponsorship;
 
+  // 지원방법 (크롤 수집, 정규화 코드 배열: online/homepage/email/phone/sms/simple/chat/visit/other)
+  // + 연락처(phone/email/homepage) — 2단계 칩 탭 동작용, 현재 미사용
+  final List<String> applyMethods;
+  final Map<String, dynamic>? applyContact;
+
   // 조인된 관계 데이터
   final List<VisaInfo> visas;
   final CategoryInfo? jobCategory;
@@ -231,6 +236,8 @@ class Job {
     this.workEndTime,
     this.koreanLevelId,
     this.visaSponsorship,
+    this.applyMethods = const [],
+    this.applyContact,
     this.visas = const [],
     this.jobCategory,
     this.employmentType,
@@ -543,6 +550,27 @@ class Job {
   static Map<String, dynamic> _map(dynamic v) =>
       v is Map<String, dynamic> ? v : {};
 
+  // apply_methods 파싱: Postgres text[] → List (supabase), 방어적으로 "{online,phone}" 문자열도 처리.
+  // 빈 값 제거 + 소문자 정규화 + 순서 유지 중복 제거.
+  static List<String> _parseApplyMethods(dynamic v) {
+    Iterable<String> raw;
+    if (v is List) {
+      raw = v.map((e) => e.toString());
+    } else if (v is String) {
+      raw = v.replaceAll(RegExp(r'^\{|\}$'), '').split(',');
+    } else {
+      return const [];
+    }
+    final seen = <String>{};
+    final out = <String>[];
+    for (final e in raw) {
+      final code = e.trim().toLowerCase();
+      if (code.isEmpty || !seen.add(code)) continue;
+      out.add(code);
+    }
+    return out;
+  }
+
   factory Job.fromJson(Map<String, dynamic> json) {
     // 비자 조인: job_visas → visa_master
     final visas = <VisaInfo>[];
@@ -693,6 +721,10 @@ class Job {
       workEndTime: json['work_end_time']?.toString(),
       koreanLevelId: _int(json['korean_level_id']),
       visaSponsorship: json['visa_sponsorship'] is bool ? json['visa_sponsorship'] : null,
+      applyMethods: _parseApplyMethods(json['apply_methods']),
+      applyContact: json['apply_contact'] is Map
+          ? Map<String, dynamic>.from(json['apply_contact'] as Map)
+          : null,
       visas: visas,
       jobCategory: jobCategory,
       employmentType: employmentType,
@@ -892,6 +924,10 @@ class Job {
       workEndTime: rpcJobData['work_end_time']?.toString(),
       koreanLevelId: _int(rpcJobData['korean_level_id']),
       visaSponsorship: rpcJobData['visa_sponsorship'] is bool ? rpcJobData['visa_sponsorship'] : null,
+      applyMethods: _parseApplyMethods(rpcJobData['apply_methods']),
+      applyContact: rpcJobData['apply_contact'] is Map
+          ? Map<String, dynamic>.from(rpcJobData['apply_contact'] as Map)
+          : null,
       visas: visas,
       jobCategory: jobCategory,
       employmentType: employmentType,

@@ -2322,6 +2322,213 @@ class AppStrings {
  'mn': 'Эх сурвалж',
  }, 'Source');
 
+ // ── 지원방법 (Apply methods) ──
+ String get infoApplyMethod => _t({
+ 'ko': '지원방법',
+ 'en': 'How to apply',
+ 'zh': '申请方式',
+ 'hi': 'आवेदन का तरीका',
+ 'ja': '応募方法',
+ 'th': 'วิธีสมัคร',
+ 'vi': 'Cách ứng tuyển',
+ 'bn': 'আবেদনের পদ্ধতি',
+ 'ru': 'Способ подачи',
+ 'id': 'Cara melamar',
+ 'ne': 'आवेदन गर्ने तरिका',
+ 'km': 'របៀបដាក់ពាក្យ',
+ 'my': 'လျှောက်ထားနည်း',
+ 'si': 'අයදුම් කරන ආකාරය',
+ 'uz': 'Ariza berish usuli',
+ 'mn': 'Өргөдөл гаргах арга',
+ }, 'How to apply');
+
+ String get applyMethodOnline => _t({
+ 'ko': '온라인 지원',
+ 'en': 'Online',
+ 'zh': '在线申请',
+ 'hi': 'ऑनलाइन',
+ 'ja': 'オンライン応募',
+ 'th': 'ออนไลน์',
+ 'vi': 'Trực tuyến',
+ 'bn': 'অনলাইন',
+ 'ru': 'Онлайн',
+ 'id': 'Online',
+ 'ne': 'अनलाइन',
+ 'km': 'អនឡាញ',
+ 'my': 'အွန်လိုင်း',
+ 'si': 'මාර්ගගත',
+ 'uz': 'Onlayn',
+ 'mn': 'Онлайн',
+ }, 'Online');
+
+ String get applyMethodHomepage => _t({
+ 'ko': '홈페이지 지원',
+ 'en': 'Homepage',
+ 'zh': '官网申请',
+ 'hi': 'वेबसाइट',
+ 'ja': 'ホームページ',
+ 'th': 'เว็บไซต์',
+ 'vi': 'Trang web',
+ 'bn': 'ওয়েবসাইট',
+ 'ru': 'Сайт',
+ 'id': 'Situs web',
+ 'ne': 'वेबसाइट',
+ 'km': 'គេហទំព័រ',
+ 'my': 'ဝဘ်ဆိုက်',
+ 'si': 'වෙබ් අඩවිය',
+ 'uz': 'Veb-sayt',
+ 'mn': 'Вэбсайт',
+ }, 'Homepage');
+
+ String get applyMethodEmail => _t({
+ 'ko': '이메일 지원',
+ 'en': 'Email',
+ 'zh': '电子邮件',
+ 'hi': 'ईमेल',
+ 'ja': 'メール',
+ 'th': 'อีเมล',
+ 'vi': 'Email',
+ 'bn': 'ইমেইল',
+ 'ru': 'Эл. почта',
+ 'id': 'Email',
+ 'ne': 'इमेल',
+ 'km': 'អ៊ីមែល',
+ 'my': 'အီးမေးလ်',
+ 'si': 'ඊමේල්',
+ 'uz': 'Email',
+ 'mn': 'Имэйл',
+ }, 'Email');
+
+ String get applyMethodPhone => _t({
+ 'ko': '전화 지원',
+ 'en': 'Phone',
+ 'zh': '电话申请',
+ 'hi': 'फ़ोन',
+ 'ja': '電話',
+ 'th': 'โทรศัพท์',
+ 'vi': 'Điện thoại',
+ 'bn': 'ফোন',
+ 'ru': 'Телефон',
+ 'id': 'Telepon',
+ 'ne': 'फोन',
+ 'km': 'ទូរស័ព្ទ',
+ 'my': 'ဖုန်း',
+ 'si': 'දුරකථන',
+ 'uz': 'Telefon',
+ 'mn': 'Утас',
+ }, 'Phone');
+
+ String get applyMethodSms => _t({
+ 'ko': '문자 지원',
+ 'en': 'Text (SMS)',
+ 'zh': '短信申请',
+ 'hi': 'एसएमएस',
+ 'ja': 'SMS',
+ 'th': 'ข้อความ SMS',
+ 'vi': 'Tin nhắn SMS',
+ 'bn': 'এসএমএস',
+ 'ru': 'СМС',
+ 'id': 'SMS',
+ 'ne': 'एसएमएस',
+ 'km': 'សារ SMS',
+ 'my': 'SMS',
+ 'si': 'කෙටි පණිවිඩ',
+ 'uz': 'SMS',
+ 'mn': 'SMS',
+ }, 'Text (SMS)');
+
+ String get applyMethodSimple => _t({
+ 'ko': '간편 지원',
+ 'en': 'Easy apply',
+ 'zh': '快捷申请',
+ 'hi': 'आसान आवेदन',
+ 'ja': 'かんたん応募',
+ 'th': 'สมัครง่าย',
+ 'vi': 'Ứng tuyển nhanh',
+ 'bn': 'সহজ আবেদন',
+ 'ru': 'Быстрый отклик',
+ 'id': 'Lamar cepat',
+ 'ne': 'सजिलो आवेदन',
+ 'km': 'ដាក់ពាក្យរហ័ស',
+ 'my': 'လွယ်ကူစွာလျှောက်ရန်',
+ 'si': 'පහසු අයදුම්',
+ 'uz': 'Tez ariza',
+ 'mn': 'Хялбар өргөдөл',
+ }, 'Easy apply');
+
+ String get applyMethodChat => _t({
+ 'ko': '채팅 문의',
+ 'en': 'Chat',
+ 'zh': '聊天咨询',
+ 'hi': 'चैट',
+ 'ja': 'チャット',
+ 'th': 'แชท',
+ 'vi': 'Trò chuyện',
+ 'bn': 'চ্যাট',
+ 'ru': 'Чат',
+ 'id': 'Chat',
+ 'ne': 'च्याट',
+ 'km': 'ជជែក',
+ 'my': 'ချတ်',
+ 'si': 'කතාබහ',
+ 'uz': 'Chat',
+ 'mn': 'Чат',
+ }, 'Chat');
+
+ String get applyMethodVisit => _t({
+ 'ko': '방문 접수',
+ 'en': 'Visit',
+ 'zh': '现场应聘',
+ 'hi': 'व्यक्तिगत रूप से',
+ 'ja': '訪問受付',
+ 'th': 'สมัครด้วยตนเอง',
+ 'vi': 'Nộp trực tiếp',
+ 'bn': 'সরাসরি জমা',
+ 'ru': 'Лично',
+ 'id': 'Datang langsung',
+ 'ne': 'प्रत्यक्ष भेट',
+ 'km': 'មកដល់ផ្ទាល់',
+ 'my': 'ကိုယ်တိုင်လာရန်',
+ 'si': 'පැමිණ ඉදිරිපත්',
+ 'uz': 'Shaxsan',
+ 'mn': 'Биечлэн ирэх',
+ }, 'Visit');
+
+ String get applyMethodOther => _t({
+ 'ko': '기타(우편 등)',
+ 'en': 'Other',
+ 'zh': '其他',
+ 'hi': 'अन्य',
+ 'ja': 'その他',
+ 'th': 'อื่นๆ',
+ 'vi': 'Khác',
+ 'bn': 'অন্যান্য',
+ 'ru': 'Другое',
+ 'id': 'Lainnya',
+ 'ne': 'अन्य',
+ 'km': 'ផ្សេងៗ',
+ 'my': 'အခြား',
+ 'si': 'වෙනත්',
+ 'uz': 'Boshqa',
+ 'mn': 'Бусад',
+ }, 'Other');
+
+ // 정규화 코드 → 라벨. 미지 코드는 null(칩 생략).
+ String? applyMethodLabel(String code) {
+ switch (code) {
+ case 'online': return applyMethodOnline;
+ case 'homepage': return applyMethodHomepage;
+ case 'email': return applyMethodEmail;
+ case 'phone': return applyMethodPhone;
+ case 'sms': return applyMethodSms;
+ case 'simple': return applyMethodSimple;
+ case 'chat': return applyMethodChat;
+ case 'visit': return applyMethodVisit;
+ case 'other': return applyMethodOther;
+ default: return null;
+ }
+ }
+
  String get chooseSource => _t({
  'ko': '출처 선택',
  'en': 'Choose source',

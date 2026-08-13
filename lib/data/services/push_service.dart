@@ -72,9 +72,14 @@ class PushService {
     // iOS: APNs 토큰 준비 전 getToken() 호출 시 예외 발생 (시뮬레이터는 APNs 미지원)
     try {
       if (Platform.isIOS) {
-        final apns = await messaging.getAPNSToken();
+        // APNs 토큰은 등록 직후 비동기로 준비됨 — 콜드 스타트 첫 호출은 null이 잦아 잠깐 재시도.
+        String? apns = await messaging.getAPNSToken();
+        for (int i = 0; i < 10 && apns == null; i++) {
+          await Future.delayed(const Duration(milliseconds: 500));
+          apns = await messaging.getAPNSToken();
+        }
         if (apns == null) {
-          if (kDebugMode) print('🟡 APNs 토큰 없음 (시뮬레이터?) — FCM 토큰 발급 생략');
+          if (kDebugMode) print('🟡 APNs 토큰 없음 (시뮬레이터/미지원) — FCM 토큰 발급 생략');
           return;
         }
       }

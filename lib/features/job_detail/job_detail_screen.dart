@@ -510,8 +510,11 @@ class _DetailBodyState extends State<_DetailBody> {
                     children: [
                       Text(
                         job.getTitle(langCode),
-                        style: const TextStyle(
-                          fontSize: 19,
+                        style: TextStyle(
+                          // 카드와 동일 기준: CJK는 크게, 번역으로 길어지는 그 외 언어는 축소
+                          fontSize: const {'ko', 'ja', 'zh', 'zh-yue'}.contains(langCode)
+                              ? 19.0
+                              : 16.0,
                           fontWeight: FontWeight.w700,
                           color: AppColors.black,
                           height: 1.3,
@@ -611,6 +614,14 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                       if (job.visaSponsorship == true)
                         _InfoRow(label: s.tabVisaSponsorship, value: 'Yes'),
+                      // 지원방법: 크롤 수집 apply_methods 있을 때만 표시(1단계=표시 전용, 칩 탭 동작 없음).
+                      // null/빈 배열/미지 코드뿐이면 위젯이 행 자체를 숨김.
+                      if (job.applyMethods.isNotEmpty)
+                        _ApplyMethodsRow(
+                          label: s.infoApplyMethod,
+                          methods: job.applyMethods,
+                          strings: s,
+                        ),
                       // 사이트명 없으면(RLS로 숨겨진 testing 사이트) 출처 행 생략 — UUID 노출 방지
                       if (job.siteName != null && job.siteName!.isNotEmpty)
                         _SourceRow(
@@ -858,6 +869,101 @@ class _AddressRow extends StatelessWidget {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// 지원방법 칩 행 (아이콘 + 라벨 Wrap). 정규화 코드 배열을 app_strings로 16개 언어 렌더.
+// 1단계=표시 전용(칩 탭 동작 없음). 라벨 없는 미지 코드는 칩 생략, 전부 미지면 행 숨김.
+class _ApplyMethodsRow extends StatelessWidget {
+  final String label;
+  final List<String> methods; // 정규화 코드
+  final AppStrings strings;
+  const _ApplyMethodsRow({
+    required this.label,
+    required this.methods,
+    required this.strings,
+  });
+
+  // 코드 → 아이콘. 라벨은 app_strings(다국어)에서 가져옴.
+  static const Map<String, IconData> _icons = {
+    'online': Icons.computer_outlined,
+    'homepage': Icons.language,
+    'email': Icons.email_outlined,
+    'phone': Icons.phone_outlined,
+    'sms': Icons.sms_outlined,
+    'simple': Icons.flash_on,
+    'chat': Icons.chat_bubble_outline,
+    'visit': Icons.place_outlined,
+    'other': Icons.more_horiz,
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    // 라벨 있는(렌더 가능한) 코드만 추림 — 없으면 행 자체 숨김.
+    final renderable =
+        methods.where((m) => strings.applyMethodLabel(m) != null).toList();
+    if (renderable.isEmpty) return const SizedBox.shrink();
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF8F8F8))),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Text(label,
+              style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.gray300)),
+          const SizedBox(width: 16),
+          // 칩은 항상 1줄. 적으면 우측 정렬(테이블 값과 일관), 많으면 왼쪽부터 가로 스크롤.
+          Expanded(
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minWidth: constraints.maxWidth),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      for (var i = 0; i < renderable.length; i++) ...[
+                        if (i > 0) const SizedBox(width: 6),
+                        _chip(renderable[i]),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String code) {
+    final icon = _icons[code] ?? Icons.more_horiz;
+    final text = strings.applyMethodLabel(code)!;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+      decoration: BoxDecoration(
+        color: AppColors.carrotLight, // 연한 주황 배경 — 회색 정보 속에서 눈에 띄게
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: AppColors.carrot),
+          const SizedBox(width: 4),
+          Text(text,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.carrot)),
         ],
       ),
     );

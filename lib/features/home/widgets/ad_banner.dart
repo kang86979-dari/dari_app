@@ -12,17 +12,37 @@ class AdBanner extends StatefulWidget {
 
 class _AdBannerState extends State<AdBanner> {
   BannerAd? _bannerAd;
+  AdSize? _adSize;
   bool _isLoaded = false;
   bool _failed = false;
+  bool _requested = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 화면 폭이 필요해 initState 대신 여기서 1회만 로드.
+    if (_requested) return;
+    _requested = true;
+    _loadAd();
+  }
+
+  Future<void> _loadAd() async {
     final adUnitId = AdHelper.bannerId;
-    print('🔵 BannerAd loading... adUnitId=$adUnitId');
-    _bannerAd = BannerAd(
+    // 화면 폭에 맞춘 적응형 배너 — 양옆 검은 여백(iOS 레터박스) 없이 꽉 참.
+    final width = MediaQuery.of(context).size.width.truncate();
+    final size = await AdSize.getAnchoredAdaptiveBannerAdSize(
+      Orientation.portrait,
+      width,
+    );
+    if (size == null) {
+      if (mounted) setState(() => _failed = true);
+      return;
+    }
+    _adSize = size;
+    print('🔵 BannerAd loading... adUnitId=$adUnitId, size=${size.width}x${size.height}');
+    final ad = BannerAd(
       adUnitId: adUnitId,
-      size: AdSize.banner,
+      size: size,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
@@ -47,7 +67,9 @@ class _AdBannerState extends State<AdBanner> {
         onAdClicked: (_) => AdHelper.markAdClicked(),
         onAdOpened: (_) => AdHelper.markAdClicked(),
       ),
-    )..load();
+    );
+    _bannerAd = ad;
+    ad.load();
   }
 
   @override
@@ -61,11 +83,13 @@ class _AdBannerState extends State<AdBanner> {
     // 로드 실패 시에만 공간 회수. 로드 전(로딩 중)에도 높이를 예약해
     // 배너가 뒤늦게 뜰 때 리스트가 밀리는 점프(멀미)를 방지.
     if (_failed) return const SizedBox.shrink();
+    final reservedHeight = _adSize?.height.toDouble() ?? AdSize.banner.height.toDouble();
     return SizedBox(
       width: double.infinity,
-      height: AdSize.banner.height.toDouble(),
+      height: reservedHeight,
+      // 적응형 배너는 화면 폭에 맞춰지므로 Center 불필요 — 그대로 꽉 채움.
       child: (_isLoaded && _bannerAd != null)
-          ? Center(child: AdWidget(ad: _bannerAd!))
+          ? AdWidget(ad: _bannerAd!)
           : null,
     );
   }
