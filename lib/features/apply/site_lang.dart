@@ -58,18 +58,12 @@ class SiteLang {
   };
 
   /// iOS에서도 인앱 WebView를 쓸 사이트 (기본은 인앱 사파리).
-  /// 쿠키/localStorage 방식은 사파리에 사전 세팅이 불가능한데, 이 사이트들은
-  /// 기기 언어도 안 따라가 무조건 한국어로 떠서 WebView+세팅이 필수.
-  /// (자체 번역 22~34개 언어 보유라 사파리 네이티브 번역을 잃어도 손해 없음.
-  ///  URL 그룹(WorkVisa·Jobploy·WorkOn·Kowork)은 사파리 유지 — URL 세팅이 되고,
-  ///  ko·en뿐인 WorkOn·Kowork은 사파리 aA 번역으로 소수언어 보완 가능)
-  static bool useWebViewOnIOS(String url) =>
-      url.contains('khire.co.kr') ||
-      url.contains('findjob.co.kr') ||
-      url.contains('komate.saramin.co.kr') ||
-      url.contains('k-work.or.kr') ||
-      url.contains('talent-link.co.kr') ||
-      url.contains('jobnshop.com');
+  /// - JobnShop만 WebView: localStorage 주입이 필요하고(사파리 불가) 상세가
+  ///   모달이라 사이트 언어 UI 접근도 안 되는 유일한 사이트. iOS 실기기 검증됨.
+  /// - 쿠키 그룹(K-HIRE 등)은 iOS WKWebView에서 쿠키 사전 세팅이 반영되지 않아
+  ///   (실기기 확인) 사파리 유지 — 사용자가 사이트 번역 UI로 한 번 설정하면
+  ///   사파리 인앱 저장소(앱 전용·영구)에 남아 다음 방문에도 유지됨.
+  static bool useWebViewOnIOS(String url) => url.contains('jobnshop.com');
 
   // ── 진입 URL 변환 (URL 그룹 + FindJob 모바일 호스트) ──
   /// iOS 사파리 경로에서도 사용 — 언어와 무관한 호스트 정리(FindJob) 포함.
@@ -163,17 +157,59 @@ class SiteLang {
     }
   }
 
-  // ── JobnShop: 로드 후 localStorage 주입 (값이 다를 때만 리로드 → 루프 없음) ──
+  // ── 로드 후 주입 (JobnShop localStorage + 구글위젯 사이트 쿠키 폴백) ──
+  /// iOS WKWebView는 로드 전 쿠키 세팅이 타이밍상 반영 안 될 수 있어,
+  /// 사이트 자체 구글위젯이 있는 K-HIRE·K-Work은 로드 후 페이지 컨텍스트에서
+  /// 쿠키+콤보를 직접 트리거하는 폴백을 둔다 (이미 번역됐으면 아무것도 안 함).
   static String? postLoadJs(String url, String appLang) {
-    if (appLang == 'ko' || !url.contains('jobnshop.com')) return null;
-    final l = _jobnshopLangs.contains(appLang) ? appLang : 'en';
+    if (appLang == 'ko') return null;
+
+    if (url.contains('jobnshop.com')) {
+      final l = _jobnshopLangs.contains(appLang) ? appLang : 'en';
+      return '''
+        (function(){
+          try{
+            if(localStorage.getItem('resume_lang')!=='$l'){
+              localStorage.setItem('resume_lang','$l');
+              location.reload();
+            }
+          }catch(e){}
+        })();
+      ''';
+    }
+
+    // 구글위젯 자체 탑재 사이트: 페이지 컨텍스트에서 쿠키 재설정 + 사이트 콤보 트리거
+    String? cookieJs;
+    if (url.contains('khire.co.kr')) {
+      final g = _toGoogle(appLang);
+      final l = _khireLangs.contains(g) ? g : 'en';
+      cookieJs = '''
+        document.cookie='googtrans=/auto/$l;domain=.khire.co.kr;path=/';
+        document.cookie='googtrans=/auto/$l;path=/';
+        document.cookie='signlang=$l;domain=.khire.co.kr;path=/';
+        var target='$l';
+      ''';
+    } else if (url.contains('k-work.or.kr')) {
+      final g = _toGoogle(appLang);
+      final l = _kworkLangs.contains(g) ? g : 'en';
+      cookieJs = '''
+        document.cookie='googtrans=/ko/$l;path=/';
+        var target='$l';
+      ''';
+    }
+    if (cookieJs == null) return null;
     return '''
       (function(){
         try{
-          if(localStorage.getItem('resume_lang')!=='$l'){
-            localStorage.setItem('resume_lang','$l');
-            location.reload();
-          }
+          $cookieJs
+          var n=0;
+          var iv=setInterval(function(){
+            n++;
+            if(/translated-(ltr|rtl)/.test(document.documentElement.className)){ clearInterval(iv); return; }
+            var c=document.querySelector('.goog-te-combo');
+            if(c){ c.value=target; c.dispatchEvent(new Event('change')); }
+            if(n>20) clearInterval(iv);
+          }, 500);
         }catch(e){}
       })();
     ''';
