@@ -642,6 +642,7 @@ class _DetailBodyState extends State<_DetailBody> {
                     text: _translatedHtml ?? job.getDescriptionText(langCode),
                     isLoading: _isTranslating,
                     siteName: job.siteName,
+                    jobUrl: job.url,
                     titleLabel: s.detailContent,
                     hasSectionFormat: _hasSectionFormat(job.siteName, _translatedHtml ?? job.getDescriptionText(langCode)),
                   ),
@@ -1158,6 +1159,7 @@ class _DescriptionBlock extends StatelessWidget {
   final String text;
   final bool isLoading;
   final String? siteName;
+  final String? jobUrl; // 벼룩시장 등 URL 도메인 기반 포맷 판별용 (테스트 모드선 siteName이 null)
   final String titleLabel;
   final bool hasSectionFormat;
 
@@ -1166,12 +1168,13 @@ class _DescriptionBlock extends StatelessWidget {
     required this.titleLabel,
     this.isLoading = false,
     this.siteName,
+    this.jobUrl,
     this.hasSectionFormat = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final descWidget = _DescriptionText(text: text, isLoading: isLoading, siteName: siteName);
+    final descWidget = _DescriptionText(text: text, isLoading: isLoading, siteName: siteName, jobUrl: jobUrl);
     // _DescriptionText가 SizedBox.shrink()를 반환하면 블록 전체 숨김
     if (!isLoading && text.isNotEmpty && descWidget._isEmpty(text, siteName)) {
       return const SizedBox.shrink();
@@ -1211,8 +1214,15 @@ class _DescriptionText extends StatelessWidget {
   final String text;
   final bool isLoading;
   final String? siteName;
+  final String? jobUrl;
 
-  const _DescriptionText({required this.text, this.isLoading = false, this.siteName});
+  const _DescriptionText({required this.text, this.isLoading = false, this.siteName, this.jobUrl});
+
+  // 벼룩시장(FindJob 글로벌) 판별 — 테스트 모드에선 sites RLS로 siteName이 null이라 URL 도메인으로도 판별.
+  bool get _isFindJob =>
+      siteName == '벼룩시장' ||
+      siteName == 'FindJob' ||
+      (jobUrl?.contains('findjob.co.kr') ?? false);
 
   /// K-HIRE CSS 제거 후 의미 있는 내용이 없는지 체크
   bool _isEmpty(String text, String? siteName) {
@@ -1257,6 +1267,10 @@ class _DescriptionText extends StatelessWidget {
     }
 
     // 사이트별 구조화된 렌더링 시도
+    if (_isFindJob) {
+      final sections = _parseFindJob(text);
+      if (sections != null) return _buildSections(sections);
+    }
     if (siteName == 'Jobploy') {
       final sections = _parseJobploySections(text);
       if (sections != null) return _buildSections(sections);
@@ -2312,6 +2326,42 @@ class _DescriptionText extends StatelessWidget {
       }
     }
     return null;
+  }
+
+  /// 벼룩시장(FindJob) 파서: 상단 key:value 블록 + [상세요강] 등 브래킷 섹션 구조.
+  /// - 상단 kv(근무요일/모집분야/주요업무/가능조건/지원가능비자 등 100~46%)는 제목 없는 첫 섹션으로
+  ///   → _buildSectionContent가 콜론 기반으로 key 볼드 처리 (언어 무관 = 번역문도 동일 작동)
+  /// - `[상세요강]` 단독 줄(번역 시 [Detailed description]·【…】 변형 포함)은 섹션 제목으로 승격
+  /// - ＊헤더는 4%뿐이고 비정형이라 구조화하지 않음 (본문 그대로)
+  List<_DescSection>? _parseFindJob(String text) {
+    final lines = text.split('\n');
+    // 브래킷 단독 줄 = 섹션 경계 (GT가 [를 【로 바꾸는 케이스 포함)
+    final bracketRe = RegExp(r'^\s*[\[【]\s*([^\]】]{1,40})\s*[\]】]\s*$');
+    final sections = <_DescSection>[];
+    var currentTitle = '';
+    var buf = <String>[];
+    void flush() {
+      final content = buf.join('\n').trim();
+      // 내용 없는 제목도 유지 — 연속 브래킷(가게명·모집 포지션명 나열)이 유실되지 않게.
+      if (content.isNotEmpty || currentTitle.isNotEmpty) {
+        sections.add(_DescSection(title: currentTitle, content: content));
+      }
+      buf = [];
+    }
+
+    for (final line in lines) {
+      final m = bracketRe.firstMatch(line);
+      if (m != null) {
+        flush();
+        currentTitle = m.group(1)!.trim();
+      } else {
+        buf.add(line);
+      }
+    }
+    flush();
+
+    if (sections.isEmpty) return null; // 내용 없음 → 자유형 폴백
+    return sections;
   }
 
   Widget _buildSections(List<_DescSection> sections) {

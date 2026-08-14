@@ -13,6 +13,9 @@ import FirebaseMessaging
     // firebase_messaging이 didFinishLaunching 시점에 호출하는 registerForRemoteNotifications()가
     // 실행되지 않는다 → APNs 토큰이 영영 발급 안 됨. 여기서 직접 호출해 등록을 보장한다.
     application.registerForRemoteNotifications()
+    // 알림센터 delegate를 명시 고정 — 아래 willPresent가 확실히 불리게 함.
+    // (firebase_messaging은 기존 delegate가 FlutterAppLifeCycleProvider를 따르면 교체하지 않고 양보)
+    UNUserNotificationCenter.current().delegate = self
     return result
   }
 
