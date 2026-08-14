@@ -8,6 +8,7 @@ import '../../core/utils/ad_helper.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../apply/apply_webview_screen.dart';
+import '../apply/site_lang.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -349,9 +350,10 @@ class _DetailBodyState extends State<_DetailBody> {
     if (uri.scheme == 'http' || uri.scheme == 'https') {
       if (Platform.isIOS) {
         // iOS: 인앱 사파리(SFSafariViewController) — 네이티브 번역(aA→번역)·로그인 세션 정상.
-        // WKWebView는 구글 번역 위젯 주입이 안 되고 시스템 번역도 없어 Safari 계열을 사용.
+        // URL 로케일 사이트(WorkVisa·Jobploy·WorkOn·Kowork)는 사파리에서도 언어 치환 적용.
+        // 쿠키 그룹 사이트는 사파리 쿠키에 접근 불가 → 사이트 자체 언어 UI 사용.
         ChromeSafariBrowser().open(
-          url: WebUri(url),
+          url: WebUri(SiteLang.entryUrl(url, widget.langCode)),
           settings: ChromeSafariBrowserSettings(barCollapsingEnabled: true),
         );
       } else {

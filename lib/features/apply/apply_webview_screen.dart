@@ -3,6 +3,7 @@ import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
+import 'site_lang.dart';
 
 /// 지원하기 인앱 WebView (프로덕션).
 ///
@@ -33,6 +34,19 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
   InAppWebViewController? _controller;
   double _progress = 0;
   bool _failed = false;
+  // 언어 사전 세팅(쿠키) 완료 전에 WebView가 로드되지 않도록 게이트
+  bool _langReady = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _prepareLang();
+  }
+
+  Future<void> _prepareLang() async {
+    await SiteLang.presetCookies(widget.url, widget.langCode);
+    if (mounted) setState(() => _langReady = true);
+  }
 
   /// 벼룩시장(FindJob) 여부 — global→global-m 도메인 리다이렉트로 백키 루프가 생기는 사이트
   bool get _isFindJob => widget.url.contains('findjob.co.kr');
@@ -136,12 +150,19 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     );
   }
 
-  /// FindJob: 데스크톱 호스트로 열면 사이트가 global-m으로 JS 리다이렉트하며
-  /// 히스토리 쌍을 만들어 백키 루프가 생김 → 처음부터 모바일 호스트로 진입 (근본 해결).
-  String get _entryUrl =>
-      widget.url.replaceFirst('://global.findjob.co.kr', '://global-m.findjob.co.kr');
+  /// 진입 URL: 언어 경로 치환(WorkVisa·Jobploy·WorkOn·Kowork) + FindJob 모바일 호스트
+  String get _entryUrl => SiteLang.entryUrl(widget.url, widget.langCode);
 
   Widget _webView() {
+    // 쿠키 사전 세팅이 끝나기 전엔 로드하지 않음 (언어 적용 보장)
+    if (!_langReady) {
+      return const Center(
+        child: SizedBox(
+          width: 24, height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.carrot),
+        ),
+      );
+    }
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_entryUrl)),
       initialSettings: InAppWebViewSettings(
@@ -163,6 +184,11 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
       },
       onProgressChanged: (c, p) {
         if (mounted) setState(() => _progress = p / 100);
+      },
+      onLoadStop: (c, url) async {
+        // JobnShop: localStorage 언어 주입 (값 다를 때만 리로드 → 루프 없음)
+        final js = SiteLang.postLoadJs(url?.toString() ?? widget.url, widget.langCode);
+        if (js != null) await c.evaluateJavascript(source: js);
       },
       onReceivedError: (c, req, err) {
         // 메인 프레임 로드 실패만 폴백 처리
