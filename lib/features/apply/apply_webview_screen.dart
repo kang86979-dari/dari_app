@@ -6,9 +6,11 @@ import '../../core/l10n/app_strings.dart';
 
 /// 지원하기 인앱 WebView (프로덕션).
 ///
-/// - 진입 시 사용자 언어로 자동 번역 (googtrans 쿠키 + Google 번역 위젯,
-///   위젯 없는 사이트엔 element.js 직접 주입 → 전 사이트/16개 언어 커버)
+/// - 번역은 각 사이트의 자체 다국어 기능 사용 (2026-08-14 전 사이트 조사:
+///   10개 사이트 전부 자체 언어 전환 UI 보유 — 구글번역 주입은 SPA(FindJob 등)와
+///   충돌해 제거, iOS(인앱 사파리)와 동일 정책)
 /// - 하드웨어 백키: WebView 내부 뒤로, history 없으면 화면 종료(다리 복귀)
+///   (FindJob은 도메인 리다이렉트 히스토리 쌍 스킵 처리)
 /// - 상단 X: 언제든 즉시 다리 복귀
 /// - intent:// 등 비-http 이동 차단(앱스토어 이탈 방지)
 /// - 로드 실패 시 외부 브라우저 폴백
@@ -23,12 +25,6 @@ class ApplyWebViewScreen extends StatefulWidget {
     this.title,
   });
 
-  /// 앱 언어코드 → Google 번역 코드 매핑 (대부분 동일)
-  static String gtLang(String appLang) {
-    const map = {'zh': 'zh-CN', 'zh-yue': 'zh-TW'};
-    return map[appLang] ?? appLang;
-  }
-
   @override
   State<ApplyWebViewScreen> createState() => _ApplyWebViewScreenState();
 }
@@ -38,47 +34,40 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
   double _progress = 0;
   bool _failed = false;
 
-  String get _lang => ApplyWebViewScreen.gtLang(widget.langCode);
+  /// 벼룩시장(FindJob) 여부 — global→global-m 도메인 리다이렉트로 백키 루프가 생기는 사이트
+  bool get _isFindJob => widget.url.contains('findjob.co.kr');
 
-  /// 현재 페이지를 사용자 언어로 번역 (Android 전용 — Google 번역 위젯 주입 후 구동).
-  /// iOS는 이 화면을 쓰지 않고 인앱 사파리(SFSafariViewController)로 열어 네이티브 번역 사용.
-  Future<void> _translate() async {
-    final c = _controller;
-    if (c == null || _lang == 'ko') return; // 한국어면 번역 불필요
-    final js = '''
-      (function(){
-        var lang='$_lang';
-        document.cookie='googtrans=/auto/'+lang+';path=/';
-        // Google 번역 상단 바 숨김 (번역은 유지, 바만 제거)
-        if(!document.getElementById('dari-gte-css')){
-          var st=document.createElement('style'); st.id='dari-gte-css';
-          st.textContent='.goog-te-banner-frame,.goog-te-banner-frame.skiptranslate,#goog-gt-tt,.goog-tooltip,.goog-te-balloon-frame{display:none!important;visibility:hidden!important;}'
-            +'body{top:0!important;position:static!important;}.skiptranslate{display:none!important;}';
-          (document.head||document.documentElement).appendChild(st);
-        }
-        if(!document.querySelector('.goog-te-combo')){
-          window.googleTranslateElementInit=function(){
-            new google.translate.TranslateElement({pageLanguage:'auto', autoDisplay:false}, 'dari-gte');
-          };
-          if(!document.getElementById('dari-gte')){
-            var d=document.createElement('div'); d.id='dari-gte'; d.style.display='none'; document.body.appendChild(d);
-          }
-          if(!document.getElementById('dari-gte-js')){
-            var s=document.createElement('script'); s.id='dari-gte-js';
-            s.src='https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
-            document.body.appendChild(s);
-          }
-        }
-        var n=0;
-        var iv=setInterval(function(){
-          n++;
-          var combo=document.querySelector('.goog-te-combo');
-          if(combo){ combo.value=lang; combo.dispatchEvent(new Event('change')); clearInterval(iv); }
-          if(n>30) clearInterval(iv);
-        }, 500);
-      })();
-    ''';
-    await c.evaluateJavascript(source: js);
+  /// URL의 경로+쿼리 (호스트 무시) — global↔global-m처럼 도메인만 다른 같은 페이지 판별용
+  String _pathQuery(String url) {
+    final u = Uri.tryParse(url);
+    if (u == null) return url;
+    return '${u.path}?${u.query}';
+  }
+
+  /// FindJob 전용 백키: 리다이렉트 쌍(같은 경로+쿼리)은 한 페이지로 취급.
+  /// 실제 다른 페이지가 있으면 그리로, 없으면(진입 페이지뿐) 다리 복귀.
+  Future<void> _handleBackFindJob(NavigatorState navigator) async {
+    final c = _controller!;
+    final history = await c.getCopyBackForwardList();
+    final items = history?.list ?? [];
+    final cur = history?.currentIndex ?? -1;
+    if (cur < 0 || items.isEmpty) {
+      navigator.pop();
+      return;
+    }
+    final curPq = _pathQuery(items[cur].url.toString());
+    int? target;
+    for (int i = cur - 1; i >= 0; i--) {
+      if (_pathQuery(items[i].url.toString()) != curPq) {
+        target = i;
+        break;
+      }
+    }
+    if (target == null) {
+      navigator.pop(); // 뒤로 갈 실제 페이지 없음 (리다이렉트 쌍뿐)
+    } else {
+      await c.goBackOrForward(steps: target - cur);
+    }
   }
 
   Future<void> _openExternal() async {
@@ -100,7 +89,12 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
         final c = _controller;
         final navigator = Navigator.of(context);
         if (c != null && await c.canGoBack()) {
-          c.goBack();
+          if (_isFindJob) {
+            // FindJob: global↔global-m 리다이렉트가 히스토리를 쌓아 goBack 루프 발생 → 전용 처리
+            await _handleBackFindJob(navigator);
+          } else {
+            c.goBack();
+          }
         } else {
           navigator.pop();
         }
@@ -142,9 +136,14 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     );
   }
 
+  /// FindJob: 데스크톱 호스트로 열면 사이트가 global-m으로 JS 리다이렉트하며
+  /// 히스토리 쌍을 만들어 백키 루프가 생김 → 처음부터 모바일 호스트로 진입 (근본 해결).
+  String get _entryUrl =>
+      widget.url.replaceFirst('://global.findjob.co.kr', '://global-m.findjob.co.kr');
+
   Widget _webView() {
     return InAppWebView(
-      initialUrlRequest: URLRequest(url: WebUri(widget.url)),
+      initialUrlRequest: URLRequest(url: WebUri(_entryUrl)),
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         javaScriptCanOpenWindowsAutomatically: true,
@@ -164,9 +163,6 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
       },
       onProgressChanged: (c, p) {
         if (mounted) setState(() => _progress = p / 100);
-      },
-      onLoadStop: (c, url) async {
-        await _translate();
       },
       onReceivedError: (c, req, err) {
         // 메인 프레임 로드 실패만 폴백 처리

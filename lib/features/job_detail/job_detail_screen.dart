@@ -355,7 +355,7 @@ class _DetailBodyState extends State<_DetailBody> {
           settings: ChromeSafariBrowserSettings(barCollapsingEnabled: true),
         );
       } else {
-        // Android: 인앱 WebView + 사용자 언어 자동 번역(Google 번역 위젯 주입)
+        // Android: 인앱 WebView — 번역은 각 사이트 자체 다국어 기능 사용 (10개 사이트 전부 보유)
         Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
         ));
