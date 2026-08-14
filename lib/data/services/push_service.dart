@@ -6,6 +6,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter/foundation.dart';
+import '../../core/utils/app_info.dart';
 import '../models/filter_state.dart';
 import 'analytics_service.dart';
 
@@ -264,6 +265,9 @@ class PushService {
             'filter_state': filterJson,
             'lang_code': langCode,
             'enabled': true,
+            // iOS 출시 대비 — 서버가 플랫폼별 발송/집계에 사용 (기본값 android라 필수)
+            'platform': Platform.isIOS ? 'ios' : 'android',
+            'app_version': await AppInfo.version(),
           }, onConflict: 'device_token');
       if (kDebugMode) print('🟢 push_subscriptions upsert 성공: token=${_token!.substring(0, 10)}...');
     } catch (e) {

@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/l10n/app_strings.dart';
 import '../models/job.dart';
 import '../models/filter_state.dart';
+import '../../core/utils/app_info.dart';
 import '../../core/utils/region_mapper.dart';
 
 class JobRepository {
@@ -117,6 +118,10 @@ class JobRepository {
     };
     // 테스트 모드: testing 사이트(JobnShop 등) 포함. 생략(false) 시 기존과 동일.
     if (includeTesting) params['p_include_testing'] = true;
+    // 버전 게이트: 서버가 사이트별 min_app_build와 비교해 신규 사이트 노출 결정.
+    // 생략 시 게이트 사이트 제외(구버전과 동일)라 실패해도 안전.
+    final build = await AppInfo.buildNumber();
+    if (build != null) params['p_app_build'] = build;
 
     if (filter.visaIds.isNotEmpty) {
       params['p_visa_ids'] = filter.visaIds.toList();
@@ -289,6 +294,7 @@ class JobRepository {
     if (q.isEmpty) return [];
 
     final offset = page * _pageSize;
+    final appBuild = await AppInfo.buildNumber();
     final data = await _traced('search_jobs_fuzzy', () => _t(_client.rpc('search_jobs_fuzzy', params: {
       'search_query': q,
       'lang_code': langCode,
@@ -296,6 +302,7 @@ class JobRepository {
       'result_limit': _pageSize,
       'result_offset': offset,
       if (includeTesting) 'include_testing': true, // 테스트 모드 (search는 p_ 없음)
+      if (appBuild != null) 'app_build': appBuild, // 버전 게이트 (search는 p_ 없음)
     })));
 
     final rows = data as List;
@@ -337,10 +344,12 @@ class JobRepository {
   Future<int> searchJobsCount(String queryText, {String langCode = 'en', bool includeTesting = false}) async {
     final q = queryText.trim();
     if (q.isEmpty) return 0;
+    final appBuild = await AppInfo.buildNumber();
     final data = await _t(_client.rpc('search_jobs_count', params: {
       'search_query': q,
       'lang_code': langCode,
       if (includeTesting) 'include_testing': true,
+      if (appBuild != null) 'app_build': appBuild,
     }));
     return (data as int?) ?? 0;
   }
@@ -403,18 +412,28 @@ class JobRepository {
     return (data as List).map((e) => Job.fromJson(e)).toList();
   }
 
+  /// 사이트 목록 (RPC get_sites) — 버전 게이트 사이트는 RLS로 직접 조회에 안 나와
+  /// RPC가 p_app_build 기준으로 노출 대상을 돌려준다. 반환: id, name, url, supports_english
+  Future<List<Map<String, dynamic>>> _fetchSites() async {
+    final appBuild = await AppInfo.buildNumber();
+    final data = await _t(_client.rpc('get_sites', params: {
+      if (appBuild != null) 'p_app_build': appBuild,
+    }));
+    return (data as List).cast<Map<String, dynamic>>();
+  }
+
   /// [DEV] 사이트 목록 조회
   Future<List<FilterOption>> getSiteOptions() async {
-    final data = await _t(
-      _client.from('sites').select('id, name').order('name'),
-    );
-    return (data as List)
+    final sites = await _fetchSites();
+    final options = sites
         .where((e) => !_excludedSiteNames.contains(e['name'] as String? ?? ''))
         .map((e) => FilterOption(
               id: e['id'].toString(),
               label: e['name'] as String? ?? '',
             ))
         .toList();
+    options.sort((a, b) => a.label.compareTo(b.label));
+    return options;
   }
 
   /// 제외할 사이트 ID 캐시
@@ -422,10 +441,8 @@ class JobRepository {
 
   Future<Set<String>> _getExcludedSiteIds() async {
     if (_excludedSiteIds != null) return _excludedSiteIds!;
-    final data = await _t(
-      _client.from('sites').select('id, name'),
-    );
-    _excludedSiteIds = (data as List)
+    final sites = await _fetchSites();
+    _excludedSiteIds = sites
         .where((e) => _excludedSiteNames.contains(e['name'] as String? ?? ''))
         .map((e) => e['id'].toString())
         .toSet();
@@ -680,8 +697,11 @@ class JobRepository {
 
   /// 필터 옵션별 공고 건수 조회 (RPC)
   Future<FilterCounts> getFilterCounts({bool includeTesting = false}) async {
-    final data = await _t(_client.rpc('get_filter_counts',
-        params: {if (includeTesting) 'p_include_testing': true}));
+    final appBuild = await AppInfo.buildNumber();
+    final data = await _t(_client.rpc('get_filter_counts', params: {
+      if (includeTesting) 'p_include_testing': true,
+      if (appBuild != null) 'p_app_build': appBuild,
+    }));
     return FilterCounts.fromJson(data as Map<String, dynamic>);
   }
 

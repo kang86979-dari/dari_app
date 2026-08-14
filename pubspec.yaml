@@ -54,6 +54,7 @@ dependencies:
 
   # 로컬 저장
   shared_preferences: ^2.2.3
+  package_info_plus: ^8.3.0
 
   # 환경변수
   flutter_dotenv: ^5.1.0

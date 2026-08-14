@@ -44,6 +44,28 @@ final _albaPhoneNoticeRe = RegExp(r'\(전화 문의시.*?\)');
 final _albaPhoneNoticeEnRe =
     RegExp(r'\((When|For)[^)]{0,120}(phone|call)[^)]*\)', caseSensitive: false);
 
+/// 벼룩시장(FindJob) 워터마크 브랜드 — GT가 언어별로 브랜드명을 번역함 (실번역 15개 언어 수집으로 확정)
+/// 벼룩시장 공고엔 "DESIGNED BY 벼룩시장"(442건)·"DESIGNED BY 알바천국"(184건) 두 종이 있음.
+final _fleaBrandRe = RegExp(
+  r'(벼룩시장|flea\s?market|ノミ市場|跳蚤市场|Барахолка|ตลาดนัด|पिस्सू\s?बाज़?ार|फ्ली\s?मार्केट|ফ্লি\s?মার্কেট|Buyum\s?bozori|'
+  r'알바천국|Alba\s?(Heaven|Surga|osmon\w*)|阿尔巴天堂|アルバ天国|আলবা|अल्बा|อัลบา)',
+  caseSensitive: false,
+);
+
+/// "DESIGNED BY ..." 워터마크의 언어별 디자인동사 (짧은 단독 줄만 매칭 — 본문 오폭 방지)
+final _fleaDesignedLineRe = RegExp(
+  r'^.{0,40}(designed\s?by|dirancang oleh|thiết kế bởi|រចនាដោយ|ออกแบบโดย|ဒီဇိုင်းထုတ်|විසින්\s?නිර්මාණය|tomonidan ishlab chiqilgan|зохион байгуулсан|разработка|由.{0,14}设计|द्वारा डिज़?ाइन|দ্বারা ডিজাইন|ডিজাইন করা).{0,40}$',
+  caseSensitive: false,
+);
+
+/// 벼룩시장 워터마크/출처 안내 줄 제거 (브랜드 언급 줄 + 디자인동사 짧은 줄)
+String _stripFleaGarbage(String text) {
+  return text
+      .split('\n')
+      .where((l) => !_fleaBrandRe.hasMatch(l) && !_fleaDesignedLineRe.hasMatch(l.trim()))
+      .join('\n');
+}
+
 /// K-HIRE 워터마크/안내문 일괄 제거
 String _stripAlbaGarbage(String text) {
   var cleaned = text;
@@ -903,9 +925,15 @@ class _ApplyMethodsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 라벨 있는(렌더 가능한) 코드만 추림 — 없으면 행 자체 숨김.
-    final renderable =
-        methods.where((m) => strings.applyMethodLabel(m) != null).toList();
+    // 서버가 새 코드를 추가해도 정보 공백이 없도록, 모르는 코드는 "기타" 칩으로 표시.
+    // (숨기면 그 방법뿐인 공고는 지원방법 행이 통째로 사라짐 — 다음 릴리즈에서 정식 라벨 추가)
+    // 모르는 코드 여러 개 → "기타" 칩 중복 방지 (라벨 기준 dedup)
+    final seenLabels = <String>{};
+    final renderable = <String>[];
+    for (final m in methods) {
+      final label = strings.applyMethodLabel(m) ?? strings.applyMethodOther;
+      if (seenLabels.add(label)) renderable.add(m);
+    }
     if (renderable.isEmpty) return const SizedBox.shrink();
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -948,7 +976,8 @@ class _ApplyMethodsRow extends StatelessWidget {
 
   Widget _chip(String code) {
     final icon = _icons[code] ?? Icons.more_horiz;
-    final text = strings.applyMethodLabel(code)!;
+    // 모르는 코드는 "기타" 라벨로 폴백 (16개 언어)
+    final text = strings.applyMethodLabel(code) ?? strings.applyMethodOther;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
@@ -1268,7 +1297,7 @@ class _DescriptionText extends StatelessWidget {
 
     // 사이트별 구조화된 렌더링 시도
     if (_isFindJob) {
-      final sections = _parseFindJob(text);
+      final sections = _parseFindJob(_stripFleaGarbage(text));
       if (sections != null) return _buildSections(sections);
     }
     if (siteName == 'Jobploy') {
