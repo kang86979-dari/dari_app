@@ -1211,42 +1211,49 @@ class AppStrings {
  'ko': '비자 무관', 'en': 'Any visa', 'zh': '不限签证', 'hi': 'कोई भी वीज़ा', 'ja': 'ビザ不問', 'th': 'วีซ่าใดก็ได้', 'vi': 'Không giới hạn visa', 'bn': 'যেকোনো ভিসা',
  'ru': 'Любая виза', 'id': 'Visa apa saja', 'ne': 'कुनै पनि भिसा', 'km': 'ទិដ្ឋាការណាមួយ', 'my': 'မည်သည့်ဗီဇာမဆို',
  'si': 'ඕනෑම වීසා',
+   'uz': 'Istalgan viza', 'mn': 'Ямар ч виз',
  }, 'Any visa');
 
  String get visaGroupE => _t({
  'ko': 'E — 취업/전문', 'en': 'E — Employment/Professional', 'zh': 'E — 就业/专业', 'hi': 'E — रोजगार/पेशेवर', 'ja': 'E — 就業/専門', 'th': 'E — จ้างงาน/วิชาชีพ', 'vi': 'E — Việc làm/Chuyên gia', 'bn': 'E — কর্মসংস্থান/পেশাদার',
  'ru': 'E — Трудоустройство', 'id': 'E — Pekerjaan/Profesional', 'ne': 'E — रोजगार/पेशेवर', 'km': 'E — ការងារ/វិជ្ជាជីវៈ', 'my': 'E — အလုပ်/ပညာရှင်',
  'si': 'E — රැකියා/වෘත්තීය',
+   'uz': 'E — Ish/Mutaxassis', 'mn': 'E — Хөдөлмөр/Мэргэжил',
  }, 'E — Employment/Professional');
 
  String get visaGroupH => _t({
  'ko': 'H — 워킹홀리데이/방문취업', 'en': 'H — Working Holiday/Visit', 'zh': 'H — 打工度假/访问就业', 'hi': 'H — वर्किंग हॉलिडे/विज़िट', 'ja': 'H — ワーキングホリデー/訪問就業', 'th': 'H — วันหยุดทำงาน/เยี่ยมชม', 'vi': 'H — Working Holiday/Thăm', 'bn': 'H — ওয়ার্কিং হলিডে/ভিজিট',
  'ru': 'H — Рабочие каникулы', 'id': 'H — Working Holiday/Kunjungan', 'ne': 'H — वर्किंग हलिडे/भ्रमण', 'km': 'H — ថ្ងៃឈប់សម្រាកការងារ/ទស្សនកិច្ច', 'my': 'H — အလုပ်အားလပ်ရက်/လည်ပတ်',
  'si': 'H — වැඩ නිවාඩු/සංචාරය',
+   'uz': 'H — Ishchi ta\'til/Tashrif', 'mn': 'H — Ажлын амралт/Айлчлал',
  }, 'H — Working Holiday/Visit');
 
  String get visaGroupF => _t({
  'ko': 'F — 재외동포/거주', 'en': 'F — Overseas Korean/Residence', 'zh': 'F — 海外同胞/居住', 'hi': 'F — विदेशी कोरियाई/निवास', 'ja': 'F — 在外同胞/居住', 'th': 'F — ชาวเกาหลีโพ้นทะเล/ถิ่นที่อยู่', 'vi': 'F — Kiều bào Hàn/Cư trú', 'bn': 'F — প্রবাসী কোরিয়ান/বসবাস',
  'ru': 'F — Зарубежные корейцы/Проживание', 'id': 'F — Korea perantauan/Tinggal', 'ne': 'F — विदेशी कोरियन/बसोबास', 'km': 'F — កូរ៉េក្រៅប្រទេស/លំនៅដ្ឋាន', 'my': 'F — နိုင်ငံခြားကိုရီးယား/နေထိုင်',
  'si': 'F — විදේශ කොරියානු/පදිංචිය',
+   'uz': 'F — Yashash/Chet eldagi koreys', 'mn': 'F — Оршин суух/Гадаад солонгос',
  }, 'F — Overseas Korean/Residence');
 
  String get visaGroupD => _t({
  'ko': 'D — 유학/연수/투자', 'en': 'D — Study/Training/Investment', 'zh': 'D — 留学/研修/投资', 'hi': 'D — अध्ययन/प्रशिक्षण/निवेश', 'ja': 'D — 留学/研修/投資', 'th': 'D — เรียน/ฝึกงาน/ลงทุน', 'vi': 'D — Du học/Thực tập/Đầu tư', 'bn': 'D — পড়াশোনা/প্রশিক্ষণ/বিনিয়োগ',
  'ru': 'D — Учёба/Стажировка/Инвестиции', 'id': 'D — Studi/Pelatihan/Investasi', 'ne': 'D — अध्ययन/तालिम/लगानी', 'km': 'D — សិក្សា/បណ្ដុះបណ្ដាល/វិនិយោគ', 'my': 'D — ပညာ/လေ့ကျင့်/ရင်းနှီးမြှုပ်နှံ',
  'si': 'D — අධ්‍යයනය/පුහුණුව/ආයෝජනය',
+   'uz': 'D — O\'qish/Amaliyot/Investitsiya', 'mn': 'D — Суралцах/Дадлага/Хөрөнгө оруулалт',
  }, 'D — Study/Training/Investment');
 
  String get visaGroupC => _t({
  'ko': 'C — 단기', 'en': 'C — Short-term', 'zh': 'C — 短期', 'hi': 'C — अल्पकालिक', 'ja': 'C — 短期', 'th': 'C — ระยะสั้น', 'vi': 'C — Ngắn hạn', 'bn': 'C — স্বল্পমেয়াদী',
  'ru': 'C — Краткосрочная', 'id': 'C — Jangka pendek', 'ne': 'C — अल्पकालीन', 'km': 'C — រយៈពេលខ្លី', 'my': 'C — ရေတိုကာလ',
  'si': 'C — කෙටි කාලීන',
+   'uz': 'C — Qisqa muddatli', 'mn': 'C — Богино хугацааны',
  }, 'C — Short-term');
 
  String get visaGroupOther => _t({
  'ko': '기타', 'en': 'Other', 'zh': '其他', 'hi': 'अन्य', 'ja': 'その他', 'th': 'อื่นๆ', 'vi': 'Khác', 'bn': 'অন্যান্য',
  'ru': 'Другое', 'id': 'Lainnya', 'ne': 'अन्य', 'km': 'ផ្សេងៗ', 'my': 'အခြား',
  'si': 'වෙනත්',
+   'uz': 'Boshqa', 'mn': 'Бусад',
  }, 'Other');
 
  String get tabVisaSponsorship => _t({
@@ -1272,42 +1279,49 @@ class AppStrings {
  'ko': '성별', 'en': 'Gender', 'zh': '性别', 'hi': 'लिंग', 'ja': '性別', 'th': 'เพศ', 'vi': 'Giới tính', 'bn': 'লিঙ্গ',
  'ru': 'Пол', 'id': 'Jenis kelamin', 'ne': 'लिङ्ग', 'km': 'ភេទ', 'my': 'လိင်',
  'si': 'ස්ත්‍රී පුරුෂ භාවය',
+   'uz': 'Jins', 'mn': 'Хүйс',
  }, 'Gender');
 
  String get genderMale => _t({
  'ko': '남성', 'en': 'Male', 'zh': '男', 'hi': 'पुरुष', 'ja': '男性', 'th': 'ชาย', 'vi': 'Nam', 'bn': 'পুরুষ',
  'ru': 'Мужской', 'id': 'Pria', 'ne': 'पुरुष', 'km': 'ប្រុស', 'my': 'အမျိုးသား',
  'si': 'පුරුෂ',
+   'uz': 'Erkak', 'mn': 'Эрэгтэй',
  }, 'Male');
 
  String get genderFemale => _t({
  'ko': '여성', 'en': 'Female', 'zh': '女', 'hi': 'महिला', 'ja': '女性', 'th': 'หญิง', 'vi': 'Nữ', 'bn': 'মহিলা',
  'ru': 'Женский', 'id': 'Wanita', 'ne': 'महिला', 'km': 'ស្រី', 'my': 'အမျိုးသမီး',
  'si': 'ස්ත්‍රී',
+   'uz': 'Ayol', 'mn': 'Эмэгтэй',
  }, 'Female');
 
  String get genderAny => _t({
  'ko': '무관', 'en': 'Any', 'zh': '不限', 'hi': 'कोई भी', 'ja': '不問', 'th': 'ไม่จำกัด', 'vi': 'Không giới hạn', 'bn': 'যেকোনো',
  'ru': 'Любой', 'id': 'Semua', 'ne': 'कुनै पनि', 'km': 'មិនកំណត់', 'my': 'မရွေး',
  'si': 'ඕනෑම',
+   'uz': 'Farqi yo\'q', 'mn': 'Хамаагүй',
  }, 'Any');
 
  String get tabSalaryType => _t({
  'ko': '급여유형', 'en': 'Pay type', 'zh': '薪资类型', 'hi': 'वेतन प्रकार', 'ja': '給与形態', 'th': 'ประเภทเงินเดือน', 'vi': 'Loại lương', 'bn': 'বেতনের ধরন',
  'ru': 'Тип зарплаты', 'id': 'Jenis gaji', 'ne': 'तलब प्रकार', 'km': 'ប្រភេទប្រាក់ខែ', 'my': 'လစာအမျိုးအစား',
  'si': 'ගෙවීම් වර්ගය',
+   'uz': 'Ish haqi turi', 'mn': 'Цалингийн төрөл',
  }, 'Pay type');
 
  String get tabEducation => _t({
  'ko': '학력', 'en': 'Education', 'zh': '学历', 'hi': 'शिक्षा', 'ja': '学歴', 'th': 'การศึกษา', 'vi': 'Học vấn', 'bn': 'শিক্ষা',
  'ru': 'Образование', 'id': 'Pendidikan', 'ne': 'शिक्षा', 'km': 'ការអប់រំ', 'my': 'ပညာရေး',
  'si': 'අධ්‍යාපනය',
+   'uz': 'Ma\'lumot', 'mn': 'Боловсрол',
  }, 'Education');
 
  String get tabExperience => _t({
  'ko': '경력', 'en': 'Experience', 'zh': '经验', 'hi': 'अनुभव', 'ja': '経験', 'th': 'ประสบการณ์', 'vi': 'Kinh nghiệm', 'bn': 'অভিজ্ঞতা',
  'ru': 'Опыт', 'id': 'Pengalaman', 'ne': 'अनुभव', 'km': 'បទពិសោធន៍', 'my': 'အတွေ့အကြုံ',
  'si': 'පළපුරුද්ද',
+   'uz': 'Tajriba', 'mn': 'Туршлага',
  }, 'Experience');
 
  // ── Education codes ──
@@ -1315,34 +1329,41 @@ class AppStrings {
  'ko': '학력 무관', 'en': 'Any', 'zh': '不限', 'hi': 'कोई भी', 'ja': '不問', 'th': 'ไม่จำกัด', 'vi': 'Không yêu cầu', 'bn': 'যেকোনো',
  'ru': 'Любое', 'id': 'Semua', 'ne': 'कुनै पनि', 'km': 'មិនកំណត់', 'my': 'မရွေး',
  'si': 'ඕනෑම',
+   'uz': 'Farqi yo\'q', 'mn': 'Хамаагүй',
  }, 'Any');
  String get eduMiddleSchool => _t({
  'ko': '중졸', 'en': 'Middle school', 'zh': '初中', 'hi': 'मिडिल स्कूल', 'ja': '中卒', 'th': 'มัธยมต้น', 'vi': 'THCS', 'bn': 'মাধ্যমিক',
  'ru': 'Средняя школа', 'id': 'SMP', 'ne': 'माध्यमिक', 'km': 'អនុវិទ្យាល័យ', 'my': 'အလယ်တန်း',
  'si': 'මධ්‍යම පාසල',
+   'uz': 'O\'rta maktab', 'mn': 'Дунд сургууль',
  }, 'Middle school');
  String get eduHighSchool => _t({
  'ko': '고졸', 'en': 'High school', 'zh': '高中', 'hi': 'हाई स्कूल', 'ja': '高卒', 'th': 'มัธยมปลาย', 'vi': 'THPT', 'bn': 'উচ্চ মাধ্যমিক',
  'ru': 'Среднее', 'id': 'SMA', 'ne': 'उच्च माध्यमिक', 'km': 'វិទ្យាល័យ', 'my': 'အထက်တန်း',
  'si': 'උසස් පාසල',
+   'uz': 'Yuqori maktab', 'mn': 'Ахлах сургууль',
  }, 'High school');
  String get eduCollege => _t({
  'ko': '전문대졸', 'en': 'College', 'zh': '大专', 'hi': 'कॉलेज', 'ja': '短大・専門卒', 'th': 'อนุปริญญา', 'vi': 'Cao đẳng', 'bn': 'কলেজ',
  'ru': 'Колледж', 'id': 'D3', 'ne': 'कलेज', 'km': 'មហាវិទ្យាល័យ', 'my': 'ကောလိပ်',
  'si': 'විද්‍යාලය',
+   'uz': 'Kollej', 'mn': 'Коллеж',
  }, 'College');
  String get eduBachelor => _t({
  'ko': '대졸', 'en': 'Bachelor\'s', 'zh': '本科', 'hi': 'स्नातक', 'ja': '大卒', 'th': 'ปริญญาตรี', 'vi': 'Đại học', 'bn': 'স্নাতক',
  'ru': 'Бакалавр', 'id': 'S1', 'ne': 'स्नातक', 'km': 'បរិញ្ញាបត្រ', 'my': 'ဘွဲ့ရ', 'si': 'උපාධිය',
+   'uz': 'Bakalavr', 'mn': 'Бакалавр',
  }, 'Bachelor\'s');
  String get eduMaster => _t({
  'ko': '석사', 'en': 'Master\'s', 'zh': '硕士', 'hi': 'परास्नातक', 'ja': '修士', 'th': 'ปริญญาโท', 'vi': 'Thạc sĩ', 'bn': 'স্নাতকোত্তর',
  'ru': 'Магистр', 'id': 'S2', 'ne': 'स्नातकोत्तर', 'km': 'អនុបណ្ឌិត', 'my': 'မဟာဘွဲ့', 'si': 'ශාස්ත්‍රපති',
+   'uz': 'Magistr', 'mn': 'Магистр',
  }, 'Master\'s');
  String get eduDoctor => _t({
  'ko': '박사', 'en': 'Doctorate', 'zh': '博士', 'hi': 'डॉक्टरेट', 'ja': '博士', 'th': 'ปริญญาเอก', 'vi': 'Tiến sĩ', 'bn': 'ডক্টরেট',
  'ru': 'Доктор', 'id': 'S3', 'ne': 'विद्यावारिधि', 'km': 'បណ្ឌិត', 'my': 'ပါရဂူ',
  'si': 'ආචාර්ය',
+   'uz': 'Doktorantura', 'mn': 'Доктор',
  }, 'Doctorate');
 
  // ── Experience codes ──
@@ -1350,31 +1371,37 @@ class AppStrings {
  'ko': '경력 무관', 'en': 'Any', 'zh': '不限', 'hi': 'कोई भी', 'ja': '不問', 'th': 'ไม่จำกัด', 'vi': 'Không yêu cầu', 'bn': 'যেকোনো',
  'ru': 'Любой', 'id': 'Semua', 'ne': 'कुनै पनि', 'km': 'មិនកំណត់', 'my': 'မရွေး',
  'si': 'ඕනෑම',
+   'uz': 'Farqi yo\'q', 'mn': 'Хамаагүй',
  }, 'Any');
  String get expNewcomer => _t({
  'ko': '신입', 'en': 'Entry level', 'zh': '应届', 'hi': 'फ्रेशर', 'ja': '新卒', 'th': 'จบใหม่', 'vi': 'Mới ra trường', 'bn': 'নবীন',
  'ru': 'Начинающий', 'id': 'Fresh graduate', 'ne': 'नयाँ', 'km': 'អ្នកចូលថ្មី', 'my': 'အသစ်',
  'si': 'ආරම්භක මට්ටම',
+   'uz': 'Yangi boshlovchi', 'mn': 'Шинэ ажилтан',
  }, 'Entry level');
  String get exp1y => _t({
  'ko': '1년 이상', 'en': '1+ years', 'zh': '1年以上', 'hi': '1+ वर्ष', 'ja': '1年以上', 'th': '1+ ปี', 'vi': '1+ năm', 'bn': '1+ বছর',
  'ru': '1+ год', 'id': '1+ tahun', 'ne': '1+ वर्ष', 'km': '1+ ឆ្នាំ', 'my': '1+ နှစ်',
  'si': 'අවුරුදු 1+',
+   'uz': '1+ yil', 'mn': '1+ жил',
  }, '1+ years');
  String get exp3y => _t({
  'ko': '3년 이상', 'en': '3+ years', 'zh': '3年以上', 'hi': '3+ वर्ष', 'ja': '3年以上', 'th': '3+ ปี', 'vi': '3+ năm', 'bn': '3+ বছর',
  'ru': '3+ года', 'id': '3+ tahun', 'ne': '3+ वर्ष', 'km': '3+ ឆ្នាំ', 'my': '3+ နှစ်',
  'si': 'අවුරුදු 3+',
+   'uz': '3+ yil', 'mn': '3+ жил',
  }, '3+ years');
  String get exp5y => _t({
  'ko': '5년 이상', 'en': '5+ years', 'zh': '5年以上', 'hi': '5+ वर्ष', 'ja': '5年以上', 'th': '5+ ปี', 'vi': '5+ năm', 'bn': '5+ বছর',
  'ru': '5+ лет', 'id': '5+ tahun', 'ne': '5+ वर्ष', 'km': '5+ ឆ្នាំ', 'my': '5+ နှစ်',
  'si': 'අවුරුදු 5+',
+   'uz': '5+ yil', 'mn': '5+ жил',
  }, '5+ years');
  String get exp10y => _t({
  'ko': '10년 이상', 'en': '10+ years', 'zh': '10年以上', 'hi': '10+ वर्ष', 'ja': '10年以上', 'th': '10+ ปี', 'vi': '10+ năm', 'bn': '10+ বছর',
  'ru': '10+ лет', 'id': '10+ tahun', 'ne': '10+ वर्ष', 'km': '10+ ឆ្នាំ', 'my': '10+ နှစ်',
  'si': 'අවුරුදු 10+',
+   'uz': '10+ yil', 'mn': '10+ жил',
  }, '10+ years');
 
  String educationLabel(String code) {
@@ -1406,12 +1433,14 @@ class AppStrings {
  'ko': '지원자격', 'en': 'Qualification', 'zh': '应聘条件', 'hi': 'योग्यता', 'ja': '応募資格', 'th': 'คุณสมบัติ', 'vi': 'Điều kiện', 'bn': 'যোগ্যতা',
  'ru': 'Квалификация', 'id': 'Kualifikasi', 'ne': 'योग्यता', 'km': 'គុណវុឌ្ឍិ', 'my': 'အရည်အချင်း',
  'si': 'සුදුසුකම්',
+   'uz': 'Talablar', 'mn': 'Шаардлага',
  }, 'Qualification');
 
  String get tabWork => _t({
  'ko': '근무', 'en': 'Work', 'zh': '工作', 'hi': 'कार्य', 'ja': '勤務', 'th': 'การทำงาน', 'vi': 'Công việc', 'bn': 'কাজ',
  'ru': 'Работа', 'id': 'Kerja', 'ne': 'काम', 'km': 'ការងារ', 'my': 'အလုပ်',
  'si': 'වැඩ',
+   'uz': 'Ish', 'mn': 'Ажил',
  }, 'Work');
 
  // ── Salary filter options ──
@@ -3023,7 +3052,8 @@ class AppStrings {
        'uz': 'Tarjima qilish',
        'mn': 'Орчуулах',
        'kk': 'Аудару',
-     }, 'Translate');
+   'si': 'පරිවර්තනය',
+ }, 'Translate');
 
  String get showOriginal => _t({
        'ko': '원문 보기',
@@ -3053,7 +3083,8 @@ class AppStrings {
        'uz': 'Asl nusxani ko\'rish',
        'mn': 'Эх бичвэрийг харах',
        'kk': 'Түпнұсқаны көру',
-     }, 'Show original');
+   'si': 'මුල් පිටපත පෙන්වන්න',
+ }, 'Show original');
 
  String get translationFailed => _t({
        'ko': '번역 실패',
@@ -3083,7 +3114,8 @@ class AppStrings {
        'uz': 'Tarjima amalga oshmadi',
        'mn': 'Орчуулга амжилтгүй',
        'kk': 'Аударма сәтсіз',
-     }, 'Translation failed');
+   'si': 'පරිවර්තනය අසාර්ථකයි',
+ }, 'Translation failed');
 
  // ── Location ──
  String get locationDeniedMessage => _t({
@@ -3152,56 +3184,64 @@ class AppStrings {
      'my': 'အချိန်ပြည့်', 'mn': 'Бүтэн цагийн', 'ja': '正社員',
      'si': 'සම්පූර්ණ කාලීන', 'bn': 'পূর্ণকালীন', 'ru': 'Полная занятость',
      'hi': 'पूर्णकालिक',
-   }, 'Full-time'),
+   'ne': 'पूर्णकालीन', 'id': 'Penuh waktu',
+ }, 'Full-time'),
    'Part-time' => _t({
      'ko': '아르바이트', 'en': 'Part-time', 'zh': '兼职', 'vi': 'Bán thời gian',
      'th': 'พาร์ทไทม์', 'uz': 'Yarim stavka', 'km': 'ក្រៅម៉ោង',
      'my': 'အချိန်ပိုင်း', 'mn': 'Хагас цагийн', 'ja': 'アルバイト',
      'si': 'අර්ධ කාලීන', 'bn': 'খণ্ডকালীন', 'ru': 'Подработка',
      'hi': 'अंशकालिक',
-   }, 'Part-time'),
+   'ne': 'अंशकालीन', 'id': 'Paruh waktu',
+ }, 'Part-time'),
    'Contract' => _t({
      'ko': '계약직', 'en': 'Contract', 'zh': '合同工', 'vi': 'Hợp đồng',
      'th': 'สัญญาจ้าง', 'uz': 'Shartnoma', 'km': 'កិច្ចសន្យា',
      'my': 'စာချုပ်', 'mn': 'Гэрээт', 'ja': '契約社員',
      'si': 'ගිවිසුම්', 'bn': 'চুক্তিভিত্তিক', 'ru': 'Контракт',
      'hi': 'अनुबंध',
-   }, 'Contract'),
+   'ne': 'करार', 'id': 'Kontrak',
+ }, 'Contract'),
    'Daily Worker' => _t({
      'ko': '일용직', 'en': 'Daily Worker', 'zh': '日工', 'vi': 'Công nhật',
      'th': 'รายวัน', 'uz': 'Kunlik ishchi', 'km': 'កម្មករប្រចាំថ្ងៃ',
      'my': 'နေ့စားအလုပ်သမား', 'mn': 'Өдрийн ажилтан', 'ja': '日雇い',
      'si': 'දෛනික සේවක', 'bn': 'দৈনিক শ্রমিক', 'ru': 'Подённый рабочий',
      'hi': 'दिहाड़ी मज़दूर',
-   }, 'Daily Worker'),
+   'ne': 'दैनिक ज्यालादारी', 'id': 'Pekerja harian',
+ }, 'Daily Worker'),
    'Intern' => _t({
      'ko': '인턴', 'en': 'Intern', 'zh': '实习生', 'vi': 'Thực tập sinh',
      'th': 'ฝึกงาน', 'uz': 'Stajer', 'km': 'កម្មសិក្សា',
      'my': 'အလုပ်သင်', 'mn': 'Дадлагажигч', 'ja': 'インターン',
      'si': 'පුහුණුකරු', 'bn': 'ইন্টার্ন', 'ru': 'Стажёр',
      'hi': 'इंटर्न',
-   }, 'Intern'),
+   'ne': 'इन्टर्न', 'id': 'Magang',
+ }, 'Intern'),
    'Dispatch' => _t({
      'ko': '파견직', 'en': 'Dispatch', 'zh': '派遣工', 'vi': 'Phái cử',
      'th': 'จัดส่งแรงงาน', 'uz': 'Yuborilgan ishchi', 'km': 'បញ្ជូន',
      'my': 'စေလွှတ်အလုပ်သမား', 'mn': 'Түр томилгоот', 'ja': '派遣社員',
      'si': 'යවන ලද සේවක', 'bn': 'প্রেরিত কর্মী', 'ru': 'Аутсорсинг',
      'hi': 'प्रतिनियुक्त',
-   }, 'Dispatch'),
+   'ne': 'एजेन्सी कामदार', 'id': 'Pekerja agensi',
+ }, 'Dispatch'),
    'Freelancer' => _t({
      'ko': '프리랜서', 'en': 'Freelancer', 'zh': '自由职业者', 'vi': 'Freelancer',
      'th': 'ฟรีแลนซ์', 'uz': 'Frilanser', 'km': 'ឯករាជ្យ',
      'my': 'လွတ်လပ်အလုပ်သမား', 'mn': 'Чөлөөт ажилтан', 'ja': 'フリーランス',
      'si': 'නිදහස් සේවක', 'bn': 'ফ্রিল্যান্সার', 'ru': 'Фрилансер',
      'hi': 'फ्रीलांसर',
-   }, 'Freelancer'),
+   'ne': 'फ्रिल्यान्सर', 'id': 'Pekerja lepas',
+ }, 'Freelancer'),
    'Negotiable' => _t({
      'ko': '협의', 'en': 'Negotiable', 'zh': '面议', 'vi': 'Thương lượng',
      'th': 'ตามตกลง', 'uz': 'Kelishiladi', 'km': 'ចរចា',
      'my': 'ညှိနှိုင်း', 'mn': 'Тохиролцоно', 'ja': '応相談',
      'si': 'සාකච්ඡා කළ හැකි', 'bn': 'আলোচনাসাপেক্ষ', 'ru': 'По договорённости',
      'hi': 'बातचीत योग्य',
-   }, 'Negotiable'),
+   'ne': 'सहमतिमा', 'id': 'Bisa dinegosiasikan',
+ }, 'Negotiable'),
    _ => nameEn,
  };
 
@@ -3212,21 +3252,24 @@ class AppStrings {
      'my': 'IT နှင့် ဖွံ့ဖြိုးရေး', 'mn': 'IT & Хөгжүүлэлт', 'ja': 'IT・開発',
      'si': 'IT සහ සංවර්ධන', 'bn': 'আইটি ও উন্নয়ন', 'ru': 'IT и разработка',
      'hi': 'आईटी और विकास',
-   }, 'IT & Development'),
+   'ne': 'आईटी तथा विकास', 'id': 'IT & Pengembangan',
+ }, 'IT & Development'),
    'Construction' => _t({
      'ko': '건설·현장', 'en': 'Construction', 'zh': '建筑·工地', 'vi': 'Xây dựng',
      'th': 'ก่อสร้าง', 'uz': 'Qurilish', 'km': 'សំណង់',
      'my': 'ဆောက်လုပ်ရေး', 'mn': 'Барилга', 'ja': '建設・現場',
      'si': 'ඉදිකිරීම්', 'bn': 'নির্মাণ', 'ru': 'Строительство',
      'hi': 'निर्माण',
-   }, 'Construction'),
+   'ne': 'निर्माण', 'id': 'Konstruksi',
+ }, 'Construction'),
    'Education' => _t({
      'ko': '교육', 'en': 'Education', 'zh': '教育', 'vi': 'Giáo dục',
      'th': 'การศึกษา', 'uz': 'Ta\'lim', 'km': 'អប់រំ',
      'my': 'ပညာရေး', 'mn': 'Боловсрол', 'ja': '教育',
      'si': 'අධ්‍යාපනය', 'bn': 'শিক্ষা', 'ru': 'Образование',
      'hi': 'शिक्षा',
-   }, 'Education'),
+   'ne': 'शिक्षा', 'id': 'Pendidikan',
+ }, 'Education'),
    'Agriculture, Forestry & Fishing' => _t({
      'ko': '농림수산', 'en': 'Agriculture, Forestry & Fishing', 'zh': '农林渔业', 'vi': 'Nông lâm ngư nghiệp',
      'th': 'เกษตร ป่าไม้ และประมง', 'uz': 'Qishloq, o\'rmon va baliqchilik', 'km': 'កសិកម្ម វនសាស្ត្រ និងនេសាទ',
@@ -3241,49 +3284,56 @@ class AppStrings {
      'my': 'ထောက်ပံ့ပို့ဆောင်ရေး', 'mn': 'Логистик', 'ja': '物流・運搬',
      'si': 'සැපයුම් දාම', 'bn': 'লজিস্টিক', 'ru': 'Логистика',
      'hi': 'रसद',
-   }, 'Logistics'),
+   'ne': 'लजिस्टिक्स', 'id': 'Logistik',
+ }, 'Logistics'),
    'Office & Admin' => _t({
      'ko': '사무·행정', 'en': 'Office & Admin', 'zh': '办公·行政', 'vi': 'Văn phòng & Hành chính',
      'th': 'สำนักงาน & ธุรการ', 'uz': 'Ofis va ma\'muriyat', 'km': 'ការិយាល័យ និងរដ្ឋបាល',
      'my': 'ရုံးနှင့် စီမံရေး', 'mn': 'Оффис & Удирдлага', 'ja': '事務・管理',
      'si': 'කාර්යාලය සහ පරිපාලන', 'bn': 'অফিস ও প্রশাসন', 'ru': 'Офис и администрирование',
      'hi': 'कार्यालय और प्रशासन',
-   }, 'Office & Admin'),
+   'ne': 'कार्यालय तथा प्रशासन', 'id': 'Kantor & Administrasi',
+ }, 'Office & Admin'),
    'Service & Sales' => _t({
      'ko': '서비스·판매', 'en': 'Service & Sales', 'zh': '服务·销售', 'vi': 'Dịch vụ & Bán hàng',
      'th': 'บริการ & การขาย', 'uz': 'Xizmat va savdo', 'km': 'សេវាកម្ម និងការលក់',
      'my': 'ဝန်ဆောင်မှုနှင့် အရောင်း', 'mn': 'Үйлчилгээ & Борлуулалт', 'ja': 'サービス・販売',
      'si': 'සේවා සහ විකුණුම්', 'bn': 'সেবা ও বিক্রয়', 'ru': 'Сервис и продажи',
      'hi': 'सेवा और बिक्री',
-   }, 'Service & Sales'),
+   'ne': 'सेवा तथा बिक्री', 'id': 'Layanan & Penjualan',
+ }, 'Service & Sales'),
    'Food & Cooking' => _t({
      'ko': '음식·조리', 'en': 'Food & Cooking', 'zh': '餐饮·烹饪', 'vi': 'Ẩm thực & Nấu ăn',
      'th': 'อาหาร & ทำอาหาร', 'uz': 'Ovqat va pazandachilik', 'km': 'អាហារ និងការចម្អិន',
      'my': 'စားသောက်နှင့် ချက်ပြုတ်', 'mn': 'Хоол & Тогооч', 'ja': '飲食・調理',
      'si': 'ආහාර සහ පිසීම', 'bn': 'খাদ্য ও রান্না', 'ru': 'Еда и кулинария',
      'hi': 'भोजन और खाना पकाना',
-   }, 'Food & Cooking'),
+   'ne': 'खाना तथा पकाउने', 'id': 'Makanan & Memasak',
+ }, 'Food & Cooking'),
    'Medical' => _t({
      'ko': '의료·건강', 'en': 'Medical', 'zh': '医疗·健康', 'vi': 'Y tế',
      'th': 'การแพทย์', 'uz': 'Tibbiyot', 'km': 'វេជ្ជសាស្ត្រ',
      'my': 'ဆေးပညာ', 'mn': 'Эмнэлэг', 'ja': '医療・健康',
      'si': 'වෛද්‍ය', 'bn': 'চিকিৎসা', 'ru': 'Медицина',
      'hi': 'चिकित्सा',
-   }, 'Medical'),
+   'ne': 'चिकित्सा', 'id': 'Medis',
+ }, 'Medical'),
    'Manufacturing' => _t({
      'ko': '제조·생산', 'en': 'Manufacturing', 'zh': '制造·生产', 'vi': 'Sản xuất',
      'th': 'การผลิต', 'uz': 'Ishlab chiqarish', 'km': 'ផលិតកម្ម',
      'my': 'ကုန်ထုတ်လုပ်ရေး', 'mn': 'Үйлдвэрлэл', 'ja': '製造・生産',
      'si': 'නිෂ්පාදන', 'bn': 'উৎপাদন', 'ru': 'Производство',
      'hi': 'विनिर्माण',
-   }, 'Manufacturing'),
+   'ne': 'उत्पादन', 'id': 'Manufaktur',
+ }, 'Manufacturing'),
    'Cleaning & Facility' => _t({
      'ko': '청소·시설', 'en': 'Cleaning & Facility', 'zh': '清洁·设施', 'vi': 'Vệ sinh & Cơ sở vật chất',
      'th': 'ทำความสะอาด & สิ่งอำนวยความสะดวก', 'uz': 'Tozalash va binolar', 'km': 'សម្អាត និងគ្រប់គ្រងអគារ',
      'my': 'သန့်ရှင်းရေးနှင့် အဆောက်အအုံ', 'mn': 'Цэвэрлэгээ & Байгууламж', 'ja': '清掃・施設',
      'si': 'පිරිසිදු කිරීම සහ පහසුකම්', 'bn': 'পরিচ্ছন্নতা ও সুবিধা', 'ru': 'Уборка и обслуживание',
      'hi': 'सफ़ाई और सुविधा',
-   }, 'Cleaning & Facility'),
+   'ne': 'सरसफाइ तथा सुविधा', 'id': 'Kebersihan & Fasilitas',
+ }, 'Cleaning & Facility'),
    'Marketing & Sales' => _t({
      'ko': '마케팅·영업', 'en': 'Marketing & Sales', 'zh': '营销·销售', 'vi': 'Marketing & Kinh doanh',
      'th': 'การตลาด & การขาย', 'uz': 'Marketing va savdo', 'km': 'ទីផ្សារ និងការលក់',
@@ -3555,63 +3605,72 @@ class AppStrings {
      'my': 'တစ်ပတ် ၁ ရက်', 'mn': '7 хоногт 1 өдөр', 'ja': '週1日',
      'si': 'සතියට දින 1', 'bn': 'সপ্তাহে ১ দিন', 'ru': '1 день/нед.',
      'hi': 'सप्ताह में 1 दिन',
-   }, '1 day/week'),
+   'ne': 'हप्तामा १ दिन', 'id': '1 hari/minggu',
+ }, '1 day/week'),
    '2 days/week' => _t({
      'ko': '주2일', 'en': '2 days/week', 'zh': '每周2天', 'vi': '2 ngày/tuần',
      'th': '2 วัน/สัปดาห์', 'uz': 'Haftada 2 kun', 'km': '2 ថ្ងៃ/សប្ដាហ៍',
      'my': 'တစ်ပတ် ၂ ရက်', 'mn': '7 хоногт 2 өдөр', 'ja': '週2日',
      'si': 'සතියට දින 2', 'bn': 'সপ্তাহে ২ দিন', 'ru': '2 дня/нед.',
      'hi': 'सप्ताह में 2 दिन',
-   }, '2 days/week'),
+   'ne': 'हप्तामा २ दिन', 'id': '2 hari/minggu',
+ }, '2 days/week'),
    '3 days/week' => _t({
      'ko': '주3일', 'en': '3 days/week', 'zh': '每周3天', 'vi': '3 ngày/tuần',
      'th': '3 วัน/สัปดาห์', 'uz': 'Haftada 3 kun', 'km': '3 ថ្ងៃ/សប្ដាហ៍',
      'my': 'တစ်ပတ် ၃ ရက်', 'mn': '7 хоногт 3 өдөр', 'ja': '週3日',
      'si': 'සතියට දින 3', 'bn': 'সপ্তাহে ৩ দিন', 'ru': '3 дня/нед.',
      'hi': 'सप्ताह में 3 दिन',
-   }, '3 days/week'),
+   'ne': 'हप्तामा ३ दिन', 'id': '3 hari/minggu',
+ }, '3 days/week'),
    '4 days/week' => _t({
      'ko': '주4일', 'en': '4 days/week', 'zh': '每周4天', 'vi': '4 ngày/tuần',
      'th': '4 วัน/สัปดาห์', 'uz': 'Haftada 4 kun', 'km': '4 ថ្ងៃ/សប្ដាហ៍',
      'my': 'တစ်ပတ် ၄ ရက်', 'mn': '7 хоногт 4 өдөр', 'ja': '週4日',
      'si': 'සතියට දින 4', 'bn': 'সপ্তাহে ৪ দিন', 'ru': '4 дня/нед.',
      'hi': 'सप्ताह में 4 दिन',
-   }, '4 days/week'),
+   'ne': 'हप्तामा ४ दिन', 'id': '4 hari/minggu',
+ }, '4 days/week'),
    '5 days/week' => _t({
      'ko': '주5일', 'en': '5 days/week', 'zh': '每周5天', 'vi': '5 ngày/tuần',
      'th': '5 วัน/สัปดาห์', 'uz': 'Haftada 5 kun', 'km': '5 ថ្ងៃ/សប្ដាហ៍',
      'my': 'တစ်ပတ် ၅ ရက်', 'mn': '7 хоногт 5 өдөр', 'ja': '週5日',
      'si': 'සතියට දින 5', 'bn': 'সপ্তাহে ৫ দিন', 'ru': '5 дней/нед.',
      'hi': 'सप्ताह में 5 दिन',
-   }, '5 days/week'),
+   'ne': 'हप्तामा ५ दिन', 'id': '5 hari/minggu',
+ }, '5 days/week'),
    '6 days/week' => _t({
      'ko': '주6일', 'en': '6 days/week', 'zh': '每周6天', 'vi': '6 ngày/tuần',
      'th': '6 วัน/สัปดาห์', 'uz': 'Haftada 6 kun', 'km': '6 ថ្ងៃ/សប្ដាហ៍',
      'my': 'တစ်ပတ် ၆ ရက်', 'mn': '7 хоногт 6 өдөр', 'ja': '週6日',
      'si': 'සතියට දින 6', 'bn': 'সপ্তাহে ৬ দিন', 'ru': '6 дней/нед.',
      'hi': 'सप्ताह में 6 दिन',
-   }, '6 days/week'),
+   'ne': 'हप्तामा ६ दिन', 'id': '6 hari/minggu',
+ }, '6 days/week'),
    'Mon–Sun' || 'Mon-Sun' || '7 days/week' => _t({
      'ko': '주7일', 'en': '7 days/week', 'zh': '每周7天', 'vi': '7 ngày/tuần',
      'th': '7 วัน/สัปดาห์', 'uz': 'Haftada 7 kun', 'km': '7 ថ្ងៃ/សប្តាហ៍',
      'my': 'တစ်ပတ် 7 ရက်', 'mn': '7 хоног/долоо хоног', 'ja': '週7日',
      'si': 'සතියට දින 7', 'bn': 'সপ্তাহে 7 দিন', 'ru': '7 дней/неделю',
      'hi': 'सप्ताह में 7 दिन',
-   }, '7 days/week'),
+   'ne': 'हप्तामा ७ दिन', 'id': '7 hari/minggu',
+ }, '7 days/week'),
    'Weekend' => _t({
      'ko': '주말', 'en': 'Weekend', 'zh': '周末', 'vi': 'Cuối tuần',
      'th': 'สุดสัปดาห์', 'uz': 'Dam olish kunlari', 'km': 'ចុងសប្ដាហ៍',
      'my': 'စနေ-တနင်္ဂနွေ', 'mn': 'Амралтын өдөр', 'ja': '週末',
      'si': 'සති අන්තය', 'bn': 'সাপ্তাহিক ছুটি', 'ru': 'Выходные',
      'hi': 'सप्ताहांत',
-   }, 'Weekend'),
+   'ne': 'सप्ताहन्त', 'id': 'Akhir pekan',
+ }, 'Weekend'),
    'Negotiable' => _t({
      'ko': '협의', 'en': 'Negotiable', 'zh': '面议', 'vi': 'Thương lượng',
      'th': 'ตามตกลง', 'uz': 'Kelishiladi', 'km': 'ចរចា',
      'my': 'ညှိနှိုင်း', 'mn': 'Тохиролцоно', 'ja': '応相談',
      'si': 'සාකච්ඡා කළ හැකි', 'bn': 'আলোচনাসাপেক্ষ', 'ru': 'По договорённости',
      'hi': 'बातचीत योग्य',
-   }, 'Negotiable'),
+   'ne': 'सहमतिमा', 'id': 'Bisa dinegosiasikan',
+ }, 'Negotiable'),
    _ => nameEn,
  };
 
@@ -3622,35 +3681,40 @@ class AppStrings {
      'my': 'မလိုအပ်ပါ', 'mn': 'Шаардлагагүй', 'ja': '不問',
      'si': 'අවශ්‍ය නැත', 'bn': 'প্রয়োজন নেই', 'ru': 'Не требуется',
      'hi': 'आवश्यक नहीं',
-   }, 'Not Required'),
+   'ne': 'आवश्यक छैन', 'id': 'Tidak diperlukan',
+ }, 'Not Required'),
    'Beginner' => _t({
      'ko': '초급', 'en': 'Beginner', 'zh': '初级', 'vi': 'Sơ cấp',
      'th': 'เริ่มต้น', 'uz': 'Boshlang\'ich', 'km': 'ចាប់ផ្តើម',
      'my': 'အခြေခံ', 'mn': 'Анхан шат', 'ja': '初級',
      'si': 'ආරම්භක', 'bn': 'প্রাথমিক', 'ru': 'Начальный',
      'hi': 'शुरुआती',
-   }, 'Beginner'),
+   'ne': 'प्रारम्भिक', 'id': 'Pemula',
+ }, 'Beginner'),
    'Intermediate' => _t({
      'ko': '중급', 'en': 'Intermediate', 'zh': '中级', 'vi': 'Trung cấp',
      'th': 'ปานกลาง', 'uz': 'O\'rta', 'km': 'មធ្យម',
      'my': 'အလယ်အလတ်', 'mn': 'Дунд шат', 'ja': '中級',
      'si': 'මධ්‍යම', 'bn': 'মধ্যবর্তী', 'ru': 'Средний',
      'hi': 'मध्यम',
-   }, 'Intermediate'),
+   'ne': 'मध्यम', 'id': 'Menengah',
+ }, 'Intermediate'),
    'Advanced' => _t({
      'ko': '상급', 'en': 'Advanced', 'zh': '高级', 'vi': 'Cao cấp',
      'th': 'ขั้นสูง', 'uz': 'Yuqori', 'km': 'កម្រិតខ្ពស់',
      'my': 'အဆင့်မြင့်', 'mn': 'Ахисан шат', 'ja': '上級',
      'si': 'උසස්', 'bn': 'উন্নত', 'ru': 'Продвинутый',
      'hi': 'उन्नत',
-   }, 'Advanced'),
+   'ne': 'उच्च', 'id': 'Mahir',
+ }, 'Advanced'),
    'Native' => _t({
      'ko': '원어민', 'en': 'Native', 'zh': '母语', 'vi': 'Bản ngữ',
      'th': 'เจ้าของภาษา', 'uz': 'Ona tili', 'km': 'ជនជាតិដើម',
      'my': 'မိခင်ဘာသာ', 'mn': 'Төрөлх', 'ja': 'ネイティブ',
      'si': 'මව් භාෂාව', 'bn': 'স্থানীয়', 'ru': 'Носитель языка',
      'hi': 'मूल भाषी',
-   }, 'Native'),
+   'ne': 'मातृभाषा स्तर', 'id': 'Penutur asli',
+ }, 'Native'),
    _ => nameEn,
  };
 
@@ -3661,35 +3725,40 @@ class AppStrings {
      'my': 'လူမှုအာမခံ', 'mn': 'Нийгмийн даатгал', 'ja': '社会保険',
      'si': 'සමාජ රක්ෂණ', 'bn': 'সামাজিক বীমা', 'ru': 'Социальное страхование',
      'hi': 'सामाजिक बीमा',
-   }, 'Social Insurance'),
+   'ne': 'सामाजिक बीमा', 'id': 'Asuransi sosial',
+ }, 'Social Insurance'),
    'Transportation Support' => _t({
      'ko': '교통비 지원', 'en': 'Transportation Support', 'zh': '交通补贴', 'vi': 'Hỗ trợ đi lại',
      'th': 'สนับสนุนค่าเดินทาง', 'uz': 'Transport xarajatlari', 'km': 'ជំនួយដឹកជញ្ជូន',
      'my': 'သယ်ယူပို့ဆောင်ရေးထောက်ပံ့', 'mn': 'Тээврийн зардал', 'ja': '交通費支給',
      'si': 'ප්‍රවාහන දීමනා', 'bn': 'পরিবহন ভাতা', 'ru': 'Оплата проезда',
      'hi': 'परिवहन सहायता',
-   }, 'Transportation Support'),
+   'ne': 'यातायात खर्च सहयोग', 'id': 'Tunjangan transportasi',
+ }, 'Transportation Support'),
    'Housing Provided' => _t({
      'ko': '숙소 제공', 'en': 'Housing Provided', 'zh': '提供住宿', 'vi': 'Cung cấp chỗ ở',
      'th': 'มีที่พักให้', 'uz': 'Turar joy taqdim etiladi', 'km': 'ផ្តល់កន្លែងស្នាក់នៅ',
      'my': 'အိမ်ရာပံ့ပိုး', 'mn': 'Байр олгоно', 'ja': '住居提供',
      'si': 'නිවාස සපයනු ලැබේ', 'bn': 'বাসস্থান প্রদান', 'ru': 'Предоставляется жильё',
      'hi': 'आवास उपलब्ध',
-   }, 'Housing Provided'),
+   'ne': 'आवास उपलब्ध', 'id': 'Disediakan tempat tinggal',
+ }, 'Housing Provided'),
    'Meal Provided' => _t({
      'ko': '식사 제공', 'en': 'Meal Provided', 'zh': '提供餐食', 'vi': 'Cung cấp bữa ăn',
      'th': 'มีอาหารให้', 'uz': 'Ovqat taqdim etiladi', 'km': 'ផ្តល់អាហារ',
      'my': 'အစားအသောက်ပံ့ပိုး', 'mn': 'Хоол олгоно', 'ja': '食事提供',
      'si': 'ආහාර සපයනු ලැබේ', 'bn': 'খাবার প্রদান', 'ru': 'Предоставляется питание',
      'hi': 'भोजन उपलब्ध',
-   }, 'Meal Provided'),
+   'ne': 'खाना उपलब्ध', 'id': 'Disediakan makan',
+ }, 'Meal Provided'),
    'Severance Pay' => _t({
      'ko': '퇴직금', 'en': 'Severance Pay', 'zh': '遣散费', 'vi': 'Trợ cấp thôi việc',
      'th': 'เงินชดเชย', 'uz': 'Ishdan bo\'shatish to\'lovi', 'km': 'ប្រាក់បំណាច់',
      'my': 'ထွက်ခွာကြေး', 'mn': 'Тэтгэмж', 'ja': '退職金',
      'si': 'විශ්‍රාම වැටුප', 'bn': 'বিচ্ছেদ ভাতা', 'ru': 'Выходное пособие',
      'hi': 'विच्छेद वेतन',
-   }, 'Severance Pay'),
+   'ne': 'सेवानिवृत्ति भत्ता', 'id': 'Pesangon',
+ }, 'Severance Pay'),
    _ => nameEn,
  };
 
@@ -3793,6 +3862,7 @@ class AppStrings {
  'my': 'ရလဒ်များ',
  'uz': 'Natijalar',
  'mn': 'Үр дүн',
+   'si': 'ප්‍රතිඵල',
  }, 'Results');
 
  String get filterMatchTab => _t({
@@ -3811,6 +3881,7 @@ class AppStrings {
  'my': 'စစ်ထုတ်',
  'uz': 'Filtr',
  'mn': 'Шүүлтүүр',
+   'si': 'පෙරහන',
  }, 'Filter');
 
  String get applySelectedFilters => _t({
@@ -3829,6 +3900,7 @@ class AppStrings {
  'my': 'အသုံးပြုပါ',
  'uz': 'Qo\'llash',
  'mn': 'Хэрэглэх',
+   'si': 'යොදන්න',
  }, 'Apply');
 
  // ── Helper ──

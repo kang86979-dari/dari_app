@@ -634,7 +634,7 @@ class _DetailBodyState extends State<_DetailBody> {
                       if (job.benefits.isNotEmpty)
                         _InfoRow(
                           label: s.tabBenefits,
-                          value: job.benefits.map((b) => b.getName(langCode)).join(', '),
+                          value: job.getBenefits(langCode),
                         ),
                       if (job.visaSponsorship == true)
                         _InfoRow(label: s.tabVisaSponsorship, value: 'Yes'),

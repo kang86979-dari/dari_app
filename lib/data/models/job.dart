@@ -399,6 +399,18 @@ class Job {
     return _translated(workModelTranslations, langCode) ?? workModel ?? '';
   }
 
+  /// 복리후생 표시명 (app_strings 번역 우선, 폴백: DB name)
+  /// DB엔 name_ko/name_en뿐이라 직접 getName(langCode)을 쓰면 비ko/en 언어가
+  /// 전부 영어로 폴백됨 — 다른 항목들처럼 16개 언어 헬퍼를 거친다.
+  String getBenefits(String langCode) {
+    return benefits.map((b) {
+      final nameEn = b.getName('en');
+      final translated = AppStrings.of(langCode).translateBenefit(nameEn);
+      if (translated != nameEn || langCode == 'en') return translated;
+      return b.getName(langCode);
+    }).join(', ');
+  }
+
   /// 근무요일 표시명 (app_strings 번역 우선, 폴백: DB name)
   String getWorkSchedule(String langCode) {
     if (workSchedule != null) {

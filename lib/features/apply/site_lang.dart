@@ -87,6 +87,26 @@ class SiteLang {
     return u;
   }
 
+  /// 같은 이름의 쿠키가 host 전용/도메인 양쪽 스코프에 병존하면 브라우저가 둘 다
+  /// 보내고 사이트는 먼저 오는(옛) 값을 집는다 → 반드시 양쪽 삭제 후 세팅.
+  static Future<void> _resetCookie(
+    CookieManager cm,
+    String host,
+    String name,
+    String value, {
+    String? domain,
+  }) async {
+    final uri = WebUri('https://$host');
+    // host 전용 + 도메인 스코프 둘 다 삭제 (없어도 무해)
+    await cm.deleteCookie(url: uri, name: name, path: '/');
+    if (domain != null) {
+      await cm.deleteCookie(url: uri, name: name, domain: domain, path: '/');
+    }
+    await cm.setCookie(
+      url: uri, name: name, value: value, domain: domain, path: '/',
+    );
+  }
+
   // ── 로드 전 쿠키 세팅 (Android WebView 전용) ──
   /// InAppWebView 로드 전에 호출. 실패해도 무해(원문 노출)라 예외는 삼킴.
   static Future<void> presetCookies(String url, String appLang) async {
@@ -96,47 +116,33 @@ class SiteLang {
       if (url.contains('khire.co.kr')) {
         final g = _toGoogle(appLang);
         final l = _khireLangs.contains(g) ? g : 'en';
-        // 사이트 초기화 JS가 host-only googtrans를 지우므로 반드시 도메인 쿠키로
-        await cm.setCookie(
-          url: WebUri('https://m.khire.co.kr'),
-          name: 'googtrans', value: '/auto/$l',
-          domain: '.khire.co.kr', path: '/',
-        );
+        // 사이트 초기화 JS가 host-only googtrans를 지우므로 도메인 쿠키로.
+        // signlang도 함께 — 이전 값이 남으면 사이트가 그 언어로 되돌림.
+        await _resetCookie(cm, 'm.khire.co.kr', 'googtrans', '/auto/$l',
+            domain: '.khire.co.kr');
+        await _resetCookie(cm, 'm.khire.co.kr', 'signlang', l,
+            domain: '.khire.co.kr');
       } else if (url.contains('findjob.co.kr')) {
         final g = _toGoogle(appLang); // 34개 언어 — 우리 셋 전부 지원
         for (final name in ['googtrans', '__googtrans']) {
-          await cm.setCookie(
-            url: WebUri('https://global-m.findjob.co.kr'),
-            name: name, value: '/auto/$g',
-            domain: '.findjob.co.kr', path: '/',
-          );
+          await _resetCookie(cm, 'global-m.findjob.co.kr', name, '/auto/$g',
+              domain: '.findjob.co.kr');
         }
       } else if (url.contains('komate.saramin.co.kr')) {
         final g = _toGoogle(appLang); // 30개 언어 — 우리 셋 전부 지원
-        // host-only 쿠키 (사이트가 domain 없이 기록) — domain 미지정으로 동일하게
-        await cm.setCookie(
-          url: WebUri('https://komate.saramin.co.kr'),
-          name: 'googtrans', value: '/auto/$g', path: '/',
-        );
-        await cm.setCookie(
-          url: WebUri('https://komate.saramin.co.kr'),
-          name: 'IS_LANGUAGE_SELECTION_SHOWN', value: 'true', path: '/',
-        );
+        // host-only 쿠키 (사이트가 domain 없이 기록)
+        await _resetCookie(cm, 'komate.saramin.co.kr', 'googtrans', '/auto/$g');
+        await _resetCookie(
+            cm, 'komate.saramin.co.kr', 'IS_LANGUAGE_SELECTION_SHOWN', 'true');
       } else if (url.contains('k-work.or.kr')) {
         final g = _toGoogle(appLang);
         final l = _kworkLangs.contains(g) ? g : 'en';
         // K-Work는 /ko/{lang} 형식 + 당일 자정(KST) 만료라 매 진입 재주입이 정답
-        await cm.setCookie(
-          url: WebUri('https://k-work.or.kr'),
-          name: 'googtrans', value: '/ko/$l', path: '/',
-        );
+        await _resetCookie(cm, 'k-work.or.kr', 'googtrans', '/ko/$l');
       } else if (url.contains('talent-link.co.kr')) {
         // KR/EN/VN 대문자 — 쿠키 있으면 언어선택 모달도 안 뜸
         final l = appLang == 'vi' ? 'VN' : 'EN';
-        await cm.setCookie(
-          url: WebUri('https://talent-link.co.kr'),
-          name: 'lang', value: l, path: '/',
-        );
+        await _resetCookie(cm, 'talent-link.co.kr', 'lang', l);
       }
     } catch (_) {
       // 쿠키 실패 = 원문 노출뿐. 사용자는 사이트 자체 언어 UI로 변경 가능.
