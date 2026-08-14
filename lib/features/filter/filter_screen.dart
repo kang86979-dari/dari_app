@@ -1,3 +1,14 @@
+// 필터 화면 (개편안 A — 2026-08 handoff 기반)
+//
+// 구조: 헤더 / 그룹 pill 탭(가로 스크롤, 본문과 양방향 연동) / 칩 그리드 본문 /
+//       선택 트레이(선택 있을 때만) / 하단 바(초기화 + 결과 N건 보기)
+// 지역: 시·도 칩 → 시·군·구 바텀시트 드릴다운 ("전지역" 배타 선택)
+//
+// 확정 사항(2026-08-14): 색은 앱 팔레트(carrot/navy) 사용, hot은 정적,
+// 비자 그룹핑 없이 hot+더보기, 광고 배너 없음, 풀스크린 유지.
+// 상태는 기존 패턴 유지 — filterStateProvider를 실시간 변경 + 진입 시 스냅샷,
+// X/백키로 나가면 변경 여부 확인 다이얼로그(적용/되돌리기).
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,11 +20,38 @@ import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
-import '../home/widgets/ad_banner.dart';
-import '../../core/widgets/error_retry.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/utils/district_names.dart';
 import '../../data/repositories/job_repository.dart';
+
+// ── 디자인 토큰 (handoff tokens.json — 색만 앱 팔레트로 치환) ──
+class _T {
+  static const orange = AppColors.carrot; // #FF6F0F
+  static const orangeSoft = AppColors.carrotLight; // #FFF3EB
+  static const navy = AppColors.navy; // #003478
+  static const ink = Color(0xFF17171C);
+  static const text = Color(0xFF2B2B33);
+  static const muted = Color(0xFF8E8E98);
+  static const line = Color(0xFFECE9E4);
+}
+
+// 그룹 키 (탭 순서 = 기존 initialTab 인덱스와 호환)
+const _kGroups = [
+  'visa', 'category', 'employ', 'region', 'salary',
+  'schedule', 'korean', 'benefit', 'country', 'site',
+];
+const _kRegion = 'region';
+
+/// 시·도 데이터 (regions 캐시에서 구성)
+class _SidoData {
+  final String si;
+  final int? siRowId; // gu_name == null 인 시·도 행
+  final List<({int id, String gu})> gus;
+  const _SidoData({required this.si, this.siRowId, required this.gus});
+
+  Set<int> get allIds =>
+      {if (siRowId != null) siRowId!, ...gus.map((g) => g.id)};
+}
 
 class FilterScreen extends ConsumerStatefulWidget {
   final int initialTab;
@@ -25,25 +63,68 @@ class FilterScreen extends ConsumerStatefulWidget {
 
 class _FilterScreenState extends ConsumerState<FilterScreen> {
   late FilterState _snapshot;
-  late int _selectedIndex;
-  final _regionKey = GlobalKey<_RegionSelectPanelState>();
+
+  final _scroll = ScrollController();
+  final _tabScroll = ScrollController();
+  final Map<String, GlobalKey> _secKeys = {for (final k in _kGroups) k: GlobalKey()};
+  final Map<String, GlobalKey> _tabKeys = {for (final k in _kGroups) k: GlobalKey()};
+  final Set<String> _expanded = {};
+  String _active = _kGroups.first;
+  bool _lockSpy = false;
+
+  List<_SidoData>? _sidos; // regions 캐시에서 1회 구성
 
   @override
   void initState() {
     super.initState();
-    _selectedIndex = widget.initialTab;
     _snapshot = ref.read(filterStateProvider);
     analytics.filterOpened(_snapshot.activeCount);
-    // 필터 진입 시, 이전(네트워크 실패 등)에 에러/실패로 캐시된 필터 데이터만 재조회.
-    // 홈의 "다시시도"는 공고 목록만 갱신하므로, 필터용 옵션/카운트는 여기서 복구한다.
-    // 정상 상태는 건드리지 않아(불필요한 재조회 없음) 사이드이펙트 없음.
-    WidgetsBinding.instance.addPostFrameCallback((_) => _recoverFailedFilterData());
+    _scroll.addListener(_onScroll);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _recoverFailedFilterData();
+      _loadRegions();
+      // initialTab: 기존 라우팅 파라미터(인덱스) 호환 — 해당 그룹으로 점프
+      if (widget.initialTab > 0 && widget.initialTab < _kGroups.length) {
+        _jump(_kGroups[widget.initialTab]);
+      }
+    });
   }
 
-  /// 에러 상태이거나 네트워크 실패값(-1)으로 캐시된 필터 프로바이더만 무효화하여 재조회한다.
+  @override
+  void dispose() {
+    _scroll.removeListener(_onScroll);
+    _scroll.dispose();
+    _tabScroll.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadRegions() async {
+    final rows = JobRepository.allRegionsCacheSync ??
+        await ref.read(jobRepositoryProvider).getAllRegionsPublic();
+    if (!mounted) return;
+    final map = <String, ({int? siId, List<({int id, String gu})> gus})>{};
+    for (final r in rows) {
+      final si = r['si_name'] as String? ?? '';
+      if (si.isEmpty) continue;
+      final cur = map[si] ?? (siId: null, gus: <({int id, String gu})>[]);
+      if (r['gu_name'] == null) {
+        map[si] = (siId: r['id'] as int, gus: cur.gus);
+      } else {
+        cur.gus.add((id: r['id'] as int, gu: r['gu_name'] as String));
+        map[si] = (siId: cur.siId, gus: cur.gus);
+      }
+    }
+    setState(() {
+      _sidos = [
+        for (final e in map.entries)
+          _SidoData(si: e.key, siRowId: e.value.siId, gus: e.value.gus),
+      ];
+    });
+  }
+
+  /// 에러/실패값으로 캐시된 필터 프로바이더만 재조회 (기존 Fix A 유지)
   void _recoverFailedFilterData() {
     if (!mounted) return;
-    // 옵션 프로바이더 (모두 FutureProvider<List<FilterOption>>, autoDispose 아님)
     final optionProviders = <FutureProvider<List<FilterOption>>>[
       visaOptionsProvider,
       categoryOptionsProvider,
@@ -58,17 +139,16 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     for (final p in optionProviders) {
       if (ref.read(p).hasError) ref.invalidate(p);
     }
-    // 필터 옵션별 건수
     if (ref.read(filterCountsProvider).hasError) {
       ref.invalidate(filterCountsProvider);
     }
-    // "결과보기" 전체 건수: 에러 또는 실패값(-1)이면 재조회
     final total = ref.read(jobTotalCountProvider);
     if (total.hasError || total.valueOrNull == -1) {
       ref.invalidate(jobTotalCountProvider);
     }
   }
 
+  // ── 나가기 (스냅샷 복원 확인) ──
   void _cancel() {
     final current = ref.read(filterStateProvider);
     if (current != _snapshot) {
@@ -84,10 +164,8 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Text(
-          s.filterExitConfirm,
-          style: const TextStyle(fontSize: 15, height: 1.5),
-        ),
+        content: Text(s.filterExitConfirm,
+            style: const TextStyle(fontSize: 15, height: 1.5)),
         actions: [
           TextButton(
             onPressed: () {
@@ -101,265 +179,172 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
           TextButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.pop();
+              _apply();
             },
             child: Text(s.filterExitApply,
                 style: const TextStyle(
-                    color: AppColors.carrot, fontWeight: FontWeight.w700)),
+                    color: _T.orange, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
     );
   }
 
+  void _apply() {
+    final filter = ref.read(filterStateProvider);
+    analytics.filterApplied({'active_count': filter.activeCount});
+    analytics.filterAppliedDetail(
+      visaIds: filter.visaIds,
+      categoryIds: filter.categoryIds,
+      employmentTypeIds: filter.employmentTypeIds,
+      regionNames: filter.regionIds.map((e) => e.toString()).toSet(),
+      salaryTypes: filter.salaryTypes,
+      workScheduleIds: filter.workScheduleIds,
+      gender: filter.gender,
+      educations: filter.educations,
+      experiences: filter.experiences,
+      koreanLevelIds: filter.koreanLevelIds,
+      benefitIds: filter.benefitIds,
+      countryIds: filter.countryIds,
+      siteIds: filter.siteIds,
+      visaSponsorship: filter.visaSponsorship,
+    );
+    final langCode = ref.read(languageProvider);
+    if (filter.isEmpty) {
+      pushService.deleteSubscription();
+    } else {
+      pushService.upsertSubscription(filter: filter, langCode: langCode);
+    }
+    context.pop();
+  }
+
+  // ── 탭 ↔ 본문 스크롤 연동 ──
+  double? _sectionOffset(String key) {
+    final ctx = _secKeys[key]?.currentContext;
+    if (ctx == null) return null;
+    final box = ctx.findRenderObject() as RenderBox?;
+    final viewport =
+        _scroll.position.context.storageContext.findRenderObject() as RenderBox?;
+    if (box == null || viewport == null) return null;
+    final dy = box.localToGlobal(Offset.zero, ancestor: viewport).dy;
+    return _scroll.offset + dy;
+  }
+
+  Future<void> _jump(String key) async {
+    setState(() {
+      _active = key;
+      _lockSpy = true;
+    });
+    _revealTab(key);
+    final target = _sectionOffset(key);
+    if (target != null && _scroll.hasClients) {
+      await _scroll.animateTo(
+        (target - 6).clamp(0.0, _scroll.position.maxScrollExtent),
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+    if (mounted) setState(() => _lockSpy = false);
+  }
+
+  void _onScroll() {
+    if (_lockSpy) return;
+    final y = _scroll.offset + 24;
+    String cur = _kGroups.first;
+    for (final k in _kGroups) {
+      final top = _sectionOffset(k);
+      if (top != null && top <= y) cur = k;
+    }
+    if (cur != _active) {
+      setState(() => _active = cur);
+      _revealTab(cur);
+    }
+  }
+
+  void _revealTab(String key) {
+    final ctx = _tabKeys[key]?.currentContext;
+    if (ctx == null) return;
+    Scrollable.ensureVisible(ctx,
+        alignment: 0.4,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut);
+  }
+
+  // ── 지역 선택 상태 (regionIds ↔ 시·도/구 파생) ──
+  bool _sidoIsAll(_SidoData s, Set<int> ids) =>
+      s.allIds.isNotEmpty && ids.containsAll(s.allIds);
+
+  List<({int id, String gu})> _sidoPickedGus(_SidoData s, Set<int> ids) =>
+      s.gus.where((g) => ids.contains(g.id)).toList();
+
+  int _regionCount(Set<int> ids) {
+    final sidos = _sidos;
+    if (sidos == null) return ids.isEmpty ? 0 : 1;
+    int n = 0;
+    for (final s in sidos) {
+      if (_sidoIsAll(s, ids)) {
+        n += 1; // 전지역 = 1개로 집계
+      } else {
+        n += _sidoPickedGus(s, ids).length;
+      }
+    }
+    return n;
+  }
+
+  void _setSidoAll(_SidoData s) {
+    final notifier = ref.read(filterStateProvider.notifier);
+    final ids = Set<int>.from(ref.read(filterStateProvider).regionIds)
+      ..addAll(s.allIds);
+    notifier.setRegionIds(ids);
+  }
+
+  void _clearSido(_SidoData s) {
+    final notifier = ref.read(filterStateProvider.notifier);
+    final ids = Set<int>.from(ref.read(filterStateProvider).regionIds)
+      ..removeAll(s.allIds);
+    notifier.setRegionIds(ids);
+  }
+
+  void _toggleGu(_SidoData s, int guId) {
+    final notifier = ref.read(filterStateProvider.notifier);
+    final ids = Set<int>.from(ref.read(filterStateProvider).regionIds);
+    if (_sidoIsAll(s, ids)) {
+      // 전지역 → 해당 구만 해제한 부분 선택으로 전환
+      ids.removeAll(s.allIds);
+      ids.addAll(s.gus.map((g) => g.id).where((id) => id != guId));
+    } else if (ids.contains(guId)) {
+      ids.remove(guId);
+    } else {
+      ids.add(guId);
+      // 전부 고르면 전지역으로 승격 (시·도 행 포함 → 시 단위 공고도 매칭)
+      if (ids.containsAll(s.gus.map((g) => g.id))) ids.addAll(s.allIds);
+    }
+    notifier.setRegionIds(ids);
+  }
+
+  // ── 빌드 ──
   @override
   Widget build(BuildContext context) {
     final filter = ref.watch(filterStateProvider);
-    final notifier = ref.read(filterStateProvider.notifier);
     final s = ref.watch(stringsProvider);
-    final categories = [
-      _CatItem(s.tabVisa, _hasSelection(filter, 0), _selectionCount(filter, 0)),
-      _CatItem(s.tabJobType, _hasSelection(filter, 1), _selectionCount(filter, 1)),
-      _CatItem(s.tabEmployType, _hasSelection(filter, 2), _selectionCount(filter, 2)),
-      _CatItem(s.tabRegion, _hasSelection(filter, 3), _selectionCount(filter, 3)),
-      _CatItem(s.tabSalary, _hasSelection(filter, 4), _selectionCount(filter, 4)),
-      _CatItem(s.tabWorkSchedule, _hasSelection(filter, 5), _selectionCount(filter, 5)),
-      _CatItem(s.tabKoreanLevel, _hasSelection(filter, 6), _selectionCount(filter, 6)),
-      _CatItem(s.tabBenefits, _hasSelection(filter, 7), _selectionCount(filter, 7)),
-      _CatItem(s.tabCountry, _hasSelection(filter, 8), _selectionCount(filter, 8)),
-      _CatItem(s.tabSite, _hasSelection(filter, 9), _selectionCount(filter, 9)),
-    ];
+    final langCode = ref.watch(languageProvider);
 
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
-        final regionState = _regionKey.currentState;
-        if (regionState != null && regionState._selectedSiDo != null) {
-          regionState.setState(() => regionState._selectedSiDo = null);
-          return;
-        }
         _cancel();
       },
       child: Scaffold(
+        backgroundColor: Colors.white,
         body: SafeArea(
           child: Column(
             children: [
-              // 헤더
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 10, 16, 10),
-                decoration: const BoxDecoration(
-                  border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(s.filter,
-                        style: const TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: AppColors.black)),
-                    GestureDetector(
-                      onTap: _cancel,
-                      child: const SizedBox(
-                        width: 36, height: 36,
-                        child: Center(
-                            child: Text('×',
-                                style: TextStyle(
-                                    fontSize: 24, color: AppColors.gray300))),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // 광고 배너
-              const AdBanner(),
-
-              // 좌우 2패널 + 칩
-              Expanded(
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Row(
-                        children: [
-                          // 왼쪽: 카테고리 목록
-                          SizedBox(
-                            width: 120,
-                            child: Container(
-                              color: const Color(0xFFF9F9F9),
-                              child: ListView.builder(
-                                itemCount: categories.length,
-                                itemBuilder: (context, index) {
-                                  final cat = categories[index];
-                                  final isSelected = index == _selectedIndex;
-                                  return GestureDetector(
-                                    onTap: () => setState(() => _selectedIndex = index),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 14, vertical: 16),
-                                      decoration: BoxDecoration(
-                                        color: isSelected ? Colors.white : Colors.transparent,
-                                        border: Border(
-                                          left: BorderSide(
-                                            color: isSelected ? AppColors.carrot : Colors.transparent,
-                                            width: 3,
-                                          ),
-                                        ),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Expanded(
-                                            child: Text(
-                                              cat.label,
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: isSelected
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w500,
-                                                color: isSelected
-                                                    ? AppColors.carrot
-                                                    : AppColors.gray400,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          if (cat.count > 0)
-                                            Container(
-                                              margin: const EdgeInsets.only(left: 6),
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: AppColors.carrot,
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                '${cat.count}',
-                                                style: const TextStyle(
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.w700,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                        ],
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                            ),
-                          ),
-
-                          // 오른쪽: 상세 필터 옵션
-                          Expanded(
-                            child: Align(
-                              alignment: Alignment.topLeft,
-                              child: _buildDetailPanel(filter, notifier, s),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // 선택된 필터 칩
-                    if (!filter.isEmpty)
-                      _SelectedFilterChips(
-                  filter: filter,
-                  notifier: notifier,
-                  visaOpts: ref.watch(visaOptionsProvider).valueOrNull ?? [],
-                  catOpts: ref.watch(categoryOptionsProvider).valueOrNull ?? [],
-                  etOpts: ref.watch(employmentTypeOptionsProvider).valueOrNull ?? [],
-                  benefitOpts: ref.watch(benefitOptionsProvider).valueOrNull ?? [],
-                  klOpts: ref.watch(koreanLevelOptionsProvider).valueOrNull ?? [],
-                  wsOpts: ref.watch(workScheduleOptionsProvider).valueOrNull ?? [],
-                  langOpts: ref.watch(languageOptionsProvider).valueOrNull ?? [],
-                  siteOpts: ref.watch(siteOptionsProvider).valueOrNull ?? [],
-                  countryOpts: ref.watch(countryOptionsProvider).valueOrNull ?? [],
-                  s: s,
-                ),
-                  ],
-                ),
-              ),
-
-              // 하단 버튼
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onTap: () {
-                          analytics.filterReset();
-                          notifier.reset();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(14),
-                            border: Border.all(
-                                color: const Color(0xFFDDDDDD), width: 1.5),
-                          ),
-                          child: Text(s.reset,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: AppColors.gray400)),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      flex: 2,
-                      child: GestureDetector(
-                        onTap: () {
-                          analytics.filterApplied({'active_count': filter.activeCount});
-                          analytics.filterAppliedDetail(
-                            visaIds: filter.visaIds,
-                            categoryIds: filter.categoryIds,
-                            employmentTypeIds: filter.employmentTypeIds,
-                            regionNames: filter.regionIds.map((e) => e.toString()).toSet(),
-                            salaryTypes: filter.salaryTypes,
-                            workScheduleIds: filter.workScheduleIds,
-                            gender: filter.gender,
-                            educations: filter.educations,
-                            experiences: filter.experiences,
-                            koreanLevelIds: filter.koreanLevelIds,
-                            benefitIds: filter.benefitIds,
-                            countryIds: filter.countryIds,
-                            siteIds: filter.siteIds,
-                            visaSponsorship: filter.visaSponsorship,
-                          );
-                          // 푸시 구독 업데이트
-                          final langCode = ref.read(languageProvider);
-                          if (filter.isEmpty) {
-                            pushService.deleteSubscription();
-                          } else {
-                            pushService.upsertSubscription(
-                              filter: filter,
-                              langCode: langCode,
-                            );
-                          }
-                          context.pop();
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 15),
-                          decoration: BoxDecoration(
-                            color: AppColors.carrot,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: _ShowResultsText(s: s),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              _header(s),
+              _tabs(filter, s),
+              Expanded(child: _body(filter, s, langCode)),
+              if (_total(filter) > 0) _tray(filter, s, langCode),
+              _bottomBar(filter, s, langCode),
             ],
           ),
         ),
@@ -367,1167 +352,560 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     );
   }
 
-  Widget _buildDetailPanel(FilterState filter, FilterStateNotifier notifier, dynamic s) {
-    switch (_selectedIndex) {
-      case 0: // 비자 + 비자지원
-        return _VisaListPanel(
-          optionsAsync: ref.watch(visaOptionsProvider),
-          selected: filter.visaIds,
-          onToggle: notifier.toggleVisa,
-          visaSponsorship: filter.visaSponsorship,
-          onVisaSponsorshipChanged: notifier.setVisaSponsorship,
-          s: s,
-        );
-      case 1: // 직종
-        return _AsyncListPanel(
-          optionsAsync: ref.watch(categoryOptionsProvider),
-          selected: filter.categoryIds,
-          onToggle: notifier.toggleCategory,
-        );
-      case 2: // 고용형태
-        return _AsyncListPanel(
-          optionsAsync: ref.watch(employmentTypeOptionsProvider),
-          selected: filter.employmentTypeIds,
-          onToggle: notifier.toggleEmploymentType,
-        );
-      case 3: // 지역
-        return _RegionSelectPanel(
-          key: _regionKey,
-          ref: ref,
-          filter: filter,
-          notifier: notifier,
-          langCode: ref.watch(languageProvider),
-        );
-      case 4: // 급여
-        return _SalaryListPanel(
-          filter: filter,
-          notifier: notifier,
-          s: s,
-        );
-      case 5: // 근무요일
-        return _WorkScheduleListPanel(
-          optionsAsync: ref.watch(workScheduleOptionsProvider),
-          selected: filter.workScheduleIds,
-          onToggle: notifier.toggleWorkSchedule,
-        );
-      case 6: // 한국어능력
-        return _AsyncIntListPanel(
-          optionsAsync: ref.watch(koreanLevelOptionsProvider),
-          selected: filter.koreanLevelIds,
-          onToggle: notifier.toggleKoreanLevel,
-        );
-      case 7: // 복리후생
-        return _AsyncListPanel(
-          optionsAsync: ref.watch(benefitOptionsProvider),
-          selected: filter.benefitIds,
-          onToggle: notifier.toggleBenefit,
-        );
-      case 8: // 국가
-        return _AsyncListPanel(
-          optionsAsync: ref.watch(countryOptionsProvider),
-          selected: filter.countryIds,
-          onToggle: notifier.toggleCountry,
-        );
-      case 9: // 채용사이트
-        return _AsyncListPanel(
-          optionsAsync: ref.watch(siteOptionsProvider),
-          selected: filter.siteIds,
-          onToggle: notifier.toggleSite,
-        );
-      default:
-        return const SizedBox.shrink();
-    }
-  }
+  int _total(FilterState f) =>
+      f.visaIds.length +
+      (f.visaSponsorship != null ? 1 : 0) +
+      f.categoryIds.length +
+      f.employmentTypeIds.length +
+      _regionCount(f.regionIds) +
+      f.salaryTypes.length +
+      f.workScheduleIds.length +
+      f.koreanLevelIds.length +
+      f.benefitIds.length +
+      f.countryIds.length +
+      f.siteIds.length;
 
-  bool _hasSelection(FilterState f, int i) {
-    switch (i) {
-      case 0: return f.visaIds.isNotEmpty || f.visaSponsorship != null;
-      case 1: return f.categoryIds.isNotEmpty;
-      case 2: return f.employmentTypeIds.isNotEmpty;
-      case 3: return f.regionIds.isNotEmpty;
-      case 4: return f.salaryTypes.isNotEmpty || (f.salaryRange != null && f.salaryRange!.isNotEmpty);
-      case 5: return f.workScheduleIds.isNotEmpty;
-      case 6: return f.koreanLevelIds.isNotEmpty;
-      case 7: return f.benefitIds.isNotEmpty;
-      case 8: return f.countryIds.isNotEmpty;
-      case 9: return f.siteIds.isNotEmpty;
-      default: return false;
-    }
-  }
+  int _countOf(String key, FilterState f) => switch (key) {
+        'visa' => f.visaIds.length + (f.visaSponsorship != null ? 1 : 0),
+        'category' => f.categoryIds.length,
+        'employ' => f.employmentTypeIds.length,
+        'region' => _regionCount(f.regionIds),
+        'salary' => f.salaryTypes.length,
+        'schedule' => f.workScheduleIds.length,
+        'korean' => f.koreanLevelIds.length,
+        'benefit' => f.benefitIds.length,
+        'country' => f.countryIds.length,
+        'site' => f.siteIds.length,
+        _ => 0,
+      };
 
-  int _selectionCount(FilterState f, int i) {
-    switch (i) {
-      case 0: return f.visaIds.length + (f.visaSponsorship != null ? 1 : 0);
-      case 1: return f.categoryIds.length;
-      case 2: return f.employmentTypeIds.length;
-      case 3: {
-        // 시/도 전체=1, 구/군 개별=구/군 수
-        final allRegions = JobRepository.allRegionsCacheSync;
-        if (allRegions == null || f.regionIds.isEmpty) return f.regionIds.isEmpty ? 0 : 1;
-        final siDoGroups = <String, List<int>>{};
-        final siDoTotals = <String, int>{};
-        final siDoHasGuGun = <String, bool>{};
-        for (final r in allRegions) {
-          final si = r['si_name'] as String;
-          if (r['gu_name'] != null) {
-            siDoTotals[si] = (siDoTotals[si] ?? 0) + 1;
-            siDoHasGuGun[si] = true;
-          } else {
-            siDoHasGuGun.putIfAbsent(si, () => false);
-          }
-        }
-        for (final id in f.regionIds) {
-          final r = allRegions.where((e) => e['id'] == id).firstOrNull;
-          if (r != null) {
-            final si = r['si_name'] as String;
-            if (r['gu_name'] != null || !(siDoHasGuGun[si] ?? false)) {
-              siDoGroups.putIfAbsent(si, () => []).add(id);
-            }
-          }
-        }
-        int count = 0;
-        for (final entry in siDoGroups.entries) {
-          final hasGuGun = siDoHasGuGun[entry.key] ?? false;
-          final total = hasGuGun ? (siDoTotals[entry.key] ?? 0) : entry.value.length;
-          count += entry.value.length >= total ? 1 : entry.value.length;
-        }
-        return count;
-      }
-      case 4: return f.salaryTypes.length + (f.salaryRange != null && f.salaryRange!.isNotEmpty ? 1 : 0);
-      case 5: return f.workScheduleIds.length;
-      case 6: return f.koreanLevelIds.length;
-      case 7: return f.benefitIds.length;
-      case 8: return f.countryIds.length;
-      case 9: return f.siteIds.length;
-      default: return 0;
-    }
-  }
-}
+  String _labelOf(String key, dynamic s) => switch (key) {
+        'visa' => s.tabVisa as String,
+        'category' => s.tabJobType as String,
+        'employ' => s.tabEmployType as String,
+        'region' => s.tabRegion as String,
+        'salary' => s.tabSalary as String,
+        'schedule' => s.tabWorkSchedule as String,
+        'korean' => s.tabKoreanLevel as String,
+        'benefit' => s.tabBenefits as String,
+        'country' => s.tabCountry as String,
+        'site' => s.tabSite as String,
+        _ => '',
+      };
 
-class _ShowResultsText extends ConsumerWidget {
-  final dynamic s;
-  const _ShowResultsText({required this.s});
+  Widget _header(dynamic s) => Padding(
+        padding: const EdgeInsets.fromLTRB(18, 6, 10, 14),
+        child: Row(
+          children: [
+            Text(s.filterTitle as String,
+                style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: -0.4,
+                    color: _T.ink)),
+            const Spacer(),
+            IconButton(
+              onPressed: _cancel,
+              icon: const Icon(Icons.close, size: 22, color: _T.muted),
+              splashRadius: 22,
+            ),
+          ],
+        ),
+      );
 
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countAsync = ref.watch(jobTotalCountProvider);
-    return countAsync.when(
-      data: (count) {
-        final langCode = ref.watch(languageProvider);
-        final formatted = count < 0 ? '...' : NumberFormat.decimalPattern(langCode).format(count);
-        return Text(
-          '${s.showResults} ($formatted)',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-              fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-        );
-      },
-      loading: () => Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const SizedBox(
-            width: 14, height: 14,
-            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+  Widget _tabs(FilterState filter, dynamic s) => Container(
+        decoration: const BoxDecoration(
+          border: Border(bottom: BorderSide(color: _T.line)),
+        ),
+        child: SingleChildScrollView(
+          controller: _tabScroll,
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          child: Row(
+            children: [
+              for (final k in _kGroups) ...[
+                _GroupTab(
+                  key: _tabKeys[k],
+                  label: _labelOf(k, s),
+                  count: _countOf(k, filter),
+                  active: k == _active,
+                  onTap: () => _jump(k),
+                ),
+                const SizedBox(width: 6),
+              ],
+            ],
           ),
-          const SizedBox(width: 8),
-          Text(s.showResults as String,
-              style: const TextStyle(
-                  fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white)),
+        ),
+      );
+
+  Widget _body(FilterState filter, dynamic s, String langCode) => ListView(
+        controller: _scroll,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+        children: [
+          for (final k in _kGroups)
+            Container(
+              key: _secKeys[k],
+              padding: const EdgeInsets.only(bottom: 22),
+              child: k == _kRegion
+                  ? _regionSection(filter, s, langCode)
+                  : _chipSection(k, filter, s),
+            ),
+        ],
+      );
+
+  Widget _sectionTitle(String label, int count, {String? hint}) => Padding(
+        padding: const EdgeInsets.only(top: 8, bottom: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: -0.2,
+                      color: _T.ink)),
+              if (count > 0) ...[
+                const SizedBox(width: 8),
+                _Badge(text: '$count'),
+              ],
+            ]),
+            if (hint != null) ...[
+              const SizedBox(height: 4),
+              Text(hint,
+                  style: const TextStyle(fontSize: 12.5, color: _T.muted)),
+            ],
+          ],
+        ),
+      );
+
+  // ── 그룹별 옵션 데이터 (hot = 정적) ──
+  static const _visaHot = {'E-9', 'E-7', 'H-2', 'F-2', 'F-4', 'F-5', 'F-6'};
+  static const _hotN = 8; // hot 지정이 없는 그룹은 앞 8개
+
+  (AsyncValue<List<FilterOption>>, Set<String>, void Function(String))
+      _groupData(String key, FilterState f, dynamic s) {
+    final n = ref.read(filterStateProvider.notifier);
+    switch (key) {
+      case 'visa':
+        return (ref.watch(visaOptionsProvider), f.visaIds, n.toggleVisa);
+      case 'category':
+        return (ref.watch(categoryOptionsProvider), f.categoryIds, n.toggleCategory);
+      case 'employ':
+        return (
+          ref.watch(employmentTypeOptionsProvider),
+          f.employmentTypeIds,
+          n.toggleEmploymentType
+        );
+      case 'salary':
+        final opts = [
+          FilterOption(id: 'hourly', label: s.salaryHourly as String),
+          FilterOption(id: 'daily', label: s.salaryDaily as String),
+          FilterOption(id: 'monthly', label: s.salaryMonthly as String),
+          FilterOption(id: 'annual', label: s.salaryAnnual as String),
+        ];
+        return (AsyncValue.data(opts), f.salaryTypes, n.toggleSalaryType);
+      case 'schedule':
+        return (
+          ref.watch(workScheduleOptionsProvider),
+          f.workScheduleIds.map((e) => e.toString()).toSet(),
+          (id) => n.toggleWorkSchedule(int.parse(id))
+        );
+      case 'korean':
+        return (
+          ref.watch(koreanLevelOptionsProvider),
+          f.koreanLevelIds.map((e) => e.toString()).toSet(),
+          (id) => n.toggleKoreanLevel(int.parse(id))
+        );
+      case 'benefit':
+        return (ref.watch(benefitOptionsProvider), f.benefitIds, n.toggleBenefit);
+      case 'country':
+        return (ref.watch(countryOptionsProvider), f.countryIds, n.toggleCountry);
+      case 'site':
+        return (ref.watch(siteOptionsProvider), f.siteIds, n.toggleSite);
+      default:
+        return (const AsyncValue.data([]), const {}, (_) {});
+    }
+  }
+
+  Widget _chipSection(String key, FilterState filter, dynamic s) {
+    final (optionsAsync, selected, onToggle) = _groupData(key, filter, s);
+    final title = _labelOf(key, s);
+    final count = _countOf(key, filter);
+
+    return optionsAsync.when(
+      loading: () => Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(title, count),
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 12),
+            child: SizedBox(
+              width: 18, height: 18,
+              child: CircularProgressIndicator(strokeWidth: 2, color: _T.orange),
+            ),
+          ),
         ],
       ),
-      error: (_, __) => Text(
-        s.showResults as String,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-            fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white),
-      ),
+      error: (_, __) => _sectionTitle(title, count),
+      data: (options) {
+        // hot/rest 분할 — 비자는 코드 화이트리스트, 그 외는 앞 N개
+        List<FilterOption> hot, rest;
+        if (key == 'visa') {
+          hot = options.where((o) => _visaHot.contains(o.label)).toList();
+          rest = options.where((o) => !_visaHot.contains(o.label)).toList();
+        } else if (options.length <= _hotN + 2) {
+          hot = options;
+          rest = const [];
+        } else {
+          hot = options.take(_hotN).toList();
+          rest = options.skip(_hotN).toList();
+        }
+        final open = _expanded.contains(key);
+        final shown = open ? [...hot, ...rest] : hot;
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _sectionTitle(title, count),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                // 비자지원 토글 — 비자 그룹 맨 앞 특수 칩
+                if (key == 'visa')
+                  _Chip(
+                    label: s.tabVisaSponsorship as String,
+                    selected: filter.visaSponsorship == true,
+                    onTap: () => ref
+                        .read(filterStateProvider.notifier)
+                        .setVisaSponsorship(
+                            filter.visaSponsorship == true ? null : true),
+                  ),
+                for (final o in shown)
+                  _Chip(
+                    label: o.label,
+                    selected: selected.contains(o.id),
+                    onTap: () => onToggle(o.id),
+                  ),
+                if (rest.isNotEmpty)
+                  _MoreChip(
+                    label: open
+                        ? s.filterCollapse as String
+                        : s.filterMoreN(rest.length) as String,
+                    onTap: () => setState(() =>
+                        open ? _expanded.remove(key) : _expanded.add(key)),
+                  ),
+              ],
+            ),
+          ],
+        );
+      },
     );
   }
-}
 
-class _SelectedFilterChips extends StatelessWidget {
-  final FilterState filter;
-  final FilterStateNotifier notifier;
-  final List<FilterOption> visaOpts;
-  final List<FilterOption> catOpts;
-  final List<FilterOption> etOpts;
-  final List<FilterOption> benefitOpts;
-  final List<FilterOption> klOpts;
-  final List<FilterOption> wsOpts;
-  final List<FilterOption> langOpts;
-  final List<FilterOption> siteOpts;
-  final List<FilterOption> countryOpts;
-  final dynamic s;
-
-  const _SelectedFilterChips({
-    required this.filter,
-    required this.notifier,
-    required this.visaOpts,
-    required this.catOpts,
-    required this.etOpts,
-    required this.benefitOpts,
-    required this.klOpts,
-    required this.wsOpts,
-    required this.langOpts,
-    required this.siteOpts,
-    required this.countryOpts,
-    required this.s,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final chips = <_ChipData>[];
-
-    for (final id in filter.visaIds) {
-      final opt = visaOpts.where((o) => o.id == id).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleVisa(id)));
+  // ── 지역 섹션 ──
+  Widget _regionSection(FilterState filter, dynamic s, String langCode) {
+    final sidos = _sidos;
+    final title = _labelOf(_kRegion, s);
+    final count = _countOf(_kRegion, filter);
+    if (sidos == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionTitle(title, count, hint: s.filterRegionHint as String),
+          const SizedBox(
+            width: 18, height: 18,
+            child: CircularProgressIndicator(strokeWidth: 2, color: _T.orange),
+          ),
+        ],
+      );
     }
-    for (final id in filter.categoryIds) {
-      final opt = catOpts.where((o) => o.id == id).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleCategory(id)));
+    final open = _expanded.contains(_kRegion);
+    final shown = open ? sidos : sidos.take(6).toList();
+    String siLabel(String si) =>
+        langCode == 'ko' ? si : RegionMapper.getLocalizedName(si, 'en');
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionTitle(title, count, hint: s.filterRegionHint as String),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (final sd in shown)
+              Builder(builder: (context) {
+                final ids = filter.regionIds;
+                final all = _sidoIsAll(sd, ids);
+                final picked = _sidoPickedGus(sd, ids);
+                return _Chip(
+                  label: siLabel(sd.si),
+                  selected: all || picked.isNotEmpty,
+                  badge: all
+                      ? '✓'
+                      : picked.isNotEmpty
+                          ? '${picked.length}'
+                          : null,
+                  trailingArrow: true,
+                  onTap: () => _openSido(sd, langCode),
+                );
+              }),
+            if (sidos.length > 6)
+              _MoreChip(
+                label: open
+                    ? s.filterCollapse as String
+                    : s.filterMoreN(sidos.length - 6) as String,
+                onTap: () => setState(() => open
+                    ? _expanded.remove(_kRegion)
+                    : _expanded.add(_kRegion)),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openSido(_SidoData sd, String langCode) async {
+    final s = ref.read(stringsProvider);
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      barrierColor: _T.navy.withValues(alpha: 0.28),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          final ids = ref.read(filterStateProvider).regionIds;
+          final all = _sidoIsAll(sd, ids);
+          final picked = _sidoPickedGus(sd, ids).map((g) => g.id).toSet();
+          final siName =
+              langCode == 'ko' ? sd.si : RegionMapper.getLocalizedName(sd.si, 'en');
+          String guLabel(String gu) => langCode == 'ko'
+              ? gu
+              : DistrictNames.getLocalizedGuName(gu, sd.si, langCode);
+          return _SidoSheet(
+            title: siName,
+            allLabel: s.filterAllRegion(siName),
+            sigunguLabel: s.filterSigungu,
+            gus: [for (final g in sd.gus) (id: g.id, label: guLabel(g.gu))],
+            isAll: all,
+            pickedIds: picked,
+            onAll: () {
+              all ? _clearSido(sd) : _setSidoAll(sd);
+              setSheet(() {});
+              setState(() {});
+            },
+            onToggleGu: (id) {
+              _toggleGu(sd, id);
+              setSheet(() {});
+              setState(() {});
+            },
+            applyLabel: all
+                ? s.filterAllRegion(siName)
+                : picked.isNotEmpty
+                    ? s.filterApplyPlaces(picked.length)
+                    : s.close,
+            onClose: () => Navigator.of(ctx).pop(),
+          );
+        },
+      ),
+    );
+    if (mounted) setState(() {});
+  }
+
+  // ── 선택 트레이 ──
+  Widget _tray(FilterState f, dynamic s, String langCode) {
+    final chips = <Widget>[];
+    final n = ref.read(filterStateProvider.notifier);
+
+    void addFromOptions(AsyncValue<List<FilterOption>> async, Set<String> sel,
+        void Function(String) onToggle) {
+      final options = async.valueOrNull ?? const <FilterOption>[];
+      for (final id in sel) {
+        final label =
+            options.where((o) => o.id == id).firstOrNull?.label ?? id;
+        chips.add(_RemovableChip(label: label, onRemove: () => onToggle(id)));
+      }
     }
-    // 지역: 시/도 전체면 시/도명, 구/군 개별이면 구/군별 칩
-    if (filter.regionIds.isNotEmpty) {
-      final allRegions = JobRepository.allRegionsCacheSync;
-      if (allRegions != null) {
-        final langCode = s.locale;
-        final siDoGroups = <String, List<int>>{};
-        final siDoTotals = <String, int>{}; // 구/군 수 (gu_name != null만)
-        final siDoHasGuGun = <String, bool>{}; // 구/군 존재 여부
-        for (final r in allRegions) {
-          final si = r['si_name'] as String;
-          if (r['gu_name'] != null) {
-            siDoTotals[si] = (siDoTotals[si] ?? 0) + 1;
-            siDoHasGuGun[si] = true;
-          } else {
-            siDoHasGuGun.putIfAbsent(si, () => false);
-          }
-        }
-        for (final id in filter.regionIds) {
-          final r = allRegions.where((e) => e['id'] == id).firstOrNull;
-          if (r != null) {
-            final si = r['si_name'] as String;
-            final hasGuGun = siDoHasGuGun[si] ?? false;
-            // 구/군 있는 시/도 → gu_name null 제외 / 세종 등 → 포함
-            if (r['gu_name'] != null || !hasGuGun) {
-              siDoGroups.putIfAbsent(si, () => []).add(id);
-            }
-          }
-        }
-        for (final entry in siDoGroups.entries) {
-          final si = entry.key;
-          final ids = entry.value;
-          final hasGuGun = siDoHasGuGun[si] ?? false;
-          final total = hasGuGun ? (siDoTotals[si] ?? 0) : ids.length;
-          if (ids.length >= total) {
-            // 시/도 전체 → 1개 칩 (gu_name=null 행 포함 모든 ID 제거)
-            final allSiDoIds = allRegions
-                .where((r) => r['si_name'] == si)
-                .map((r) => r['id'] as int)
-                .toSet();
-            chips.add(_ChipData(
-              RegionMapper.getLocalizedName(si, langCode),
-              () { final u = Set<int>.from(filter.regionIds); u.removeAll(allSiDoIds); notifier.setRegionIds(u); },
-            ));
-          } else {
-            // 구/군 개별 → 각각 칩
-            for (final id in ids) {
-              final r = allRegions.where((e) => e['id'] == id).firstOrNull;
-              if (r != null && r['gu_name'] != null) {
-                final gu = r['gu_name'] as String;
-                final label = langCode == 'ko' ? gu : DistrictNames.getLocalizedGuName(gu, si, langCode);
-                chips.add(_ChipData(label, () => notifier.toggleRegionId(id)));
-              }
-            }
-          }
+
+    if (f.visaSponsorship == true) {
+      chips.add(_RemovableChip(
+          label: s.tabVisaSponsorship as String,
+          onRemove: () => n.setVisaSponsorship(null)));
+    }
+    addFromOptions(ref.watch(visaOptionsProvider), f.visaIds, n.toggleVisa);
+    addFromOptions(
+        ref.watch(categoryOptionsProvider), f.categoryIds, n.toggleCategory);
+    addFromOptions(ref.watch(employmentTypeOptionsProvider),
+        f.employmentTypeIds, n.toggleEmploymentType);
+    // 지역
+    final sidos = _sidos ?? const <_SidoData>[];
+    for (final sd in sidos) {
+      final all = _sidoIsAll(sd, f.regionIds);
+      final siName =
+          langCode == 'ko' ? sd.si : RegionMapper.getLocalizedName(sd.si, 'en');
+      if (all) {
+        chips.add(_RemovableChip(
+            label: s.filterAllRegion(siName) as String,
+            onRemove: () => _clearSido(sd)));
+      } else {
+        for (final g in _sidoPickedGus(sd, f.regionIds)) {
+          final guLabel = langCode == 'ko'
+              ? g.gu
+              : DistrictNames.getLocalizedGuName(g.gu, sd.si, langCode);
+          chips.add(_RemovableChip(
+              label: '$siName $guLabel',
+              onRemove: () => _toggleGu(sd, g.id)));
         }
       }
     }
-    if (filter.salaryRange != null && filter.salaryRange!.isNotEmpty) {
-      chips.add(_ChipData(filter.salaryRange!, () => notifier.setSalary(null)));
-    }
-    for (final id in filter.employmentTypeIds) {
-      final opt = etOpts.where((o) => o.id == id).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleEmploymentType(id)));
-    }
-    for (final st in filter.salaryTypes) {
+    // 급여
+    for (final st in f.salaryTypes) {
       final label = switch (st) {
-        'hourly' => s.salaryHourly,
-        'daily' => s.salaryDaily,
-        'weekly' => s.salaryWeekly,
-        'monthly' => s.salaryMonthly,
-        'annual' => s.salaryAnnual,
-        'negotiable' => s.salaryNegotiable,
+        'hourly' => s.salaryHourly as String,
+        'daily' => s.salaryDaily as String,
+        'monthly' => s.salaryMonthly as String,
+        'annual' => s.salaryAnnual as String,
         _ => st,
       };
-      chips.add(_ChipData(label, () => notifier.toggleSalaryType(st)));
+      chips.add(
+          _RemovableChip(label: label, onRemove: () => n.toggleSalaryType(st)));
     }
-    for (final id in filter.workScheduleIds) {
-      final opt = wsOpts.where((o) => o.id == id.toString()).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleWorkSchedule(id)));
-    }
-    for (final id in filter.koreanLevelIds) {
-      final opt = klOpts.where((o) => o.id == id.toString()).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleKoreanLevel(id)));
-    }
-    for (final id in filter.benefitIds) {
-      final opt = benefitOpts.where((o) => o.id == id).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleBenefit(id)));
-    }
-    if (filter.visaSponsorship != null) {
-      chips.add(_ChipData(
-        s.tabVisaSponsorship,
-        () => notifier.setVisaSponsorship(null),
-      ));
-    }
-    for (final id in filter.languageIds) {
-      final opt = langOpts.where((o) => o.id == id.toString()).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleLanguage(id)));
-    }
-    for (final id in filter.countryIds) {
-      final opt = countryOpts.where((o) => o.id == id).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleCountry(id)));
-    }
-    for (final id in filter.siteIds) {
-      final opt = siteOpts.where((o) => o.id == id).firstOrNull;
-      if (opt != null) chips.add(_ChipData(opt.label, () => notifier.toggleSite(id)));
-    }
-
+    addFromOptions(
+        ref.watch(workScheduleOptionsProvider),
+        f.workScheduleIds.map((e) => e.toString()).toSet(),
+        (id) => n.toggleWorkSchedule(int.parse(id)));
+    addFromOptions(
+        ref.watch(koreanLevelOptionsProvider),
+        f.koreanLevelIds.map((e) => e.toString()).toSet(),
+        (id) => n.toggleKoreanLevel(int.parse(id)));
+    addFromOptions(ref.watch(benefitOptionsProvider), f.benefitIds, n.toggleBenefit);
+    addFromOptions(ref.watch(countryOptionsProvider), f.countryIds, n.toggleCountry);
+    addFromOptions(ref.watch(siteOptionsProvider), f.siteIds, n.toggleSite);
 
     if (chips.isEmpty) return const SizedBox.shrink();
-
     return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
       decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
+        border: Border(top: BorderSide(color: _T.line)),
       ),
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
       child: SizedBox(
-        height: 32,
+        height: 42,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: chips.length,
           separatorBuilder: (_, __) => const SizedBox(width: 6),
-          itemBuilder: (_, i) {
-            final chip = chips[i];
-            return Container(
-              padding: const EdgeInsets.only(left: 10, right: 6),
-              decoration: BoxDecoration(
-                color: AppColors.carrotLight,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFFFD4B3)),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(chip.label,
-                      style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.carrotDark)),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: chip.onRemove,
-                    child: const Icon(Icons.close, size: 14, color: AppColors.carrot),
-                  ),
-                ],
-              ),
-            );
-          },
+          itemBuilder: (_, i) => Align(child: chips[i]),
         ),
       ),
     );
   }
-}
 
-class _ChipData {
-  final String label;
-  final VoidCallback onRemove;
-  const _ChipData(this.label, this.onRemove);
-}
-
-class _CatItem {
-  final String label;
-  final bool hasSelection;
-  final int count;
-  const _CatItem(this.label, this.hasSelection, [this.count = 0]);
-}
-
-// ── String ID 칩 패널 ──
-
-// ── 지역 패널 (현재 위치 버튼 포함) ──
-
-class _RegionSelectPanel extends StatefulWidget {
-  final WidgetRef ref;
-  final FilterState filter;
-  final FilterStateNotifier notifier;
-  final String langCode;
-
-  const _RegionSelectPanel({
-    super.key,
-    required this.ref,
-    required this.filter,
-    required this.notifier,
-    required this.langCode,
-  });
-
-  @override
-  State<_RegionSelectPanel> createState() => _RegionSelectPanelState();
-}
-
-class _RegionSelectPanelState extends State<_RegionSelectPanel> {
-  String? _selectedSiDo;
-  double _siDoScrollOffset = 0;
-
-  /// 선택된 regionIds에 포함된 시/도 목록
-  Set<String> get _selectedSiDoSet {
-    final allRegions = JobRepository.allRegionsCacheSync;
-    if (allRegions == null || widget.filter.regionIds.isEmpty) return {};
-    final result = <String>{};
-    for (final id in widget.filter.regionIds) {
-      final r = allRegions.where((e) => e['id'] == id).firstOrNull;
-      if (r != null) result.add(r['si_name'] as String);
-    }
-    return result;
-  }
-
-  /// 구/군 선택 — 다중 시/도 합산
-  void _selectGuGun(int id, String siDo) {
-    widget.notifier.toggleRegionId(id);
-  }
-
-  Future<void> _toggleSiDoAll(String siDo) async {
-    final repo = widget.ref.read(jobRepositoryProvider);
-    final allIds = await repo.getRegionIdsForSiDo(siDo);
-    final current = Set<int>.from(widget.filter.regionIds);
-    if (allIds.every(current.contains)) {
-      current.removeAll(allIds);
-    } else {
-      current.addAll(allIds);
-    }
-    widget.notifier.setRegionIds(current);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_selectedSiDo == null) {
-      return _buildSiDoList();
-    }
-    return _buildGuGunList(_selectedSiDo!);
-  }
-
-  Widget _buildSiDoList() {
-    final siDoAsync = widget.ref.watch(siDoOptionsProvider);
-    final lang = widget.langCode;
-    return siDoAsync.when(
-      data: (options) {
-        final selectedSiDos = _selectedSiDoSet;
-        final controller = ScrollController(initialScrollOffset: _siDoScrollOffset);
-        controller.addListener(() => _siDoScrollOffset = controller.offset);
-        return ListView.builder(
-          controller: controller,
-          padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-          itemCount: options.length,
-          itemBuilder: (context, index) {
-            final opt = options[index];
-            final isCurrent = selectedSiDos.contains(opt.id);
-            final label = lang == 'ko'
-                ? opt.id
-                : '${RegionMapper.getLocalizedName(opt.id, 'en')} (${opt.id})';
-
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () async {
-                final repo = widget.ref.read(jobRepositoryProvider);
-                final guGuns = await repo.getGuGunOptions(opt.id, lang);
-                if (guGuns.isEmpty) {
-                  _toggleSiDoAll(opt.id);
-                } else {
-                  setState(() => _selectedSiDo = opt.id);
-                }
-              },
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.gray100, width: 0.5)),
-                ),
-                child: Row(
-                  children: [
-                    if (isCurrent)
-                      Container(
-                        width: 6, height: 6,
-                        margin: const EdgeInsets.only(right: 8),
-                        decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.carrot),
-                      ),
-                    Expanded(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: isCurrent ? AppColors.carrot : AppColors.black,
-                        ),
-                      ),
-                    ),
-                    const Icon(Icons.chevron_right, size: 18, color: AppColors.gray300),
-                  ],
-                ),
+  // ── 하단 바 ──
+  Widget _bottomBar(FilterState f, dynamic s, String langCode) {
+    final total = _total(f);
+    final countAsync = ref.watch(jobTotalCountProvider);
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: _T.line)),
+      ),
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      child: Row(
+        children: [
+          SizedBox(
+            height: 52,
+            child: OutlinedButton(
+              onPressed: total > 0
+                  ? () {
+                      analytics.filterReset();
+                      ref.read(filterStateProvider.notifier).reset();
+                    }
+                  : null,
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: _T.line),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14)),
+                padding: const EdgeInsets.symmetric(horizontal: 18),
+                foregroundColor: _T.text,
+                disabledForegroundColor: _T.muted,
               ),
-            );
-          },
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
-  Widget _buildGuGunList(String siDo) {
-    final guGunAsync = widget.ref.watch(guGunOptionsProvider(siDo));
-    final lang = widget.langCode;
-    return guGunAsync.when(
-      data: (options) {
-        return Column(
-          children: [
-            // 뒤로가기 (고정)
-            GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _selectedSiDo = null),
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: Row(
-                  children: [
-                    const Icon(Icons.arrow_back_ios, size: 14, color: AppColors.carrot),
-                    const SizedBox(width: 4),
-                    Text(
-                      lang == 'ko' ? siDo : '${RegionMapper.getLocalizedName(siDo, 'en')} ($siDo)',
-                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.carrot),
-                    ),
-                  ],
-                ),
-              ),
+              child: Text(s.reset as String,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w600)),
             ),
-            // 스크롤 리스트
-            Expanded(
-              child: ListView.builder(
-                padding: const EdgeInsets.fromLTRB(0, 0, 0, 48),
-                itemCount: options.length + 1, // All Districts + 구/군
-                itemBuilder: (context, index) {
-            if (index == 0) {
-              // All Districts
-              final allSelected = _isSiDoAllSelected(siDo);
-              return GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onTap: () => _toggleSiDoAll(siDo),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                  decoration: BoxDecoration(
-                    border: Border(bottom: BorderSide(color: AppColors.gray100, width: 0.5)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          lang == 'ko' ? '전체' : 'All Districts',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: allSelected ? AppColors.carrot : AppColors.black,
-                          ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: 52,
+              child: FilledButton(
+                onPressed: _apply,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _T.orange,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Flexible(
+                      child: countAsync.when(
+                        data: (count) {
+                          final formatted = count < 0
+                              ? '...'
+                              : NumberFormat.decimalPattern(langCode)
+                                  .format(count);
+                          return Text('${s.showResults} ($formatted)',
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: -0.2,
+                                  color: Colors.white));
+                        },
+                        loading: () => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const SizedBox(
+                              width: 14, height: 14,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.white),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(s.showResults as String,
+                                style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white)),
+                          ],
                         ),
+                        error: (_, __) => Text(s.showResults as String,
+                            style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
                       ),
-                      Icon(
-                        allSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                        size: 20,
-                        color: allSelected ? AppColors.carrot : AppColors.gray300,
+                    ),
+                    if (total > 0) ...[
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.24),
+                          borderRadius: BorderRadius.circular(99),
+                        ),
+                        child: Text('$total',
+                            style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.white)),
                       ),
                     ],
-                  ),
-                ),
-              );
-            }
-
-            final opt = options[index - 1];
-            final id = int.parse(opt.id);
-            final isSelected = widget.filter.regionIds.contains(id);
-            final guLabel = lang == 'ko'
-                ? opt.label
-                : '${DistrictNames.getLocalizedGuName(opt.label, siDo, 'en')} (${opt.label})';
-
-            return GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: () => _selectGuGun(id, siDo),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                decoration: BoxDecoration(
-                  border: Border(bottom: BorderSide(color: AppColors.gray100, width: 0.5)),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        guLabel,
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w400,
-                          color: isSelected ? AppColors.carrot : AppColors.black,
-                        ),
-                      ),
-                    ),
-                    Icon(
-                      isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-                      size: 20,
-                      color: isSelected ? AppColors.carrot : AppColors.gray300,
-                    ),
                   ],
                 ),
               ),
-            );
-          },
-              ),
             ),
-          ],
-        );
-      },
-      loading: () => const Center(child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (_, __) => const SizedBox.shrink(),
-    );
-  }
-
-  bool _isSiDoAllSelected(String siDo) {
-    // 해당 시/도의 모든 구/군 id가 선택되어 있는지 확인
-    final guGunAsync = widget.ref.read(guGunOptionsProvider(siDo));
-    final options = guGunAsync.valueOrNull;
-    if (options == null || options.isEmpty) return false;
-    return options.every((opt) => widget.filter.regionIds.contains(int.parse(opt.id)));
-  }
-
-}
-
-// ── 비자 패널 (리스트 형식, 인기 비자 상단 + 비자지원 토글 포함) ──
-
-class _VisaListPanel extends StatelessWidget {
-  final AsyncValue<List<FilterOption>> optionsAsync;
-  final Set<String> selected;
-  final void Function(String) onToggle;
-  final bool? visaSponsorship;
-  final void Function(bool?) onVisaSponsorshipChanged;
-  final dynamic s;
-
-  const _VisaListPanel({
-    required this.optionsAsync,
-    required this.selected,
-    required this.onToggle,
-    required this.visaSponsorship,
-    required this.onVisaSponsorshipChanged,
-    required this.s,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return optionsAsync.when(
-      data: (options) {
-        final popular = <FilterOption>[];
-        final rest = <FilterOption>[];
-        for (final opt in options) {
-          if (JobRepository.popularVisaCodes.contains(opt.label)) {
-            popular.add(opt);
-          } else {
-            rest.add(opt);
-          }
-        }
-        final allItems = [...popular, ...rest];
-
-        // +1: 최상단 비자 지원 행 (비자 항목과 동일한 선택박스 한 줄)
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-          itemCount: allItems.length + 1,
-          itemBuilder: (context, index) {
-            // 최상단: 비자 지원 (인기 비자와 동일하게 🔥 + 라벨 + 우측 체크박스)
-            if (index == 0) {
-              return _filterListRow(
-                label: '\u{1F525} ${s.tabVisaSponsorship}',
-                isSelected: visaSponsorship == true,
-                onTap: () => onVisaSponsorshipChanged(visaSponsorship == true ? null : true),
-              );
-            }
-            // 그 아래: 비자 목록 (인기 비자 상단)
-            final opt = allItems[index - 1];
-            final isPopular = (index - 1) < popular.length;
-            final isSelected = selected.contains(opt.id);
-            final label = isPopular ? '\u{1F525} ${opt.label}' : opt.label;
-            return _filterListRow(
-              label: label,
-              isSelected: isSelected,
-              onTap: () => onToggle(opt.id),
-            );
-          },
-        );
-      },
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-}
-
-// ── 근무요일 리스트 패널 (플랫 리스트) ──
-
-class _WorkScheduleListPanel extends StatelessWidget {
-  final AsyncValue<List<FilterOption>> optionsAsync;
-  final Set<int> selected;
-  final void Function(int) onToggle;
-
-  const _WorkScheduleListPanel({
-    required this.optionsAsync,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return optionsAsync.when(
-      data: (options) {
-        // 3그룹 분류 후 플랫 리스트로 합침
-        final group1 = <FilterOption>[]; // 협의, 주말
-        final group2 = <FilterOption>[]; // 월~금, 월~토, 월~일
-        final group3 = <FilterOption>[]; // 주N일
-        final others = <FilterOption>[];
-
-        for (final opt in options) {
-          final l = opt.label.toLowerCase().replaceAll(' ', '');
-          if (_isNegotiableOrWeekend(l)) {
-            group1.add(opt);
-          } else if (_isWeekdayRange(l)) {
-            group2.add(opt);
-          } else if (_isDayCount(l)) {
-            group3.add(opt);
-          } else {
-            others.add(opt);
-          }
-        }
-
-        // 주N일은 큰 수부터
-        group3.sort((a, b) {
-          final na = _extractNumber(a.label);
-          final nb = _extractNumber(b.label);
-          return nb.compareTo(na);
-        });
-
-        final allItems = [...group1, ...group2, ...group3, ...others];
-
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-          itemCount: allItems.length,
-          itemBuilder: (context, index) {
-            final opt = allItems[index];
-            final id = int.tryParse(opt.id) ?? 0;
-            final isSelected = selected.contains(id);
-            return _filterListRow(
-              label: opt.label,
-              isSelected: isSelected,
-              onTap: () => onToggle(id),
-            );
-          },
-        );
-      },
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-
-  bool _isNegotiableOrWeekend(String l) {
-    return l.contains('협의') || l.contains('negotia') ||
-        l.contains('주말') || l.contains('weekend');
-  }
-
-  bool _isWeekdayRange(String l) {
-    return l.contains('월~') || l.contains('월-') ||
-        l.contains('mon') || l.contains('weekday');
-  }
-
-  bool _isDayCount(String l) {
-    return RegExp(r'(주|week)\s*\d').hasMatch(l) ||
-        RegExp(r'\d\s*(일|day)').hasMatch(l);
-  }
-
-  int _extractNumber(String label) {
-    final match = RegExp(r'\d+').firstMatch(label);
-    return match != null ? int.parse(match.group(0)!) : 0;
-  }
-}
-
-class _DashedLinePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = const Color(0xFFE0E0E0)
-      ..strokeWidth = 1;
-    const dashWidth = 4.0;
-    const dashSpace = 4.0;
-    var startX = 0.0;
-    while (startX < size.width) {
-      canvas.drawLine(
-        Offset(startX, 0),
-        Offset(startX + dashWidth, 0),
-        paint,
-      );
-      startX += dashWidth + dashSpace;
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-// ── 멀티 섹션 패널 (오른쪽 패널에 여러 필터를 섹션별로 표시) ──
-
-class _SectionData {
-  final String title;
-  final Widget child;
-  const _SectionData({required this.title, required this.child});
-}
-
-class _MultiSectionPanel extends StatelessWidget {
-  final List<_SectionData> sections;
-  const _MultiSectionPanel({required this.sections});
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          for (var i = 0; i < sections.length; i++) ...[
-            if (sections[i].title.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 4),
-                child: Text(
-                  sections[i].title,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.carrot,
-                  ),
-                ),
-              ),
-            sections[i].child,
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _AsyncChipPanel extends StatelessWidget {
-  final AsyncValue<List<FilterOption>> optionsAsync;
-  final Set<String> selected;
-  final void Function(String) onToggle;
-  const _AsyncChipPanel({
-    required this.optionsAsync,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return optionsAsync.when(
-      data: (options) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Wrap(
-          spacing: 8, runSpacing: 8,
-          children: options.map((opt) {
-            return _Chip(
-              label: opt.label,
-              isSelected: selected.contains(opt.id),
-              onTap: () => onToggle(opt.id),
-            );
-          }).toList(),
-        ),
-      ),
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-}
-
-// ── String ID 리스트 패널 ──
-
-class _AsyncListPanel extends StatelessWidget {
-  final AsyncValue<List<FilterOption>> optionsAsync;
-  final Set<String> selected;
-  final void Function(String) onToggle;
-  const _AsyncListPanel({
-    required this.optionsAsync,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return optionsAsync.when(
-      data: (options) => ListView.builder(
-        padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-        itemCount: options.length,
-        itemBuilder: (context, index) {
-          final opt = options[index];
-          final isSelected = selected.contains(opt.id);
-          return _filterListRow(
-            label: opt.label,
-            isSelected: isSelected,
-            onTap: () => onToggle(opt.id),
-          );
-        },
-      ),
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-}
-
-// ── int ID 칩 패널 ──
-
-class _AsyncIntChipPanel extends StatelessWidget {
-  final AsyncValue<List<FilterOption>> optionsAsync;
-  final Set<int> selected;
-  final void Function(int) onToggle;
-  const _AsyncIntChipPanel({
-    required this.optionsAsync,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return optionsAsync.when(
-      data: (options) => SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Wrap(
-          spacing: 8, runSpacing: 8,
-          children: options.map((opt) {
-            final id = int.tryParse(opt.id) ?? 0;
-            return _Chip(
-              label: opt.label,
-              isSelected: selected.contains(id),
-              onTap: () => onToggle(id),
-            );
-          }).toList(),
-        ),
-      ),
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-}
-
-// ── int ID 리스트 패널 ──
-
-class _AsyncIntListPanel extends StatelessWidget {
-  final AsyncValue<List<FilterOption>> optionsAsync;
-  final Set<int> selected;
-  final void Function(int) onToggle;
-  const _AsyncIntListPanel({
-    required this.optionsAsync,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return optionsAsync.when(
-      data: (options) => ListView.builder(
-        padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-        itemCount: options.length,
-        itemBuilder: (context, index) {
-          final opt = options[index];
-          final id = int.tryParse(opt.id) ?? 0;
-          final isSelected = selected.contains(id);
-          return _filterListRow(
-            label: opt.label,
-            isSelected: isSelected,
-            onTap: () => onToggle(id),
-          );
-        },
-      ),
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-}
-
-// ── 하드코딩 칩 패널 (급여) ──
-
-class _UnifiedSalaryPanel extends StatelessWidget {
-  final FilterState filter;
-  final FilterStateNotifier notifier;
-  final dynamic s;
-
-  const _UnifiedSalaryPanel({
-    required this.filter,
-    required this.notifier,
-    required this.s,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final options = [
-      FilterOption(id: 'hourly', label: s.salaryHourly as String),
-      FilterOption(id: 'daily', label: s.salaryDaily as String),
-      FilterOption(id: 'weekly', label: s.salaryWeekly as String),
-      FilterOption(id: 'monthly', label: s.salaryMonthly as String),
-      FilterOption(id: 'annual', label: s.salaryAnnual as String),
-    ];
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: 8, runSpacing: 8,
-        children: options.map((opt) => _Chip(
-          label: opt.label,
-          isSelected: filter.salaryTypes.contains(opt.id),
-          onTap: () => notifier.toggleSalaryType(opt.id),
-        )).toList(),
-      ),
-    );
-  }
-}
-
-// ── 급여 리스트 패널 ──
-
-class _SalaryListPanel extends StatelessWidget {
-  final FilterState filter;
-  final FilterStateNotifier notifier;
-  final dynamic s;
-
-  const _SalaryListPanel({
-    required this.filter,
-    required this.notifier,
-    required this.s,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final options = [
-      FilterOption(id: 'hourly', label: s.salaryHourly as String),
-      FilterOption(id: 'daily', label: s.salaryDaily as String),
-      FilterOption(id: 'weekly', label: s.salaryWeekly as String),
-      FilterOption(id: 'monthly', label: s.salaryMonthly as String),
-      FilterOption(id: 'annual', label: s.salaryAnnual as String),
-    ];
-
-    return ListView.builder(
-      padding: const EdgeInsets.fromLTRB(0, 4, 0, 48),
-      itemCount: options.length,
-      itemBuilder: (context, index) {
-        final opt = options[index];
-        final isSelected = filter.salaryTypes.contains(opt.id);
-        return _filterListRow(
-          label: opt.label,
-          isSelected: isSelected,
-          onTap: () => notifier.toggleSalaryType(opt.id),
-        );
-      },
-    );
-  }
-}
-
-class _SalaryPanel extends StatefulWidget {
-  final FilterState filter;
-  final FilterStateNotifier notifier;
-  final dynamic s;
-
-  const _SalaryPanel({
-    required this.filter,
-    required this.notifier,
-    required this.s,
-  });
-
-  @override
-  State<_SalaryPanel> createState() => _SalaryPanelState();
-}
-
-class _SalaryPanelState extends State<_SalaryPanel> {
-  String _selectedTab = 'monthly';
-
-  @override
-  Widget build(BuildContext context) {
-    final s = widget.s;
-    final types = [
-      _SalaryTypeItem('monthly', s.salaryMonthly as String),
-      _SalaryTypeItem('hourly', s.salaryHourly as String),
-      _SalaryTypeItem('annual', s.salaryAnnual as String),
-    ];
-
-    List<String> rangeOptions;
-    if (_selectedTab == 'hourly') {
-      rangeOptions = s.salaryHourlyOptions as List<String>;
-    } else if (_selectedTab == 'annual') {
-      rangeOptions = s.salaryAnnualOptions as List<String>;
-    } else {
-      rangeOptions = s.salaryMonthlyOptions as List<String>;
-    }
-
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 급여 타입 탭 (로컬 상태, 서버 통신 없음)
-          Container(
-            decoration: BoxDecoration(
-              color: const Color(0xFFF5F5F5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            padding: const EdgeInsets.all(3),
-            child: Row(
-              children: types.map((t) {
-                final isSelected = _selectedTab == t.code;
-                return Expanded(
-                  child: GestureDetector(
-                    onTap: () => setState(() => _selectedTab = t.code),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      decoration: BoxDecoration(
-                        color: isSelected ? Colors.white : Colors.transparent,
-                        borderRadius: BorderRadius.circular(8),
-                        boxShadow: isSelected
-                            ? [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4, offset: const Offset(0, 1))]
-                            : null,
-                      ),
-                      child: Text(
-                        t.label,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                          color: isSelected ? AppColors.carrot : AppColors.gray400,
-                        ),
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Divider(color: Color(0xFFF0F0F0)),
-          const SizedBox(height: 16),
-          // 급여 범위 선택
-          Wrap(
-            spacing: 8, runSpacing: 8,
-            children: rangeOptions.map((item) {
-              final isSelected = widget.filter.salaryRange == item;
-              return _Chip(
-                label: item,
-                isSelected: isSelected,
-                onTap: () => widget.notifier.setSalary(
-                    widget.filter.salaryRange == item ? null : item),
-              );
-            }).toList(),
           ),
         ],
       ),
@@ -1535,251 +913,398 @@ class _SalaryPanelState extends State<_SalaryPanel> {
   }
 }
 
-class _SalaryTypeItem {
-  final String code;
+// ─────────────────────────────────────────────────────────────
+// 부품
+
+class _GroupTab extends StatelessWidget {
   final String label;
-  const _SalaryTypeItem(this.code, this.label);
-}
-
-class _StringChipPanel extends StatelessWidget {
-  final List<String> items;
-  final Set<String> selected;
-  final void Function(String) onToggle;
-
-  const _StringChipPanel({
-    required this.items,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: 8, runSpacing: 8,
-        children: items.map((item) => _Chip(
-          label: item,
-          isSelected: selected.contains(item),
-          onTap: () => onToggle(item),
-        )).toList(),
-      ),
-    );
-  }
-}
-
-// ── FilterOption 칩 패널 (id로 선택, label 표시) ──
-
-class _OptionChipPanel extends StatelessWidget {
-  final List<FilterOption> options;
-  final Set<String> selected;
-  final void Function(String) onToggle;
-
-  const _OptionChipPanel({
-    required this.options,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: 8, runSpacing: 8,
-        children: options.map((opt) => _Chip(
-          label: opt.label,
-          isSelected: selected.contains(opt.id),
-          onTap: () => onToggle(opt.id),
-        )).toList(),
-      ),
-    );
-  }
-}
-
-// ── 성별 패널 ──
-
-class _GenderPanel extends StatelessWidget {
-  final String? selected;
-  final void Function(String?) onChanged;
-  final dynamic s;
-
-  const _GenderPanel({
-    required this.selected,
-    required this.onChanged,
-    required this.s,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final options = [
-      ('any', s.genderAny),
-      ('male', s.genderMale),
-      ('female', s.genderFemale),
-    ];
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Wrap(
-        spacing: 8, runSpacing: 8,
-        children: options.map((opt) => _Chip(
-          label: opt.$2 as String,
-          isSelected: selected == opt.$1,
-          onTap: () => onChanged(selected == opt.$1 ? null : opt.$1),
-        )).toList(),
-      ),
-    );
-  }
-}
-
-// ── get_filter_counts 기반 동적 칩 패널 ──
-
-class _FilterCountChipPanel extends ConsumerWidget {
-  final String countsKey;
-  final Set<String> selected;
-  final void Function(String) onToggle;
-
-  const _FilterCountChipPanel({
-    required this.countsKey,
-    required this.selected,
-    required this.onToggle,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final countsAsync = ref.watch(filterCountsProvider);
-    return countsAsync.when(
-      data: (counts) {
-        final map = countsKey == 'education' ? counts.education
-            : countsKey == 'experience' ? counts.experience
-            : <String, int>{};
-        if (map.isEmpty) {
-          return const Center(child: Text('No options'));
-        }
-        final sorted = map.entries.toList()
-          ..sort((a, b) => b.value.compareTo(a.value));
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Wrap(
-            spacing: 8, runSpacing: 8,
-            children: sorted.map((e) => _Chip(
-              label: '${e.key} (${e.value})',
-              isSelected: selected.contains(e.key),
-              onTap: () => onToggle(e.key),
-            )).toList(),
-          ),
-        );
-      },
-      loading: () => const Center(
-          child: CircularProgressIndicator(color: AppColors.carrot)),
-      error: (e, _) => const ErrorRetry(onRetry: null),
-    );
-  }
-}
-
-// ── Boolean 토글 패널 ──
-
-class _TogglePanel extends StatelessWidget {
-  final bool? value;
-  final void Function(bool?) onChanged;
-
-  const _TogglePanel({this.value, required this.onChanged});
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        children: [
-          _Chip(
-            label: 'Yes',
-            isSelected: value == true,
-            onTap: () => onChanged(value == true ? null : true),
-          ),
-          const SizedBox(width: 8),
-          _Chip(
-            label: 'No',
-            isSelected: value == false,
-            onTap: () => onChanged(value == false ? null : false),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-// ── 공통 리스트 행 (모든 리스트 패널에서 사용) ──
-
-Widget _filterListRow({
-  required String label,
-  required bool isSelected,
-  required VoidCallback onTap,
-}) {
-  return GestureDetector(
-    behavior: HitTestBehavior.opaque,
-    onTap: onTap,
-    child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.gray100, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w400,
-                color: isSelected ? AppColors.carrot : AppColors.black,
-              ),
-            ),
-          ),
-          Icon(
-            isSelected ? Icons.check_box : Icons.check_box_outline_blank,
-            size: 20,
-            color: isSelected ? AppColors.carrot : AppColors.gray300,
-          ),
-        ],
-      ),
-    ),
-  );
-}
-
-// ── 공통 칩 ──
-
-class _Chip extends StatelessWidget {
-  final String label;
-  final bool isSelected;
+  final int count;
+  final bool active;
   final VoidCallback onTap;
 
-  const _Chip({
+  const _GroupTab({
+    super.key,
     required this.label,
-    required this.isSelected,
+    required this.count,
+    required this.active,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+    return Semantics(
+      selected: active,
+      button: true,
+      child: Material(
+        color: active ? _T.navy : Colors.transparent,
+        borderRadius: BorderRadius.circular(99),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            height: 34,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            alignment: Alignment.center,
+            child: Row(
+              children: [
+                Text(label,
+                    style: TextStyle(
+                      fontSize: 13.5,
+                      fontWeight: active ? FontWeight.w700 : FontWeight.w500,
+                      letterSpacing: -0.2,
+                      color: active ? Colors.white : _T.muted,
+                    )),
+                if (count > 0) ...[
+                  const SizedBox(width: 5),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 17),
+                    height: 17,
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      // 활성 탭 위에서도 또렷하게 — 흰 배경 + 남색 숫자
+                      color: active ? Colors.white : _T.orange,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text('$count',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          height: 1.2,
+                          color: active ? _T.navy : Colors.white,
+                        )),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _Badge extends StatelessWidget {
+  final String text;
+  const _Badge({required this.text});
+
+  @override
+  Widget build(BuildContext context) => Container(
+        constraints: const BoxConstraints(minWidth: 20),
+        height: 20,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        alignment: Alignment.center,
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.carrotLight : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected ? AppColors.carrot : AppColors.gray100,
-            width: 1.5,
+          color: _T.orange,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Text(text,
+            style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                height: 1.2,
+                color: Colors.white)),
+      );
+}
+
+class _Chip extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final String? badge;
+  final bool trailingArrow;
+  final VoidCallback onTap;
+
+  const _Chip({
+    required this.label,
+    required this.selected,
+    required this.onTap,
+    this.badge,
+    this.trailingArrow = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      selected: selected,
+      button: true,
+      child: Material(
+        color: selected ? _T.orangeSoft : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            height: 40,
+            padding: const EdgeInsets.symmetric(horizontal: 13),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: selected ? _T.orange : _T.line),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                      letterSpacing: -0.2,
+                      color: selected ? _T.navy : _T.text,
+                    )),
+                if (badge != null) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    constraints: const BoxConstraints(minWidth: 18),
+                    height: 18,
+                    padding: const EdgeInsets.symmetric(horizontal: 5),
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: _T.orange,
+                      borderRadius: BorderRadius.circular(9),
+                    ),
+                    child: Text(badge!,
+                        style: const TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            height: 1.2,
+                            color: Colors.white)),
+                  ),
+                ],
+                if (trailingArrow) ...[
+                  const SizedBox(width: 6),
+                  Icon(Icons.chevron_right,
+                      size: 16, color: selected ? _T.orange : _T.muted),
+                ],
+              ],
+            ),
           ),
         ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-            color: isSelected ? AppColors.carrotDark : AppColors.gray600,
+      ),
+    );
+  }
+}
+
+class _MoreChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onTap;
+  const _MoreChip({required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 40,
+          padding: const EdgeInsets.symmetric(horizontal: 12),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: _T.line),
+          ),
+          child: Text(label,
+              style: const TextStyle(
+                  fontSize: 14, fontWeight: FontWeight.w600, color: _T.muted)),
+        ),
+      );
+}
+
+class _RemovableChip extends StatelessWidget {
+  final String label;
+  final VoidCallback onRemove;
+  const _RemovableChip({required this.label, required this.onRemove});
+
+  @override
+  Widget build(BuildContext context) => Material(
+        color: _T.orangeSoft,
+        borderRadius: BorderRadius.circular(99),
+        child: InkWell(
+          onTap: onRemove,
+          borderRadius: BorderRadius.circular(99),
+          child: Container(
+            height: 32,
+            padding: const EdgeInsets.only(left: 12, right: 10),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(99),
+              border: Border.all(color: _T.orange),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(label,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _T.navy)),
+                const SizedBox(width: 6),
+                const Icon(Icons.close, size: 14, color: _T.orange),
+              ],
+            ),
           ),
         ),
+      );
+}
+
+// ─────────────────────────────────────────────────────────────
+// 지역 2단계 바텀시트
+class _SidoSheet extends StatelessWidget {
+  final String title;
+  final String allLabel;
+  final String sigunguLabel;
+  final List<({int id, String label})> gus;
+  final bool isAll;
+  final Set<int> pickedIds;
+  final VoidCallback onAll;
+  final void Function(int id) onToggleGu;
+  final String applyLabel;
+  final VoidCallback onClose;
+
+  const _SidoSheet({
+    required this.title,
+    required this.allLabel,
+    required this.sigunguLabel,
+    required this.gus,
+    required this.isAll,
+    required this.pickedIds,
+    required this.onAll,
+    required this.onToggleGu,
+    required this.applyLabel,
+    required this.onClose,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final maxH = MediaQuery.of(context).size.height * 0.78;
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxH),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(10, 12, 18, 12),
+            child: Row(
+              children: [
+                IconButton(
+                  onPressed: onClose,
+                  icon: const Icon(Icons.chevron_left,
+                      size: 24, color: _T.muted),
+                  splashRadius: 20,
+                ),
+                Expanded(
+                  child: Text(title,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.4,
+                          color: _T.ink)),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
+            child: InkWell(
+              onTap: onAll,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 48,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                decoration: BoxDecoration(
+                  color: isAll ? _T.orangeSoft : Colors.white,
+                  borderRadius: BorderRadius.circular(12),
+                  border:
+                      Border.all(color: isAll ? _T.orange : _T.line),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 20,
+                      height: 20,
+                      decoration: BoxDecoration(
+                        color: isAll ? _T.orange : Colors.white,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: isAll
+                                ? _T.orange
+                                : const Color(0xFFD6D2CB),
+                            width: 1.5),
+                      ),
+                      child: isAll
+                          ? const Icon(Icons.check,
+                              size: 14, color: Colors.white)
+                          : null,
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(allLabel,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              fontSize: 15,
+                              fontWeight: FontWeight.w700,
+                              color: isAll ? _T.navy : _T.text)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          Flexible(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(18, 0, 18, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: Text(sigunguLabel,
+                        style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                            color: _T.muted)),
+                  ),
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: [
+                      for (final g in gus)
+                        _Chip(
+                          label: g.label,
+                          selected: isAll || pickedIds.contains(g.id),
+                          onTap: () => onToggleGu(g.id),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Container(
+            decoration: const BoxDecoration(
+              border: Border(top: BorderSide(color: _T.line)),
+            ),
+            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+            child: SizedBox(
+              width: double.infinity,
+              height: 52,
+              child: FilledButton(
+                onPressed: onClose,
+                style: FilledButton.styleFrom(
+                  backgroundColor: _T.navy,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                ),
+                child: Text(applyLabel,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

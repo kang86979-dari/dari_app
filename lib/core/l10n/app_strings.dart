@@ -3846,6 +3846,64 @@ class AppStrings {
    _ => code,
  };
 
+ // ── 필터 개편 (탭+칩 그리드) ──
+ String get filterTitle => _t({
+ 'ko': '필터', 'en': 'Filter', 'zh': '筛选', 'hi': 'फ़िल्टर', 'ja': 'フィルター',
+ 'th': 'ตัวกรอง', 'vi': 'Bộ lọc', 'bn': 'ফিল্টার', 'ru': 'Фильтр', 'id': 'Filter',
+ 'ne': 'फिल्टर', 'km': 'តម្រង', 'my': 'စစ်ထုတ်ရန်', 'si': 'පෙරහන',
+ 'uz': 'Filtr', 'mn': 'Шүүлтүүр',
+ }, 'Filter');
+
+ String get filterRegionHint => _t({
+ 'ko': '시·도를 누르면 시·군·구까지 고를 수 있어요',
+ 'en': 'Tap a region to pick districts',
+ 'zh': '点击地区可选择区/郡', 'hi': 'ज़िला चुनने के लिए क्षेत्र दबाएँ',
+ 'ja': '地域をタップすると市·郡·区まで選べます', 'th': 'แตะภูมิภาคเพื่อเลือกเขต',
+ 'vi': 'Chạm vào khu vực để chọn quận/huyện', 'bn': 'জেলা বাছতে অঞ্চলে চাপুন',
+ 'ru': 'Нажмите регион, чтобы выбрать районы', 'id': 'Ketuk wilayah untuk pilih distrik',
+ 'ne': 'जिल्ला छान्न क्षेत्र थिच्नुहोस्', 'km': 'ចុចតំបន់ដើម្បីជ្រើសស្រុក',
+ 'my': 'ခရိုင်ရွေးရန် ဒေသကိုနှိပ်ပါ', 'si': 'දිස්ත්‍රික්ක තෝරන්න ප්‍රදේශය ඔබන්න',
+ 'uz': 'Tuman tanlash uchun hududni bosing', 'mn': 'Дүүрэг сонгохоор бүс дээр дарна уу',
+ }, 'Tap a region to pick districts');
+
+ String filterMoreN(int n) => _t({
+ 'ko': '+{n} 더보기', 'en': '+{n} more', 'zh': '+{n} 更多', 'hi': '+{n} और',
+ 'ja': '+{n} もっと見る', 'th': '+{n} เพิ่มเติม', 'vi': '+{n} xem thêm',
+ 'bn': '+{n} আরও', 'ru': 'ещё +{n}', 'id': '+{n} lainnya', 'ne': '+{n} थप',
+ 'km': '+{n} បន្ថែម', 'my': '+{n} ထပ်ကြည့်ရန်', 'si': '+{n} තව',
+ 'uz': "+{n} ko'proq", 'mn': '+{n} дэлгэрэнгүй',
+ }, '+{n} more').replaceAll('{n}', '$n');
+
+ String get filterCollapse => _t({
+ 'ko': '접기', 'en': 'Collapse', 'zh': '收起', 'hi': 'समेटें', 'ja': '閉じる',
+ 'th': 'ย่อ', 'vi': 'Thu gọn', 'bn': 'গুটান', 'ru': 'Свернуть', 'id': 'Tutup',
+ 'ne': 'बन्द गर्नुहोस्', 'km': 'បង្រួម', 'my': 'ခေါက်ရန်', 'si': 'හකුළන්න',
+ 'uz': "Yig'ish", 'mn': 'Хураах',
+ }, 'Collapse');
+
+ /// '{si} 전지역' — si는 시·도명
+ String filterAllRegion(String si) => _t({
+ 'ko': '{si} 전지역', 'en': 'All of {si}', 'zh': '{si}全部地区', 'hi': 'पूरा {si}',
+ 'ja': '{si}全域', 'th': 'ทั้งหมดของ {si}', 'vi': 'Toàn bộ {si}', 'bn': 'সমগ্র {si}',
+ 'ru': 'Весь {si}', 'id': 'Seluruh {si}', 'ne': 'सम्पूर्ण {si}', 'km': 'ទាំងអស់ {si}',
+ 'my': '{si} တစ်ခုလုံး', 'si': '{si} සම්පූර්ණ', 'uz': 'Butun {si}', 'mn': 'Бүх {si}',
+ }, 'All of {si}').replaceAll('{si}', si);
+
+ /// 지역 시트 적용 버튼 — 'N곳 적용'
+ String filterApplyPlaces(int n) => _t({
+ 'ko': '{n}곳 적용', 'en': 'Apply {n}', 'zh': '应用 {n} 处', 'hi': '{n} लागू करें',
+ 'ja': '{n}か所適用', 'th': 'ใช้ {n} แห่ง', 'vi': 'Áp dụng {n}', 'bn': '{n}টি প্রয়োগ',
+ 'ru': 'Применить {n}', 'id': 'Terapkan {n}', 'ne': '{n} लागू', 'km': 'អនុវត្ត {n}',
+ 'my': '{n} ခုသုံးရန်', 'si': '{n}ක් යොදන්න', 'uz': "{n} ta qo'llash", 'mn': '{n} хэрэглэх',
+ }, 'Apply {n}').replaceAll('{n}', '$n');
+
+ String get filterSigungu => _t({
+ 'ko': '시·군·구', 'en': 'Districts', 'zh': '市/郡/区', 'hi': 'ज़िले', 'ja': '市·郡·区',
+ 'th': 'เขต/อำเภอ', 'vi': 'Quận/Huyện', 'bn': 'জেলা', 'ru': 'Районы', 'id': 'Distrik',
+ 'ne': 'जिल्ला', 'km': 'ស្រុក/ខណ្ឌ', 'my': 'မြို့နယ်', 'si': 'දිස්ත්‍රික්ක',
+ 'uz': 'Tumanlar', 'mn': 'Дүүргүүд',
+ }, 'Districts');
+
  // ── Filter Exit Confirm ──
  String get filterExitConfirm => _t({
  'ko': '변경사항을 적용할까요?',
