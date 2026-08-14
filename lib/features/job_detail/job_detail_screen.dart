@@ -637,7 +637,7 @@ class _DetailBodyState extends State<_DetailBody> {
                           value: job.getBenefits(langCode),
                         ),
                       if (job.visaSponsorship == true)
-                        _InfoRow(label: s.tabVisaSponsorship, value: 'Yes'),
+                        _InfoRow(label: s.tabVisaSponsorship, value: s.visaSponsorshipYes),
                       // 지원방법: 크롤 수집 apply_methods 있을 때만 표시(1단계=표시 전용, 칩 탭 동작 없음).
                       // null/빈 배열/미지 코드뿐이면 위젯이 행 자체를 숨김.
                       if (job.applyMethods.isNotEmpty)

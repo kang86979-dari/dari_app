@@ -208,6 +208,7 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
   }
 
   Widget _errorView() {
+    final s = AppStrings.of(widget.langCode);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -216,13 +217,13 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
           children: [
             const Icon(Icons.wifi_off, size: 48, color: AppColors.gray300),
             const SizedBox(height: 16),
-            const Text('페이지를 열 수 없어요',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+            Text(s.pageLoadFailed,
+                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
             const SizedBox(height: 20),
             FilledButton(
               onPressed: _openExternal,
               style: FilledButton.styleFrom(backgroundColor: AppColors.carrot),
-              child: const Text('외부 브라우저로 열기'),
+              child: Text(s.openInBrowser),
             ),
           ],
         ),

@@ -2351,6 +2351,65 @@ class AppStrings {
  'mn': 'Эх сурвалж',
  }, 'Source');
 
+ /// 지원 WebView 로드 실패 화면
+ String get pageLoadFailed => _t({
+ 'ko': '페이지를 열 수 없어요',
+ 'en': 'Couldn\'t open the page',
+ 'zh': '无法打开页面',
+ 'hi': 'पेज नहीं खुल सका',
+ 'ja': 'ページを開けません',
+ 'th': 'ไม่สามารถเปิดหน้านี้ได้',
+ 'vi': 'Không thể mở trang',
+ 'bn': 'পৃষ্ঠাটি খোলা যায়নি',
+ 'ru': 'Не удалось открыть страницу',
+ 'id': 'Tidak dapat membuka halaman',
+ 'ne': 'पृष्ठ खोल्न सकिएन',
+ 'km': 'មិនអាចបើកទំព័របានទេ',
+ 'my': 'စာမျက်နှာကို ဖွင့်၍မရပါ',
+ 'si': 'පිටුව විවෘත කළ නොහැක',
+ 'uz': 'Sahifani ochib bo\'lmadi',
+ 'mn': 'Хуудсыг нээж чадсангүй',
+ }, 'Couldn\'t open the page');
+
+ String get openInBrowser => _t({
+ 'ko': '외부 브라우저로 열기',
+ 'en': 'Open in browser',
+ 'zh': '在浏览器中打开',
+ 'hi': 'ब्राउज़र में खोलें',
+ 'ja': 'ブラウザで開く',
+ 'th': 'เปิดในเบราว์เซอร์',
+ 'vi': 'Mở trong trình duyệt',
+ 'bn': 'ব্রাউজারে খুলুন',
+ 'ru': 'Открыть в браузере',
+ 'id': 'Buka di browser',
+ 'ne': 'ब्राउजरमा खोल्नुहोस्',
+ 'km': 'បើកក្នុងកម្មវិធីរុករក',
+ 'my': 'ဘရောက်ဆာတွင် ဖွင့်ရန်',
+ 'si': 'බ්‍රවුසරයේ විවෘත කරන්න',
+ 'uz': 'Brauzerda ochish',
+ 'mn': 'Хөтөч дээр нээх',
+ }, 'Open in browser');
+
+ /// 상세 "비자지원" 행 값 (행 자체가 true일 때만 표시됨)
+ String get visaSponsorshipYes => _t({
+ 'ko': '지원',
+ 'en': 'Yes',
+ 'zh': '支持',
+ 'hi': 'हाँ',
+ 'ja': '支援あり',
+ 'th': 'มี',
+ 'vi': 'Có',
+ 'bn': 'হ্যাঁ',
+ 'ru': 'Да',
+ 'id': 'Ya',
+ 'ne': 'छ',
+ 'km': 'មាន',
+ 'my': 'ရှိသည်',
+ 'si': 'ඔව්',
+ 'uz': 'Ha',
+ 'mn': 'Тийм',
+ }, 'Yes');
+
  // ── 지원방법 (Apply methods) ──
  String get infoApplyMethod => _t({
  'ko': '지원방법',
