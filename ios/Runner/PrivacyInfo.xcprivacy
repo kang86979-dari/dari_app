@@ -2,11 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- 앱은 광고(AdMob)·Facebook SDK를 통해 추적을 수행하므로 true. 추적 도메인은 각 SDK 매니페스트가 기여함. -->
+	<!-- 앱 자체 코드는 추적 도메인에 직접 접속하지 않음 → 앱 레벨은 false.
+	     추적(AdMob·Facebook) 선언은 각 SDK의 자체 매니페스트가 담당 (FBSDKCoreKit 등).
+	     주의: true로 두려면 NSPrivacyTrackingDomains 목록이 필수(ITMS-91064)인데,
+	     광고 도메인을 여기 나열하면 ATT 거부 시 iOS가 차단해 비동의 광고까지 죽음. -->
 	<key>NSPrivacyTracking</key>
-	<true/>
-	<key>NSPrivacyTrackingDomains</key>
-	<array/>
+	<false/>
 	<key>NSPrivacyCollectedDataTypes</key>
 	<array/>
 	<key>NSPrivacyAccessedAPITypes</key>
