@@ -348,16 +348,16 @@ class _DetailBodyState extends State<_DetailBody> {
     final uri = Uri.tryParse(url);
     if (uri == null) return;
     if (uri.scheme == 'http' || uri.scheme == 'https') {
-      if (Platform.isIOS) {
-        // iOS: 인앱 사파리(SFSafariViewController) — 네이티브 번역(aA→번역)·로그인 세션 정상.
-        // URL 로케일 사이트(WorkVisa·Jobploy·WorkOn·Kowork)는 사파리에서도 언어 치환 적용.
-        // 쿠키 그룹 사이트는 사파리 쿠키에 접근 불가 → 사이트 자체 언어 UI 사용.
+      if (Platform.isIOS && !SiteLang.useWebViewOnIOS(url)) {
+        // iOS 기본: 인앱 사파리 — URL 로케일 사이트는 언어 치환 적용,
+        // ko·en뿐인 사이트는 사파리 네이티브 번역(aA)으로 소수언어 보완 가능.
         ChromeSafariBrowser().open(
           url: WebUri(SiteLang.entryUrl(url, widget.langCode)),
           settings: ChromeSafariBrowserSettings(barCollapsingEnabled: true),
         );
       } else {
-        // Android: 인앱 WebView — 번역은 각 사이트 자체 다국어 기능 사용 (10개 사이트 전부 보유)
+        // Android 전체 + iOS 쿠키/localStorage 그룹(K-HIRE·FindJob·KoMate·K-Work·
+        // TalentLink·JobnShop): 인앱 WebView — 진입 시 언어 사전 세팅(SiteLang) 적용
         Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
         ));

@@ -57,6 +57,20 @@ class SiteLang {
     'bn', 'si', 'ja', 'kk', 'ky', 'lo', 'tg', 'tl', 'ur', 'tet',
   };
 
+  /// iOS에서도 인앱 WebView를 쓸 사이트 (기본은 인앱 사파리).
+  /// 쿠키/localStorage 방식은 사파리에 사전 세팅이 불가능한데, 이 사이트들은
+  /// 기기 언어도 안 따라가 무조건 한국어로 떠서 WebView+세팅이 필수.
+  /// (자체 번역 22~34개 언어 보유라 사파리 네이티브 번역을 잃어도 손해 없음.
+  ///  URL 그룹(WorkVisa·Jobploy·WorkOn·Kowork)은 사파리 유지 — URL 세팅이 되고,
+  ///  ko·en뿐인 WorkOn·Kowork은 사파리 aA 번역으로 소수언어 보완 가능)
+  static bool useWebViewOnIOS(String url) =>
+      url.contains('khire.co.kr') ||
+      url.contains('findjob.co.kr') ||
+      url.contains('komate.saramin.co.kr') ||
+      url.contains('k-work.or.kr') ||
+      url.contains('talent-link.co.kr') ||
+      url.contains('jobnshop.com');
+
   // ── 진입 URL 변환 (URL 그룹 + FindJob 모바일 호스트) ──
   /// iOS 사파리 경로에서도 사용 — 언어와 무관한 호스트 정리(FindJob) 포함.
   static String entryUrl(String url, String appLang) {
