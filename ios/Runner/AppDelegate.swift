@@ -41,6 +41,18 @@ import FirebaseMessaging
     super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
+  // 포그라운드 알림 표시: 새 UIScene 구조에서 firebase_messaging의 willPresent 전달 체인이
+  // 끊겨 setForegroundNotificationPresentationOptions(alert:true)가 무시됨 →
+  // 여기서 직접 배너+소리+배지 표시를 지정한다. (completionHandler는 정확히 1회만 호출)
+  override func userNotificationCenter(
+    _ center: UNUserNotificationCenter,
+    willPresent notification: UNNotification,
+    withCompletionHandler completionHandler:
+      @escaping (UNNotificationPresentationOptions) -> Void
+  ) {
+    completionHandler([.banner, .list, .sound, .badge])
+  }
+
   func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
     GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
   }
