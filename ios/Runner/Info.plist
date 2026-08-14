@@ -48,6 +48,13 @@
 				<string>fb983463687782706</string>
 			</array>
 		</dict>
+		<!-- 스마트 링크(kang86979-dari.github.io/app) — 설치 시 즉시 앱 열기용 -->
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>dari</string>
+			</array>
+		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>

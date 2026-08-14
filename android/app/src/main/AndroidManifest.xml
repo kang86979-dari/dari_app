@@ -28,6 +28,13 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- 스마트 링크(kang86979-dari.github.io/app) — dari:// 스킴으로 앱 열기 -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="dari"/>
+            </intent-filter>
         </activity>
         <!-- AdMob App ID (운영) -->
         <meta-data
