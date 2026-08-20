@@ -3657,7 +3657,8 @@ class AppStrings {
    _ => null,
  };
 
- String translateWorkSchedule(String nameEn) => switch (nameEn) {
+ String translateWorkSchedule(String nameEn) {
+   final r = switch (nameEn) {
    '1 day/week' => _t({
      'ko': '주1일', 'en': '1 day/week', 'zh': '每周1天', 'vi': '1 ngày/tuần',
      'th': '1 วัน/สัปดาห์', 'uz': 'Haftada 1 kun', 'km': '1 ថ្ងៃ/សប្ដាហ៍',
@@ -3731,7 +3732,12 @@ class AppStrings {
    'ne': 'सहमतिमा', 'id': 'Bisa dinegosiasikan',
  }, 'Negotiable'),
    _ => nameEn,
- };
+   };
+   // 근무요일 '주(週)' 단위 접미사 제거 — 슬래시 이후 전부 삭제
+   // (en '/week', vi '/tuần', ru '/нед.', id '/minggu', th·km·mn 등)
+   // '협의/주말' 등 슬래시 없는 라벨은 그대로. 근무요일 행 라벨이 맥락 제공.
+   return r.replaceFirst(RegExp(r'\s*/.*$'), '');
+ }
 
  String translateKoreanLevel(String nameEn) => switch (nameEn) {
    'Not Required' => _t({

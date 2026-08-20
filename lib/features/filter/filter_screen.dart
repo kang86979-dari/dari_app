@@ -71,6 +71,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   final Set<String> _expanded = {};
   String _active = _kGroups.first;
   bool _lockSpy = false;
+  bool _tabsOpen = false; // ∨ 아이콘 탭/스와이프 → 전체 탭 펼침
 
   List<_SidoData>? _sidos; // regions 캐시에서 1회 구성
 
@@ -235,7 +236,8 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       _active = key;
       _lockSpy = true;
     });
-    _revealTab(key);
+    // 펼침→접힘 직후엔 탭 키가 다음 프레임에 생기므로 rebuild 후 reveal
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealTab(key));
     final target = _sectionOffset(key);
     if (target != null && _scroll.hasClients) {
       await _scroll.animateTo(
@@ -413,44 +415,111 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
         ),
       );
 
-  Widget _tabs(FilterState filter, dynamic s) => Container(
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: _T.line)),
-        ),
+  Widget _tabs(FilterState filter, dynamic s) {
+    void toggle() => setState(() => _tabsOpen = !_tabsOpen);
+
+    // 펼침/접힘 화살표 버튼 — 탭 또는 세로 스와이프로 토글
+    final toggleBtn = GestureDetector(
+      onTap: toggle,
+      onVerticalDragEnd: (d) {
+        final v = d.primaryVelocity ?? 0;
+        if (v > 80 && !_tabsOpen) setState(() => _tabsOpen = true);
+        if (v < -80 && _tabsOpen) setState(() => _tabsOpen = false);
+      },
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        width: 34,
+        height: 38,
+        alignment: Alignment.center,
+        child: Icon(_tabsOpen ? Icons.expand_less : Icons.expand_more,
+            size: 22, color: _T.navy),
+      ),
+    );
+
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(bottom: BorderSide(color: _T.line)),
+      ),
+      padding: const EdgeInsets.fromLTRB(12, 0, 6, 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: _tabsOpen
+                ? Wrap(
+                    spacing: 6,
+                    runSpacing: 6,
+                    children: [
+                      for (final k in _kGroups)
+                        _GroupTab(
+                          label: _labelOf(k, s),
+                          count: _countOf(k, filter),
+                          active: k == _active,
+                          onTap: () {
+                            setState(() => _tabsOpen = false);
+                            _jump(k);
+                          },
+                        ),
+                    ],
+                  )
+                : SingleChildScrollView(
+                    controller: _tabScroll,
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [
+                        for (final k in _kGroups) ...[
+                          _GroupTab(
+                            key: _tabKeys[k],
+                            label: _labelOf(k, s),
+                            count: _countOf(k, filter),
+                            active: k == _active,
+                            onTap: () => _jump(k),
+                          ),
+                          const SizedBox(width: 6),
+                        ],
+                      ],
+                    ),
+                  ),
+          ),
+          toggleBtn,
+        ],
+      ),
+    );
+  }
+
+  // SingleChildScrollView: 전체 섹션을 항상 빌드 — 탭 점프/스크롤 스파이가
+  // GlobalKey 위치를 언제나 계산할 수 있어야 함 (ListView는 화면 밖 미빌드)
+  Widget _body(FilterState filter, dynamic s, String langCode) => Container(
+        color: const Color(0xFFF2F3F5),
         child: SingleChildScrollView(
-          controller: _tabScroll,
-          scrollDirection: Axis.horizontal,
-          padding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
-          child: Row(
+          controller: _scroll,
+          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          child: Column(
             children: [
-              for (final k in _kGroups) ...[
-                _GroupTab(
-                  key: _tabKeys[k],
-                  label: _labelOf(k, s),
-                  count: _countOf(k, filter),
-                  active: k == _active,
-                  onTap: () => _jump(k),
+              for (final k in _kGroups)
+                Container(
+                  key: _secKeys[k],
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: const [
+                      BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 8,
+                          offset: Offset(0, 2)),
+                    ],
+                  ),
+                  child: k == _kRegion
+                      ? _regionSection(filter, s, langCode)
+                      : _chipSection(k, filter, s),
                 ),
-                const SizedBox(width: 6),
-              ],
             ],
           ),
         ),
-      );
-
-  Widget _body(FilterState filter, dynamic s, String langCode) => ListView(
-        controller: _scroll,
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-        children: [
-          for (final k in _kGroups)
-            Container(
-              key: _secKeys[k],
-              padding: const EdgeInsets.only(bottom: 22),
-              child: k == _kRegion
-                  ? _regionSection(filter, s, langCode)
-                  : _chipSection(k, filter, s),
-            ),
-        ],
       );
 
   Widget _sectionTitle(String label, int count, {String? hint}) => Padding(
@@ -459,6 +528,16 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(children: [
+              // 시안: 제목 왼쪽 주황 세로 바
+              Container(
+                width: 4,
+                height: 16,
+                margin: const EdgeInsets.only(right: 8),
+                decoration: BoxDecoration(
+                  color: _T.orange,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
               Text(label,
                   style: const TextStyle(
                       fontSize: 16,
@@ -501,6 +580,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
         final opts = [
           FilterOption(id: 'hourly', label: s.salaryHourly as String),
           FilterOption(id: 'daily', label: s.salaryDaily as String),
+          FilterOption(id: 'weekly', label: s.salaryWeekly as String),
           FilterOption(id: 'monthly', label: s.salaryMonthly as String),
           FilterOption(id: 'annual', label: s.salaryAnnual as String),
         ];
@@ -562,7 +642,11 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
           rest = options.skip(_hotN).toList();
         }
         final open = _expanded.contains(key);
-        final shown = open ? [...hot, ...rest] : hot;
+        // 접힘 상태: more 안에서 선택된 항목은 앞으로 승격해 항상 표시
+        final promoted =
+            rest.where((o) => selected.contains(o.id)).toList();
+        final hiddenCount = rest.length - promoted.length;
+        final shown = open ? [...hot, ...rest] : [...hot, ...promoted];
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -588,11 +672,11 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                     selected: selected.contains(o.id),
                     onTap: () => onToggle(o.id),
                   ),
-                if (rest.isNotEmpty)
+                if (open || hiddenCount > 0)
                   _MoreChip(
                     label: open
                         ? s.filterCollapse as String
-                        : s.filterMoreN(rest.length) as String,
+                        : s.filterMoreN(hiddenCount) as String,
                     onTap: () => setState(() =>
                         open ? _expanded.remove(key) : _expanded.add(key)),
                   ),
@@ -622,7 +706,14 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       );
     }
     final open = _expanded.contains(_kRegion);
-    final shown = open ? sidos : sidos.take(6).toList();
+    // 접힘 상태: 7번째 이후 시·도 중 선택된 것은 승격해 항상 표시
+    bool sidoSelected(_SidoData sd) =>
+        _sidoIsAll(sd, filter.regionIds) ||
+        _sidoPickedGus(sd, filter.regionIds).isNotEmpty;
+    final promotedSidos = sidos.skip(6).where(sidoSelected).toList();
+    final hiddenCount = sidos.length - 6 - promotedSidos.length;
+    final shown =
+        open ? sidos : [...sidos.take(6), ...promotedSidos];
     String siLabel(String si) =>
         langCode == 'ko' ? si : RegionMapper.getLocalizedName(si, 'en');
 
@@ -641,21 +732,22 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                 final picked = _sidoPickedGus(sd, ids);
                 return _Chip(
                   label: siLabel(sd.si),
+                  // 비한국어: 윗줄 영어 / 아랫줄 (한글)
+                  subLabel: langCode == 'ko' ? null : '(${sd.si})',
                   selected: all || picked.isNotEmpty,
                   badge: all
                       ? '✓'
                       : picked.isNotEmpty
                           ? '${picked.length}'
                           : null,
-                  trailingArrow: true,
                   onTap: () => _openSido(sd, langCode),
                 );
               }),
-            if (sidos.length > 6)
+            if (open || hiddenCount > 0)
               _MoreChip(
                 label: open
                     ? s.filterCollapse as String
-                    : s.filterMoreN(sidos.length - 6) as String,
+                    : s.filterMoreN(hiddenCount) as String,
                 onTap: () => setState(() => open
                     ? _expanded.remove(_kRegion)
                     : _expanded.add(_kRegion)),
@@ -680,11 +772,12 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
           final picked = _sidoPickedGus(sd, ids).map((g) => g.id).toSet();
           final siName =
               langCode == 'ko' ? sd.si : RegionMapper.getLocalizedName(sd.si, 'en');
+          // 비한국어: '영어 (한글)' 병기 (구버전 표기)
           String guLabel(String gu) => langCode == 'ko'
               ? gu
-              : DistrictNames.getLocalizedGuName(gu, sd.si, langCode);
+              : '${DistrictNames.getLocalizedGuName(gu, sd.si, langCode)} ($gu)';
           return _SidoSheet(
-            title: siName,
+            title: langCode == 'ko' ? sd.si : '$siName (${sd.si})',
             allLabel: s.filterAllRegion(siName),
             sigunguLabel: s.filterSigungu,
             gus: [for (final g in sd.gus) (id: g.id, label: guLabel(g.gu))],
@@ -739,14 +832,13 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     addFromOptions(ref.watch(employmentTypeOptionsProvider),
         f.employmentTypeIds, n.toggleEmploymentType);
     // 지역
+    // 구버전과 동일: 시/도 전체=지역명(앱 언어), 구/군 개별=구 이름만
     final sidos = _sidos ?? const <_SidoData>[];
     for (final sd in sidos) {
       final all = _sidoIsAll(sd, f.regionIds);
-      final siName =
-          langCode == 'ko' ? sd.si : RegionMapper.getLocalizedName(sd.si, 'en');
       if (all) {
         chips.add(_RemovableChip(
-            label: s.filterAllRegion(siName) as String,
+            label: RegionMapper.getLocalizedName(sd.si, langCode),
             onRemove: () => _clearSido(sd)));
       } else {
         for (final g in _sidoPickedGus(sd, f.regionIds)) {
@@ -754,8 +846,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
               ? g.gu
               : DistrictNames.getLocalizedGuName(g.gu, sd.si, langCode);
           chips.add(_RemovableChip(
-              label: '$siName $guLabel',
-              onRemove: () => _toggleGu(sd, g.id)));
+              label: guLabel, onRemove: () => _toggleGu(sd, g.id)));
         }
       }
     }
@@ -764,8 +855,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       final label = switch (st) {
         'hourly' => s.salaryHourly as String,
         'daily' => s.salaryDaily as String,
+        'weekly' => s.salaryWeekly as String,
         'monthly' => s.salaryMonthly as String,
         'annual' => s.salaryAnnual as String,
+        'negotiable' => s.salaryNegotiable as String,
         _ => st,
       };
       chips.add(
@@ -788,9 +881,10 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       decoration: const BoxDecoration(
         border: Border(top: BorderSide(color: _T.line)),
       ),
-      padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+      // 칩 위 14 / 아래 6 + 하단바 위 8 = 14/14 균형 (세로 가운데, 여유 있게)
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
       child: SizedBox(
-        height: 42,
+        height: 30,
         child: ListView.separated(
           scrollDirection: Axis.horizontal,
           itemCount: chips.length,
@@ -801,15 +895,13 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     );
   }
 
-  // ── 하단 바 ──
+  // ── 하단 바 ── (트레이 아래 언더라인 제거 — 상단 보더 없음)
   Widget _bottomBar(FilterState f, dynamic s, String langCode) {
     final total = _total(f);
     final countAsync = ref.watch(jobTotalCountProvider);
     return Container(
-      decoration: const BoxDecoration(
-        border: Border(top: BorderSide(color: _T.line)),
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 18),
+      // SafeArea가 홈 인디케이터 여백을 이미 확보 — 아래 패딩 최소화
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
       child: Row(
         children: [
           SizedBox(
@@ -886,22 +978,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                                 color: Colors.white)),
                       ),
                     ),
-                    if (total > 0) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.24),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text('$total',
-                            style: const TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white)),
-                      ),
-                    ],
                   ],
                 ),
               ),
@@ -936,40 +1012,41 @@ class _GroupTab extends StatelessWidget {
       selected: active,
       button: true,
       child: Material(
+        // 선택 탭 = 남색 (본문이 주황 위주라 가독성 위해 대비색)
         color: active ? _T.navy : Colors.transparent,
         borderRadius: BorderRadius.circular(99),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(99),
           child: Container(
-            height: 34,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            height: 38,
+            padding: const EdgeInsets.symmetric(horizontal: 14),
             alignment: Alignment.center,
             child: Row(
               children: [
                 Text(label,
                     style: TextStyle(
-                      fontSize: 13.5,
+                      fontSize: 16,
                       fontWeight: active ? FontWeight.w700 : FontWeight.w500,
                       letterSpacing: -0.2,
-                      color: active ? Colors.white : _T.muted,
+                      color: active ? Colors.white : _T.ink,
                     )),
                 if (count > 0) ...[
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 6),
                   Container(
-                    constraints: const BoxConstraints(minWidth: 17),
-                    height: 17,
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    constraints: const BoxConstraints(minWidth: 20),
+                    height: 20,
+                    padding: const EdgeInsets.symmetric(horizontal: 6),
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       // 활성 탭 위에서도 또렷하게 — 흰 배경 + 남색 숫자
                       color: active ? Colors.white : _T.orange,
-                      borderRadius: BorderRadius.circular(9),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text('$count',
                         style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
                           height: 1.2,
                           color: active ? _T.navy : Colors.white,
                         )),
@@ -1009,17 +1086,17 @@ class _Badge extends StatelessWidget {
 
 class _Chip extends StatelessWidget {
   final String label;
+  final String? subLabel; // 지역 등 2줄 표기 (윗줄 영어 / 아랫줄 한글)
   final bool selected;
   final String? badge;
-  final bool trailingArrow;
   final VoidCallback onTap;
 
   const _Chip({
     required this.label,
     required this.selected,
     required this.onTap,
+    this.subLabel,
     this.badge,
-    this.trailingArrow = false,
   });
 
   @override
@@ -1028,28 +1105,48 @@ class _Chip extends StatelessWidget {
       selected: selected,
       button: true,
       child: Material(
-        color: selected ? _T.orangeSoft : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        color: selected ? AppColors.carrotLight : Colors.white,
+        borderRadius: BorderRadius.circular(20),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(20),
           child: Container(
-            height: 40,
-            padding: const EdgeInsets.symmetric(horizontal: 13),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: selected ? _T.orange : _T.line),
+              borderRadius: BorderRadius.circular(20),
+              // 선택 시 테두리 없음 (홈 칩과 동일) — 크기 유지 위해 투명 보더
+              border: Border.all(
+                color: selected ? Colors.transparent : AppColors.gray100,
+                width: 1.5,
+              ),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(label,
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-                      letterSpacing: -0.2,
-                      color: selected ? _T.navy : _T.text,
-                    )),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    Text(label,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight:
+                              selected ? FontWeight.w600 : FontWeight.w500,
+                          color: selected
+                              ? AppColors.carrotDark
+                              : AppColors.gray600,
+                        )),
+                    if (subLabel != null)
+                      Text(subLabel!,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: selected
+                                ? AppColors.carrotDark
+                                : AppColors.gray600,
+                          )),
+                  ],
+                ),
                 if (badge != null) ...[
                   const SizedBox(width: 6),
                   Container(
@@ -1069,11 +1166,6 @@ class _Chip extends StatelessWidget {
                             color: Colors.white)),
                   ),
                 ],
-                if (trailingArrow) ...[
-                  const SizedBox(width: 6),
-                  Icon(Icons.chevron_right,
-                      size: 16, color: selected ? _T.orange : _T.muted),
-                ],
               ],
             ),
           ),
@@ -1091,18 +1183,21 @@ class _MoreChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          height: 40,
-          padding: const EdgeInsets.symmetric(horizontal: 12),
-          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _T.line),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppColors.gray100, width: 1.5),
           ),
-          child: Text(label,
-              style: const TextStyle(
-                  fontSize: 14, fontWeight: FontWeight.w600, color: _T.muted)),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(label,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w600, color: _T.muted)),
+            ],
+          ),
         ),
       );
 }
@@ -1113,29 +1208,26 @@ class _RemovableChip extends StatelessWidget {
   const _RemovableChip({required this.label, required this.onRemove});
 
   @override
+  // 홈 화면 필터 칩과 동일 스타일 (테두리 없음)
   Widget build(BuildContext context) => Material(
-        color: _T.orangeSoft,
-        borderRadius: BorderRadius.circular(99),
+        color: AppColors.carrotLight,
+        borderRadius: BorderRadius.circular(15),
         child: InkWell(
           onTap: onRemove,
-          borderRadius: BorderRadius.circular(99),
+          borderRadius: BorderRadius.circular(15),
           child: Container(
-            height: 32,
-            padding: const EdgeInsets.only(left: 12, right: 10),
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(99),
-              border: Border.all(color: _T.orange),
-            ),
+            padding:
+                const EdgeInsets.only(left: 12, right: 6, top: 6, bottom: 6),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(label,
                     style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _T.navy)),
-                const SizedBox(width: 6),
-                const Icon(Icons.close, size: 14, color: _T.orange),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.carrotDark)),
+                const SizedBox(width: 4),
+                const Icon(Icons.close, size: 14, color: AppColors.carrot),
               ],
             ),
           ),
@@ -1145,6 +1237,61 @@ class _RemovableChip extends StatelessWidget {
 
 // ─────────────────────────────────────────────────────────────
 // 지역 2단계 바텀시트
+/// 바텀시트 리스트 행 — 체크박스 + 라벨 (전지역 행과 동일 스타일)
+class _SheetRow extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _SheetRow(
+      {required this.label, required this.selected, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) => InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          height: 48,
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: selected ? _T.orangeSoft : Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: selected ? _T.orange : _T.line),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  color: selected ? _T.orange : Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(
+                      color:
+                          selected ? _T.orange : const Color(0xFFD6D2CB),
+                      width: 1.5),
+                ),
+                child: selected
+                    ? const Icon(Icons.check, size: 14, color: Colors.white)
+                    : null,
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(label,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight:
+                            selected ? FontWeight.w700 : FontWeight.w500,
+                        color: selected
+                            ? AppColors.carrotDark
+                            : _T.text)),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
 class _SidoSheet extends StatelessWidget {
   final String title;
   final String allLabel;
@@ -1244,7 +1391,7 @@ class _SidoSheet extends StatelessWidget {
                           style: TextStyle(
                               fontSize: 15,
                               fontWeight: FontWeight.w700,
-                              color: isAll ? _T.navy : _T.text)),
+                              color: isAll ? AppColors.carrotDark : _T.text)),
                     ),
                   ],
                 ),
@@ -1266,15 +1413,17 @@ class _SidoSheet extends StatelessWidget {
                             letterSpacing: 0.5,
                             color: _T.muted)),
                   ),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
+                  // 구/군 — 리스트 행 형태 (구버전 방식)
+                  Column(
                     children: [
                       for (final g in gus)
-                        _Chip(
-                          label: g.label,
-                          selected: isAll || pickedIds.contains(g.id),
-                          onTap: () => onToggleGu(g.id),
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: _SheetRow(
+                            label: g.label,
+                            selected: isAll || pickedIds.contains(g.id),
+                            onTap: () => onToggleGu(g.id),
+                          ),
                         ),
                     ],
                   ),
@@ -1286,7 +1435,9 @@ class _SidoSheet extends StatelessWidget {
             decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: _T.line)),
             ),
-            padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
+            // 홈 인디케이터 안전영역만큼 버튼을 위로 (바닥에 안 붙게)
+            padding: EdgeInsets.fromLTRB(
+                18, 12, 18, 14 + MediaQuery.of(context).viewPadding.bottom),
             child: SizedBox(
               width: double.infinity,
               height: 52,
