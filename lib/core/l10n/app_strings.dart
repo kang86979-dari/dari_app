@@ -2657,6 +2657,25 @@ class AppStrings {
  'mn': 'Дэлгэрэнгүй',
  }, 'Details');
 
+ String get detailTranslating => _t({
+ 'ko': '번역 중…',
+ 'en': 'Translating…',
+ 'zh': '翻译中…',
+ 'hi': 'अनुवाद हो रहा है…',
+ 'ja': '翻訳中…',
+ 'th': 'กำลังแปล…',
+ 'vi': 'Đang dịch…',
+ 'bn': 'অনুবাদ করা হচ্ছে…',
+ 'ru': 'Перевод…',
+ 'id': 'Menerjemahkan…',
+ 'ne': 'अनुवाद हुँदैछ…',
+ 'km': 'កំពុងបកប្រែ…',
+ 'my': 'ဘာသာပြန်နေသည်…',
+ 'si': 'පරිවර්තනය වෙමින්…',
+ 'uz': 'Tarjima qilinmoqda…',
+ 'mn': 'Орчуулж байна…',
+ }, 'Translating…');
+
  String get disclaimer => _t({
  'ko': '본 공고는 외부 사이트에서 수집된 정보입니다.\n채용 관련 문의는 해당 사이트를 이용해 주세요.',
  'en': 'This information is collected from external sites.\nPlease contact the original site for inquiries.',

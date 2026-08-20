@@ -340,6 +340,8 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       child: Scaffold(
         backgroundColor: Colors.white,
         body: SafeArea(
+          // 하단은 _bottomBar가 시스템 여백을 직접 처리 (iOS 홈바 / Android 내비)
+          bottom: false,
           child: Column(
             children: [
               _header(s),
@@ -900,8 +902,9 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     final total = _total(f);
     final countAsync = ref.watch(jobTotalCountProvider);
     return Container(
-      // SafeArea가 홈 인디케이터 여백을 이미 확보 — 아래 패딩 최소화
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      // 시스템 하단 여백(홈바/내비) + 고정 10 → 양 플랫폼 일관된 간격
+      padding: EdgeInsets.fromLTRB(
+          16, 8, 16, 10 + MediaQuery.of(context).viewPadding.bottom),
       child: Row(
         children: [
           SizedBox(

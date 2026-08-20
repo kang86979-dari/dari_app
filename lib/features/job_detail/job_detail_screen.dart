@@ -665,6 +665,7 @@ class _DetailBodyState extends State<_DetailBody> {
                   _DescriptionBlock(
                     text: _translatedHtml ?? job.getDescriptionText(langCode),
                     isLoading: _isTranslating,
+                    translatingLabel: s.detailTranslating,
                     siteName: job.siteName,
                     jobUrl: job.url,
                     titleLabel: s.detailContent,
@@ -1193,11 +1194,13 @@ class _DescriptionBlock extends StatelessWidget {
   final String? jobUrl; // 벼룩시장 등 URL 도메인 기반 포맷 판별용 (테스트 모드선 siteName이 null)
   final String titleLabel;
   final bool hasSectionFormat;
+  final String translatingLabel;
 
   const _DescriptionBlock({
     required this.text,
     required this.titleLabel,
     this.isLoading = false,
+    this.translatingLabel = '',
     this.siteName,
     this.jobUrl,
     this.hasSectionFormat = false,
@@ -1205,7 +1208,12 @@ class _DescriptionBlock extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final descWidget = _DescriptionText(text: text, isLoading: isLoading, siteName: siteName, jobUrl: jobUrl);
+    final descWidget = _DescriptionText(
+        text: text,
+        isLoading: isLoading,
+        translatingLabel: translatingLabel,
+        siteName: siteName,
+        jobUrl: jobUrl);
     // _DescriptionText가 SizedBox.shrink()를 반환하면 블록 전체 숨김
     if (!isLoading && text.isNotEmpty && descWidget._isEmpty(text, siteName)) {
       return const SizedBox.shrink();
@@ -1244,10 +1252,11 @@ class _DescriptionBlock extends StatelessWidget {
 class _DescriptionText extends StatelessWidget {
   final String text;
   final bool isLoading;
+  final String translatingLabel;
   final String? siteName;
   final String? jobUrl;
 
-  const _DescriptionText({required this.text, this.isLoading = false, this.siteName, this.jobUrl});
+  const _DescriptionText({required this.text, this.isLoading = false, this.translatingLabel = '', this.siteName, this.jobUrl});
 
   // 벼룩시장(FindJob 글로벌) 판별 — 테스트 모드에선 sites RLS로 siteName이 null이라 URL 도메인으로도 판별.
   bool get _isFindJob =>
@@ -1282,12 +1291,26 @@ class _DescriptionText extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isLoading) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24),
         child: Center(
-          child: SizedBox(
-            width: 20, height: 20,
-            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.carrot),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const SizedBox(
+                width: 18, height: 18,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.carrot),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                translatingLabel,
+                style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray600),
+              ),
+            ],
           ),
         ),
       );
