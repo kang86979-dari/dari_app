@@ -2481,14 +2481,28 @@ class _DetailBannerAd extends StatefulWidget {
 
 class _DetailBannerAdState extends State<_DetailBannerAd> {
   BannerAd? _bannerAd;
+  AdSize? _adSize;
   bool _isLoaded = false;
+  bool _requested = false;
 
   @override
-  void initState() {
-    super.initState();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // 적응형 배너는 화면 폭이 필요 → 여기서 1회만 로드.
+    if (_requested) return;
+    _requested = true;
+    _loadAd();
+  }
+
+  Future<void> _loadAd() async {
+    final width = MediaQuery.of(context).size.width.truncate();
+    final size =
+        await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
+    if (!mounted || size == null) return; // 계산 실패 시 로드 안 함
+    _adSize = size;
     _bannerAd = BannerAd(
       adUnitId: AdHelper.bannerId,
-      size: AdSize.banner,
+      size: size,
       request: const AdRequest(),
       listener: BannerAdListener(
         onAdLoaded: (ad) {
@@ -2512,7 +2526,7 @@ class _DetailBannerAdState extends State<_DetailBannerAd> {
     if (!_isLoaded || _bannerAd == null) return const SizedBox.shrink();
     return SizedBox(
       width: double.infinity,
-      height: AdSize.banner.height.toDouble(),
+      height: _adSize!.height.toDouble(),
       child: Center(child: AdWidget(ad: _bannerAd!)),
     );
   }

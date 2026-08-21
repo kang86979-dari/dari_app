@@ -28,12 +28,20 @@ class _AdBannerState extends State<AdBanner> {
     _loadAd();
   }
 
-  void _loadAd() {
+  Future<void> _loadAd() async {
     final adUnitId = AdHelper.bannerId;
-    // 표준 배너(320x50) 양 플랫폼 공통. 가운데 정렬 + 여백은 앱 배경색으로 채워
-    // iOS 양옆 검은 여백 없이 깔끔하게.
-    const size = AdSize.banner;
+    // 앵커 적응형 배너: 화면 폭에 맞춰 크기 계산(입찰 재고↑, No Fill↓).
+    // MediaQuery 필요 → initState 대신 didChangeDependencies에서 호출.
+    final width = MediaQuery.of(context).size.width.truncate();
+    final size =
+        await AdSize.getCurrentOrientationAnchoredAdaptiveBannerAdSize(width);
+    if (!mounted) return;
+    if (size == null) {
+      setState(() => _failed = true); // 크기 계산 실패 시 로드 안 함
+      return;
+    }
     _adSize = size;
+    setState(() {}); // 계산된 적응형 높이로 자리 예약(로딩 중 점프 방지)
     if (kDebugMode) {
       print('🔵 BannerAd loading... adUnitId=$adUnitId, size=${size.width}x${size.height}');
     }
