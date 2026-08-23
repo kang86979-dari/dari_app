@@ -20,7 +20,7 @@ class NativeAdCard extends StatefulWidget {
 
 class _NativeAdCardState extends State<NativeAdCard> {
   // small 템플릿 표시 높이. 하단 여백 최소화(콘텐츠에 맞춤).
-  static const double _height = 105;
+  static const double _height = 92;
 
   @override
   void initState() {
@@ -39,10 +39,16 @@ class _NativeAdCardState extends State<NativeAdCard> {
       // 로드 전/실패 시 공간을 예약하지 않아 리스트가 밀리지 않게 함.
       return const SizedBox.shrink();
     }
-    // 카드 프레임은 템플릿(cornerRadius 16)이 단독 담당 → 바깥 테두리 없이 여백만.
+    // 라운드/테두리는 이 Container가 단독 담당(템플릿 배경은 투명) → 이중 프레임 방지.
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       height: _height,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFF0F0F0)),
+      ),
+      clipBehavior: Clip.antiAlias,
       child: AdWidget(ad: ad),
     );
   }
