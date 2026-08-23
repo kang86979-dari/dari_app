@@ -527,7 +527,7 @@ class _DetailBodyState extends State<_DetailBody> {
                 // 상단 small 네이티브 광고 (컴팩트 — 상단 압박 없이 고노출)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(4, 12, 4, 0),
-                  child: NativeAdCard(controller: _adController, slot: 0, height: 78),
+                  child: NativeAdCard(controller: _adController, slot: 0),
                 ),
 
                 // 회사 섹션
