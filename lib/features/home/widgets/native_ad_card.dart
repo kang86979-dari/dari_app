@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/utils/native_ad_controller.dart';
@@ -45,7 +46,8 @@ class _NativeAdCardState extends State<NativeAdCard> {
     }
     // 안드로이드에서 플랫폼뷰(광고)를 둥글게 클리핑하면 모서리가 뚫리는 이슈가 있어
     // 라운드 클리핑 없이 사각 단일 테두리만 적용(구멍/이중선 방지).
-    final h = widget.height ?? 92.0;
+    // iOS small 템플릿은 같은 높이에서 텍스트가 위아래로 잘려 조금 더 확보(미디어는 고정).
+    final h = widget.height ?? (Platform.isIOS ? 108.0 : 92.0);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       height: h,
