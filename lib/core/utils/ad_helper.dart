@@ -22,6 +22,10 @@ class AdHelper {
   static const _iosTestBanner = 'ca-app-pub-3940256099942544/2934735716';
   static const _iosTestInterstitial = 'ca-app-pub-3940256099942544/4411468910';
   static const _iosTestAppOpen = 'ca-app-pub-3940256099942544/5575463023';
+  static const _iosTestNative = 'ca-app-pub-3940256099942544/3986624511';
+
+  // Google 공식 Android 네이티브 테스트 단위 (배너와 달리 별도 상수 필요)
+  static const _androidTestNative = 'ca-app-pub-3940256099942544/2247696110';
 
   static String get bannerId {
     if (Platform.isIOS) {
@@ -69,5 +73,17 @@ class AdHelper {
     return kDebugMode
         ? dotenv.env['AD_BANNER_ID_TEST']!
         : dotenv.env['AD_MREC_ID'] ?? dotenv.env['AD_BANNER_ID']!;
+  }
+
+  /// 리스트 네이티브 광고용. 운영 단위(AD_NATIVE_ID) 발급 전까지는 테스트 단위로 폴백.
+  static String get nativeId {
+    if (Platform.isIOS) {
+      return kDebugMode
+          ? _iosTestNative
+          : dotenv.env['AD_NATIVE_ID_IOS'] ?? _iosTestNative;
+    }
+    return kDebugMode
+        ? _androidTestNative
+        : dotenv.env['AD_NATIVE_ID'] ?? _androidTestNative;
   }
 }
