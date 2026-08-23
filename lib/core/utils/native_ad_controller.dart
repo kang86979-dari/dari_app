@@ -97,8 +97,8 @@ class NativeAdController {
   static NativeTemplateStyle _style() => NativeTemplateStyle(
         // small = 아이콘+제목+본문+CTA 컴팩트(큰 미디어 이미지 없음) → 공고 카드에 가까움
         templateType: TemplateType.small,
-        // 템플릿 자체 배경/프레임은 투명(안쪽 카드선 제거) → 라운드·테두리는 감싸는 Container 단독
-        mainBackgroundColor: Colors.transparent,
+        // 배경 흰색(모서리 구멍 방지). 라운드/테두리는 감싸는 Container가 담당.
+        mainBackgroundColor: Colors.white,
         cornerRadius: 0.0,
         callToActionTextStyle: NativeTemplateTextStyle(
           textColor: Colors.white,

@@ -39,16 +39,15 @@ class _NativeAdCardState extends State<NativeAdCard> {
       // 로드 전/실패 시 공간을 예약하지 않아 리스트가 밀리지 않게 함.
       return const SizedBox.shrink();
     }
-    // 라운드/테두리는 이 Container가 단독 담당(템플릿 배경은 투명) → 이중 프레임 방지.
+    // 안드로이드에서 플랫폼뷰(광고)를 둥글게 클리핑하면 모서리가 뚫리는 이슈가 있어
+    // 라운드 클리핑 없이 사각 단일 테두리만 적용(구멍/이중선 방지).
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       height: _height,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
+        border: Border.all(color: const Color(0xFFF0F0F0), width: 0.5),
       ),
-      clipBehavior: Clip.antiAlias,
       child: AdWidget(ad: ad),
     );
   }
