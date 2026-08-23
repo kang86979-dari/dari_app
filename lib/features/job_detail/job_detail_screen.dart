@@ -18,7 +18,6 @@ import '../../data/models/job.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/favorite_provider.dart';
-import '../../data/repositories/job_repository.dart';
 import '../../data/services/analytics_service.dart';
 import '../../core/widgets/error_retry.dart';
 
@@ -160,97 +159,22 @@ class _DetailBodyState extends State<_DetailBody> {
   int _adApplyInterval = 3; // 기본값
   bool _configLoaded = false;
 
-  // 번역 상태
-  bool _isTranslating = false;
-  String? _translatedHtml;
-
-
   @override
   void initState() {
     super.initState();
     analytics.jobDetailView(widget.job.id, 'detail');
     _loadInterstitialAd();
     _loadAdConfig();
-    _autoTranslate();
-
   }
 
   @override
   void didUpdateWidget(covariant _DetailBody oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.langCode != widget.langCode) {
-      _translatedHtml = null;
       _showKoreanAddress = false;
-      _autoTranslate();
     }
   }
 
-  /// 상세 화면 진입 시 번역이 없으면 자동으로 Edge Function 호출
-  Future<void> _autoTranslate() async {
-    final langCode = widget.langCode;
-    if (langCode == 'ko') return;
-    // DB에 번역이 있으면 불필요 (getDescriptionHtml이 이미 처리)
-    final t = widget.job.descriptionTranslations[langCode]?.toString();
-    if (t != null && t.isNotEmpty) return;
-
-    setState(() => _isTranslating = true);
-
-    try {
-      final result = await JobRepository().translateDescription(widget.job.id, langCode);
-      if (!mounted || langCode != widget.langCode) return;
-      if (result.isNotEmpty) {
-        setState(() {
-          _translatedHtml = result
-              .replaceAll('\\r\\n', '\n')
-              .replaceAll('\\n', '\n')
-              .replaceAll('\\r', '\n')
-              // CSS 제거
-              .replaceAll(RegExp(r'/\*.*?\*/', dotAll: true), '')
-              .replaceAll(RegExp(r'\.[\w-]+\s*\{[^}]*\}'), '')
-              .replaceAll(RegExp(r'[.#:*][\w-][^{]*\{[^}]*\}'), '')
-              .replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\{[^}]*\}[^}]*\}'), '')
-              .replaceAll(RegExp(r'@[\w-]+[^{]*\{[^}]*\}'), '')
-              // 알바천국 워터마크 제거 (첫 줄에서만)
-              .replaceFirst(RegExp(r'^\s*(DESIGNED BY 알바천국|DESIGNED BY[^\n]*|ĐƯỢC THIẾT KẾ BỞI[^\n]*|THIẾT KẾ B[YỞ][^\n]*|ออกแบบโดย[^\n]*|由[^\n]*设计[^\n]*|ДИЗАЙН BY[^\n]*)\s*\n?', caseSensitive: false), '')
-              .replaceFirst(RegExp(r'^\s*(Alba\s*Heaven|アルバ天国|알바천국|अल्बा हेवन|আলবা হেভেন|அல்பா ஹெவன்|අල්බා හෙවන්|अल्बा स्वर्ग)[^\n]*\n?'), '')
-              .replaceFirst(RegExp(r'^\s*(විසින් නිර්මාණය කරන ලද[ීැ]?|द्वारा डिज़?ाइन[^\n]*|द्वारा डिजाइन[^\n]*|দ্বারা ডিজাইন[^\n]*)\s*\n?'), '')
-              // 번역 마커 → 실제 문자 변환
-              .replaceAll(RegExp(r'‖[^‖]*‖'), '\n')
-              .replaceAll(RegExp(r'‖(?:NL)+\s*'), '\n')
-              .replaceAll(RegExp(r'‖[A-Z]?\s*'), '')
-              .replaceAll(RegExp('["\u201C\u201D]NL["\u201C\u201D]'), '\n')
-              .replaceAll(RegExp('["\u201C\u201D]TILDE["\u201C\u201D]'), '~')
-              .replaceAll(RegExp(r'(?<![A-Za-z])NL(?![A-Za-z])'), '\n')
-              .replaceAll(RegExp(r'(?<![A-Za-z])TILDE(?![A-Za-z])'), '~')
-              .replaceAll(RegExp(r'\n{3,}'), '\n\n');
-          _isTranslating = false;
-        });
-        return;
-      }
-    } catch (_) {
-      // Edge Function 실패 시 DB 캐시 확인 (서버에서 저장 성공했을 수 있음)
-      if (!mounted || langCode != widget.langCode) return;
-      // 클라이언트 타임아웃이어도 서버는 번역을 완료해 DB에 저장했을 수 있음
-      // → 지연을 두고 DB 캐시를 2회 재확인 (3초 후, 8초 후)
-      for (final delay in const [Duration(seconds: 3), Duration(seconds: 5)]) {
-        await Future.delayed(delay);
-        if (!mounted || langCode != widget.langCode) return;
-        try {
-          final job = await JobRepository().getJobById(widget.job.id);
-          if (!mounted || langCode != widget.langCode) return;
-          final cached = job?.descriptionTranslations[langCode]?.toString();
-          if (cached != null && cached.isNotEmpty) {
-            setState(() {
-              _translatedHtml = cached;
-              _isTranslating = false;
-            });
-            return;
-          }
-        } catch (_) {}
-      }
-    }
-    if (mounted) setState(() => _isTranslating = false);
-  }
 
 
   Future<void> _loadAdConfig() async {
@@ -670,17 +594,7 @@ class _DetailBodyState extends State<_DetailBody> {
                   child: _DetailBannerAd(),
                 ),
 
-                // 상세 내용
-                if (job.getDescription().isNotEmpty)
-                  _DescriptionBlock(
-                    text: _translatedHtml ?? job.getDescriptionText(langCode),
-                    isLoading: _isTranslating,
-                    translatingLabel: s.detailTranslating,
-                    siteName: job.siteName,
-                    jobUrl: job.url,
-                    titleLabel: s.detailContent,
-                    hasSectionFormat: _hasSectionFormat(job.siteName, _translatedHtml ?? job.getDescriptionText(langCode)),
-                  ),
+                // 상세 내용 영역 제거 — 원문은 출처 사이트에서 확인(불안정한 실시간 번역 의존 제거)
 
                 const Divider(height: 1, color: Color(0xFFF5F5F5)),
 
