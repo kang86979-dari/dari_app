@@ -95,7 +95,8 @@ class NativeAdController {
 
   /// 공고 카드 느낌에 맞춘 medium 템플릿 스타일 (당근색 CTA + 흰 배경 + 라운드).
   static NativeTemplateStyle _style() => NativeTemplateStyle(
-        templateType: TemplateType.medium,
+        // small = 아이콘+제목+본문+CTA 컴팩트(큰 미디어 이미지 없음) → 공고 카드에 가까움
+        templateType: TemplateType.small,
         mainBackgroundColor: Colors.white,
         cornerRadius: 16.0,
         callToActionTextStyle: NativeTemplateTextStyle(
