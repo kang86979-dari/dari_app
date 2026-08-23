@@ -19,8 +19,8 @@ class NativeAdCard extends StatefulWidget {
 }
 
 class _NativeAdCardState extends State<NativeAdCard> {
-  // medium 템플릿 표시 높이. 잘림 방지용 고정값(디바이스 검수 후 조정 가능).
-  static const double _height = 330;
+  // medium 템플릿 표시 높이. CTA 버튼 잘림 방지 위해 넉넉히 확보(디바이스 검수 반영).
+  static const double _height = 370;
 
   @override
   void initState() {
