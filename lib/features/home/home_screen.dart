@@ -21,6 +21,9 @@ import '../../data/repositories/job_repository.dart';
 import 'widgets/job_card.dart';
 import 'widgets/skeleton_card.dart';
 import 'widgets/ad_banner.dart';
+import 'widgets/native_ad_card.dart';
+import '../../core/constants/ad_config.dart';
+import '../../core/utils/native_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/widgets/offline_banner.dart';
@@ -50,6 +53,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   bool _showFilterTooltip = false;
   bool _pendingAppOpenAd = false;
   DateTime? _lastRefreshTime;
+  final _adController = NativeAdController();
 
   @override
   void initState() {
@@ -253,6 +257,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
+    _adController.disposeAll();
     super.dispose();
   }
 
@@ -827,7 +832,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
       ];
     }
 
-    final totalItems = _jobs.length + (_jobs.length ~/ 3) + 1 + (_isLoadingMore ? 1 : 0);
+    // 최상단 배너 1개 + 이후 공고 N개마다 네이티브 광고 1개 (N=listAdInterval)
+    const n = AdConfig.listAdInterval;
+    final inListAdCount = _jobs.length ~/ n;
+    final totalItems = 1 + _jobs.length + inListAdCount + (_isLoadingMore ? 1 : 0);
 
     return [
       SliverPadding(
@@ -843,15 +851,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                 );
               }
 
-              if (index == 0) return const AdBanner();
+              if (index == 0) return const AdBanner(); // 최상단 배너 유지(고노출 지면)
 
-              final adjustedIndex = index - 1;
-              final isAd = (adjustedIndex + 1) % 4 == 0 && adjustedIndex > 0;
+              final a = index - 1;
+              final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 반복 단위
+              final pos = a % (n + 1);
 
-              if (isAd) return const AdBanner();
+              // 각 주기의 마지막(pos==n) = 네이티브 광고 슬롯
+              if (pos == n) {
+                return NativeAdCard(controller: _adController, slot: cycle);
+              }
 
-              final adCount = adjustedIndex ~/ 4;
-              final jobIndex = adjustedIndex - adCount;
+              final jobIndex = cycle * n + pos;
               if (jobIndex >= _jobs.length) return const SizedBox.shrink();
 
               final job = _jobs[jobIndex];

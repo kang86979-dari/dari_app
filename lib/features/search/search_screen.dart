@@ -18,6 +18,9 @@ import '../../core/widgets/error_retry.dart';
 import '../../core/utils/filter_matcher.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/widgets/segmented_tabs.dart';
+import '../../core/constants/ad_config.dart';
+import '../../core/utils/native_ad_controller.dart';
+import '../home/widgets/native_ad_card.dart';
 import '../../data/models/filter_state.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -35,6 +38,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _showResults = false; // false=추천/최근, true=검색결과
   bool _showFab = false;
   final List<Job> _searchJobs = [];
+  final _adController = NativeAdController();
   int _searchPage = 0;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -63,6 +67,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _controller.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
+    _adController.disposeAll();
     super.dispose();
   }
 
@@ -495,29 +500,40 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               child: ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.only(bottom: 20),
-                itemCount: _searchJobs.length + (_searchJobs.length ~/ 3) + 1 + (_isLoadingMore ? 1 : 0),
+                itemCount: 1 +
+                    _searchJobs.length +
+                    (_searchJobs.length ~/ AdConfig.listAdInterval) +
+                    (_isLoadingMore ? 1 : 0),
                 itemBuilder: (context, index) {
-                  // 최상단 배너
-                  if (index == 0) return const AdBanner();
+                  const n = AdConfig.listAdInterval;
+                  final total = 1 +
+                      _searchJobs.length +
+                      (_searchJobs.length ~/ n) +
+                      (_isLoadingMore ? 1 : 0);
 
-                  final adjustedIndex = index - 1;
-                  final adCount = adjustedIndex ~/ 4;
-                  final isAd = (adjustedIndex + 1) % 4 == 0 && adjustedIndex > 0;
+                  // 로딩 인디케이터 (마지막)
+                  if (_isLoadingMore && index == total - 1) {
+                    return const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 16),
+                      child: Center(
+                          child:
+                              CircularProgressIndicator(color: AppColors.carrot)),
+                    );
+                  }
 
-                  if (isAd) return const AdBanner();
+                  if (index == 0) return const AdBanner(); // 최상단 배너 유지
 
-                  final jobIndex = adjustedIndex - adCount;
+                  final a = index - 1;
+                  final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 반복 단위
+                  final pos = a % (n + 1);
 
-                  // 로딩 인디케이터
+                  // 각 주기의 마지막(pos==n) = 네이티브 광고 슬롯
+                  if (pos == n) {
+                    return NativeAdCard(controller: _adController, slot: cycle);
+                  }
+
+                  final jobIndex = cycle * n + pos;
                   if (jobIndex >= _searchJobs.length) {
-                    if (_isLoadingMore) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Center(
-                            child: CircularProgressIndicator(
-                                color: AppColors.carrot)),
-                      );
-                    }
                     return const SizedBox.shrink();
                   }
 

@@ -11,6 +11,9 @@ import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
 import '../home/widgets/ad_banner.dart';
+import '../home/widgets/native_ad_card.dart';
+import '../../core/constants/ad_config.dart';
+import '../../core/utils/native_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
@@ -29,11 +32,18 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   bool _editMode = false;
   final Set<String> _selectedForDelete = {};
   bool _tracked = false;
+  final _adController = NativeAdController();
 
   @override
   void initState() {
     super.initState();
     _loadSortType();
+  }
+
+  @override
+  void dispose() {
+    _adController.disposeAll();
+    super.dispose();
   }
 
   Future<void> _loadSortType() async {
@@ -214,11 +224,18 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           padding: const EdgeInsets.only(bottom: 20),
                           itemCount: itemCount,
                           itemBuilder: (context, index) {
-                            // 최상단 배너
+                            const n = AdConfig.listAdInterval;
+                            // 최상단 배너 유지
                             if (index == 0) return const AdBanner();
-                            // 3카드마다 배너
-                            final jobIndex = _favJobIndex(index);
-                            if (jobIndex < 0) return const AdBanner();
+                            final a = index - 1;
+                            final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 단위
+                            final pos = a % (n + 1);
+                            // 각 주기 마지막 = 네이티브 광고 슬롯
+                            if (pos == n) {
+                              return NativeAdCard(
+                                  controller: _adController, slot: cycle);
+                            }
+                            final jobIndex = cycle * n + pos;
                             if (jobIndex >= jobs.length) return const SizedBox.shrink();
                             final job = jobs[jobIndex];
                             if (_editMode) {
@@ -334,20 +351,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     );
   }
 
-  /// 배너 포함 총 아이템 수: 최상단 배너 + (3카드마다 배너)
+  /// 광고 포함 총 아이템 수: 최상단 배너 + 공고 + (공고 N개마다 네이티브 광고)
   int _buildFavListItemCount(int jobCount) {
     if (jobCount == 0) return 1; // 최상단 배너만
-    final adCount = (jobCount - 1) ~/ 3; // 3카드마다 1개 (첫 3개 후)
-    return 1 + jobCount + adCount; // 최상단 배너 + 카드 + 중간 배너
-  }
-
-  /// index → 실제 job 인덱스 (-1이면 배너)
-  int _favJobIndex(int index) {
-    final adjustedIndex = index - 1; // 최상단 배너 제외
-    final isAd = (adjustedIndex + 1) % 4 == 0 && adjustedIndex > 0;
-    if (isAd) return -1;
-    final adCount = adjustedIndex ~/ 4;
-    return adjustedIndex - adCount;
+    final adCount = jobCount ~/ AdConfig.listAdInterval;
+    return 1 + jobCount + adCount;
   }
 
   void _showSortSheet(BuildContext context, dynamic s) {
