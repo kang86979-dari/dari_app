@@ -55,4 +55,19 @@ class AdHelper {
         ? dotenv.env['AD_APP_OPEN_ID_TEST']!
         : dotenv.env['AD_APP_OPEN_ID']!;
   }
+
+  /// 상세 화면 MREC(300x250)용. 운영 전용 단위 발급 전까지는 배너 단위로 폴백.
+  /// 테스트 모드에서는 배너 테스트 단위가 요청 크기(300x250)에 맞춰 서빙됨.
+  static String get mrecId {
+    if (Platform.isIOS) {
+      return kDebugMode
+          ? _iosTestBanner
+          : dotenv.env['AD_MREC_ID_IOS'] ??
+              dotenv.env['AD_BANNER_ID_IOS'] ??
+              _iosTestBanner;
+    }
+    return kDebugMode
+        ? dotenv.env['AD_BANNER_ID_TEST']!
+        : dotenv.env['AD_MREC_ID'] ?? dotenv.env['AD_BANNER_ID']!;
+  }
 }
