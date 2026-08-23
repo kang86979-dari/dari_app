@@ -39,16 +39,10 @@ class _NativeAdCardState extends State<NativeAdCard> {
       // 로드 전/실패 시 공간을 예약하지 않아 리스트가 밀리지 않게 함.
       return const SizedBox.shrink();
     }
-    // 공고 카드와 동일한 테두리·라운드 적용(플랫폼뷰를 라운드로 클리핑)
+    // 카드 프레임은 템플릿(cornerRadius 16)이 단독 담당 → 바깥 테두리 없이 여백만.
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       height: _height,
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF0F0F0)),
-      ),
-      clipBehavior: Clip.antiAlias,
       child: AdWidget(ad: ad),
     );
   }
