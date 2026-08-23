@@ -10,7 +10,6 @@ import '../../providers/favorite_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
-import '../home/widgets/ad_banner.dart';
 import '../home/widgets/native_ad_card.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
@@ -225,8 +224,11 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                           itemCount: itemCount,
                           itemBuilder: (context, index) {
                             const n = AdConfig.listAdInterval;
-                            // 최상단 배너 유지
-                            if (index == 0) return const AdBanner();
+                            // 최상단도 네이티브. slot -1로 인-리스트 슬롯과 키 분리.
+                            if (index == 0) {
+                              return NativeAdCard(
+                                  controller: _adController, slot: -1);
+                            }
                             final a = index - 1;
                             final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 단위
                             final pos = a % (n + 1);

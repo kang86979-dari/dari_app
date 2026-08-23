@@ -20,7 +20,6 @@ import '../../core/utils/district_names.dart';
 import '../../data/repositories/job_repository.dart';
 import 'widgets/job_card.dart';
 import 'widgets/skeleton_card.dart';
-import 'widgets/ad_banner.dart';
 import 'widgets/native_ad_card.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
@@ -851,7 +850,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                 );
               }
 
-              if (index == 0) return const AdBanner(); // 최상단 배너 유지(고노출 지면)
+              // 최상단도 네이티브(고노출 지면 + 중복 감소). slot -1로 인-리스트와 키 분리.
+              if (index == 0) {
+                return NativeAdCard(controller: _adController, slot: -1);
+              }
 
               final a = index - 1;
               final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 반복 단위
