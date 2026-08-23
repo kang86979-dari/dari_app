@@ -11,8 +11,10 @@ import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
 import '../home/widgets/native_ad_card.dart';
+import '../home/widgets/mrec_ad_card.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
+import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
@@ -32,6 +34,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   final Set<String> _selectedForDelete = {};
   bool _tracked = false;
   final _adController = NativeAdController();
+  final _mrecController = MrecAdController();
 
   @override
   void initState() {
@@ -42,6 +45,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   @override
   void dispose() {
     _adController.disposeAll();
+    _mrecController.disposeAll();
     super.dispose();
   }
 
@@ -232,10 +236,13 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                             final a = index - 1;
                             final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 단위
                             final pos = a % (n + 1);
-                            // 각 주기 마지막 = 네이티브 광고 슬롯
+                            // 각 주기 마지막 = 광고 슬롯 (cycle 짝수=MREC, 홀수=small)
                             if (pos == n) {
-                              return NativeAdCard(
-                                  controller: _adController, slot: cycle);
+                              return cycle.isEven
+                                  ? MrecAdCard(
+                                      controller: _mrecController, slot: cycle)
+                                  : NativeAdCard(
+                                      controller: _adController, slot: cycle);
                             }
                             final jobIndex = cycle * n + pos;
                             if (jobIndex >= jobs.length) return const SizedBox.shrink();

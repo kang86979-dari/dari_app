@@ -9,18 +9,20 @@ class NativeAdCard extends StatefulWidget {
     super.key,
     required this.controller,
     required this.slot,
+    this.height = 92,
   });
 
   final NativeAdController controller;
   final int slot;
+
+  /// small 템플릿 표시 높이(기본 92). 화면별로 여백 조정 가능.
+  final double height;
 
   @override
   State<NativeAdCard> createState() => _NativeAdCardState();
 }
 
 class _NativeAdCardState extends State<NativeAdCard> {
-  // small 템플릿 표시 높이. 하단 여백 최소화(콘텐츠에 맞춤).
-  static const double _height = 92;
 
   @override
   void initState() {
@@ -43,7 +45,7 @@ class _NativeAdCardState extends State<NativeAdCard> {
     // 라운드 클리핑 없이 사각 단일 테두리만 적용(구멍/이중선 방지).
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
-      height: _height,
+      height: widget.height,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border.all(color: const Color(0xFFF0F0F0), width: 0.5),

@@ -19,7 +19,9 @@ import '../../core/utils/region_mapper.dart';
 import '../../core/widgets/segmented_tabs.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
+import '../../core/utils/mrec_ad_controller.dart';
 import '../home/widgets/native_ad_card.dart';
+import '../home/widgets/mrec_ad_card.dart';
 import '../../data/models/filter_state.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
@@ -38,6 +40,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _showFab = false;
   final List<Job> _searchJobs = [];
   final _adController = NativeAdController();
+  final _mrecController = MrecAdController();
   int _searchPage = 0;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -67,6 +70,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     _focusNode.dispose();
     _scrollController.dispose();
     _adController.disposeAll();
+    _mrecController.disposeAll();
     super.dispose();
   }
 
@@ -529,9 +533,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 반복 단위
                   final pos = a % (n + 1);
 
-                  // 각 주기의 마지막(pos==n) = 네이티브 광고 슬롯
+                  // 각 주기 마지막(pos==n) = 광고 슬롯 (cycle 짝수=MREC, 홀수=small)
                   if (pos == n) {
-                    return NativeAdCard(controller: _adController, slot: cycle);
+                    return cycle.isEven
+                        ? MrecAdCard(controller: _mrecController, slot: cycle)
+                        : NativeAdCard(controller: _adController, slot: cycle);
                   }
 
                   final jobIndex = cycle * n + pos;

@@ -5,6 +5,8 @@ import 'package:go_router/go_router.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import '../../core/utils/ad_helper.dart';
+import '../../core/utils/native_ad_controller.dart';
+import '../home/widgets/native_ad_card.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../apply/apply_webview_screen.dart';
@@ -149,6 +151,7 @@ class _DetailBodyState extends State<_DetailBody> {
   InterstitialAd? _interstitialAd;
   String? _pendingUrl;
   bool _showKoreanAddress = false;
+  final _adController = NativeAdController(); // 상세 상단 small 네이티브
 
   // 지원하기 광고: 공고별 클릭 횟수 추적
   // 다른 공고 → 무조건 광고, 같은 공고 → 최초 1번 + 이후 3번마다
@@ -419,6 +422,7 @@ class _DetailBodyState extends State<_DetailBody> {
   @override
   void dispose() {
     _interstitialAd?.dispose();
+    _adController.disposeAll();
     super.dispose();
   }
 
@@ -520,15 +524,15 @@ class _DetailBodyState extends State<_DetailBody> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // 광고 배너 (AdMob)
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(24, 16, 24, 0),
-                  child: _DetailBannerAd(),
+                // 상단 small 네이티브 광고 (컴팩트 — 상단 압박 없이 고노출)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(4, 12, 4, 0),
+                  child: NativeAdCard(controller: _adController, slot: 0, height: 78),
                 ),
 
                 // 회사 섹션
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 16),
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -658,6 +662,12 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                     ],
                   ),
+                ),
+
+                // 광고 배너 (MREC) — 핵심정보 아래 배치(상단 압박 완화, 중요정보 먼저 노출)
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(24, 8, 24, 8),
+                  child: _DetailBannerAd(),
                 ),
 
                 // 상세 내용

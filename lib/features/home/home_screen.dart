@@ -21,8 +21,10 @@ import '../../data/repositories/job_repository.dart';
 import 'widgets/job_card.dart';
 import 'widgets/skeleton_card.dart';
 import 'widgets/native_ad_card.dart';
+import 'widgets/mrec_ad_card.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
+import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/widgets/offline_banner.dart';
@@ -53,6 +55,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
   bool _pendingAppOpenAd = false;
   DateTime? _lastRefreshTime;
   final _adController = NativeAdController();
+  final _mrecController = MrecAdController();
 
   @override
   void initState() {
@@ -257,6 +260,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
     WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     _adController.disposeAll();
+    _mrecController.disposeAll();
     super.dispose();
   }
 
@@ -859,9 +863,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
               final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 반복 단위
               final pos = a % (n + 1);
 
-              // 각 주기의 마지막(pos==n) = 네이티브 광고 슬롯
+              // 각 주기의 마지막(pos==n) = 광고 슬롯
+              // 교대: cycle 짝수(5·15번째)=MREC, 홀수(10·20번째)=small 네이티브
               if (pos == n) {
-                return NativeAdCard(controller: _adController, slot: cycle);
+                return cycle.isEven
+                    ? MrecAdCard(controller: _mrecController, slot: cycle)
+                    : NativeAdCard(controller: _adController, slot: cycle);
               }
 
               final jobIndex = cycle * n + pos;
