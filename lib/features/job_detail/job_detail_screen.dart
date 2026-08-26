@@ -152,10 +152,14 @@ class _DetailBodyState extends State<_DetailBody> {
   bool _showKoreanAddress = false;
   final _adController = NativeAdController(); // 상세 상단 small 네이티브
 
-  // 지원하기 광고: 공고별 클릭 횟수 추적
-  // 다른 공고 → 무조건 광고, 같은 공고 → 최초 1번 + 이후 3번마다
-  static final Map<String, int> _applyCountPerJob = {};
-  static void clearApplyCount() => _applyCountPerJob.clear();
+  // 지원하기 광고: 공고 구분 없는 전체 지원 횟수 기준
+  // 1번째 무조건 / 3배수(3,6,9…)마다 광고, 단 동일 공고 이미 봤으면 스킵
+  static int _applyCount = 0;
+  static final Set<String> _adShownJobs = {}; // 이미 광고 본 공고
+  static void clearApplyCount() {
+    _applyCount = 0;
+    _adShownJobs.clear();
+  }
   int _adApplyInterval = 3; // 기본값
   bool _configLoaded = false;
 
@@ -228,11 +232,13 @@ class _DetailBodyState extends State<_DetailBody> {
     analytics.applyTap(widget.job.id, widget.job.siteName);
     _pendingUrl = _validateJobUrl(url, widget.job.siteUrl);
     final jobId = widget.job.id;
-    final count = (_applyCountPerJob[jobId] ?? 0) + 1;
-    _applyCountPerJob[jobId] = count;
-    // 다른 공고(count==1): 무조건 광고 / 같은 공고: 최초 1번 + 이후 3번마다
-    final showAd = count == 1 || (_adApplyInterval > 0 && count % _adApplyInterval == 1);
+    _applyCount++;
+    final isFirst = _applyCount == 1;
+    final isMultiple = _adApplyInterval > 0 && _applyCount % _adApplyInterval == 0;
+    // 첫 지원은 무조건 / 3배수는 동일 공고 이미 봤으면 스킵
+    final showAd = isFirst || (isMultiple && !_adShownJobs.contains(jobId));
     if (showAd && _interstitialAd != null) {
+      _adShownJobs.add(jobId); // 광고 실제 노출 시 기록
       analytics.applyAdShown(widget.job.id);
       _interstitialAd!.show();
     } else {
