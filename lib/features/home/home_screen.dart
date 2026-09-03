@@ -39,7 +39,8 @@ class HomeScreen extends ConsumerStatefulWidget {
   ConsumerState<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObserver {
+class _HomeScreenState extends ConsumerState<HomeScreen>
+    with WidgetsBindingObserver, TickerProviderStateMixin {
   final _scrollController = ScrollController();
   bool _showFab = false;
   final List<Job> _jobs = [];
@@ -552,6 +553,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> with WidgetsBindingObse
                       delegate: _FixedHeaderDelegate(
                         height: _searchHeaderHeight(context, filter.isEmpty),
                         snap: true,
+                        vsync: this,
                         child: Container(
                           color: Colors.white,
                           child: filter.isEmpty
@@ -1394,29 +1396,30 @@ class _ReadOnlyFilterChips extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           itemCount: chips.length,
           separatorBuilder: (_, __) => const SizedBox(width: 6),
-          itemBuilder: (_, i) => Container(
-            padding: const EdgeInsets.only(left: 12, right: 6, top: 6, bottom: 6),
-            decoration: BoxDecoration(
-              color: AppColors.carrotLight,
-              borderRadius: BorderRadius.circular(15),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  chips[i].label,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.carrotDark,
+          itemBuilder: (_, i) => GestureDetector(
+            onTap: chips[i].onRemove, // 칩 전체 탭으로 삭제 (X만 누르기 어려운 문제 해결)
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              padding: const EdgeInsets.only(left: 12, right: 8, top: 6, bottom: 6),
+              decoration: BoxDecoration(
+                color: AppColors.carrotLight,
+                borderRadius: BorderRadius.circular(15),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    chips[i].label,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: AppColors.carrotDark,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 4),
-                GestureDetector(
-                  onTap: chips[i].onRemove,
-                  child: const Icon(Icons.close, size: 14, color: AppColors.carrot),
-                ),
-              ],
+                  const SizedBox(width: 4),
+                  const Icon(Icons.close, size: 14, color: AppColors.carrot),
+                ],
+              ),
             ),
           ),
         ),
@@ -1527,7 +1530,14 @@ class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double height;
   final Widget child;
   final bool snap; // floating 헤더 부드러운 스냅 (스크롤 멈추면 완전히 열림/닫힘)
-  const _FixedHeaderDelegate({required this.height, required this.child, this.snap = false});
+  @override
+  final TickerProvider? vsync; // snap 애니메이션 구동용 (없으면 assertion)
+  const _FixedHeaderDelegate({
+    required this.height,
+    required this.child,
+    this.snap = false,
+    this.vsync,
+  });
 
   @override
   double get minExtent => height;

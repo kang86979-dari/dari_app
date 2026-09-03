@@ -60,7 +60,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
     if (isFirstLaunch) {
       context.go('/onboarding/language');
     } else {
-      await appOpenAdService.showIfAvailable();
+      // 재실행 경로에서만: 노출 대상이고 광고 미준비면 최대 3초 로드 대기 후 노출
+      // (스킵 대상이면 대기 없이 즉시 홈으로 — showIfAvailable 내부에서 판정)
+      await appOpenAdService.showIfAvailable(maxWait: const Duration(seconds: 3));
       if (!mounted) return;
       context.go('/home');
     }

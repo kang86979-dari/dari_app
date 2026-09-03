@@ -1207,12 +1207,13 @@ class AppStrings {
  }, 'Language');
 
  // ── Visa group names ──
+ // 'ANY' 비자 코드 = 공고에 비자 미명시 → "비자 확인"으로 표시(무관 아님, 확인 필요)
  String get visaGroupAny => _t({
- 'ko': '비자 무관', 'en': 'Any visa', 'zh': '不限签证', 'hi': 'कोई भी वीज़ा', 'ja': 'ビザ不問', 'th': 'วีซ่าใดก็ได้', 'vi': 'Không giới hạn visa', 'bn': 'যেকোনো ভিসা',
- 'ru': 'Любая виза', 'id': 'Visa apa saja', 'ne': 'कुनै पनि भिसा', 'km': 'ទិដ្ឋាការណាមួយ', 'my': 'မည်သည့်ဗီဇာမဆို',
- 'si': 'ඕනෑම වීසා',
-   'uz': 'Istalgan viza', 'mn': 'Ямар ч виз',
- }, 'Any visa');
+ 'ko': '비자 확인', 'en': 'Check Visa', 'zh': '确认签证', 'hi': 'वीज़ा जांचें', 'ja': 'ビザ確認', 'th': 'ตรวจสอบวีซ่า', 'vi': 'Kiểm tra visa', 'bn': 'ভিসা যাচাই',
+ 'ru': 'Проверьте визу', 'id': 'Cek visa', 'ne': 'भिसा जाँच्नुहोस्', 'km': 'ពិនិត្យទិដ្ឋាការ', 'my': 'ဗီဇာစစ်ဆေးပါ',
+ 'si': 'වීසා පරීක්ෂා කරන්න',
+   'uz': 'Vizani tekshiring', 'mn': 'Виз шалгах',
+ }, 'Check Visa');
 
  String get visaGroupE => _t({
  'ko': 'E — 취업/전문', 'en': 'E — Employment/Professional', 'zh': 'E — 就业/专业', 'hi': 'E — रोजगार/पेशेवर', 'ja': 'E — 就業/専門', 'th': 'E — จ้างงาน/วิชาชีพ', 'vi': 'E — Việc làm/Chuyên gia', 'bn': 'E — কর্মসংস্থান/পেশাদার',

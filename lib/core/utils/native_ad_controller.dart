@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
@@ -94,30 +95,34 @@ class NativeAdController {
   }
 
   /// 공고 카드 느낌에 맞춘 medium 템플릿 스타일 (당근색 CTA + 흰 배경 + 라운드).
-  static NativeTemplateStyle _style() => NativeTemplateStyle(
-        // small = 아이콘+제목+본문+CTA 컴팩트(큰 미디어 이미지 없음) → 공고 카드에 가까움
-        templateType: TemplateType.small,
-        // 배경 흰색(모서리 구멍 방지). 라운드/테두리는 감싸는 Container가 담당.
-        mainBackgroundColor: Colors.white,
-        cornerRadius: 0.0,
-        callToActionTextStyle: NativeTemplateTextStyle(
-          textColor: Colors.white,
-          backgroundColor: AppColors.carrot,
-          style: NativeTemplateFontStyle.bold,
-          size: 14.0,
-        ),
-        primaryTextStyle: NativeTemplateTextStyle(
-          textColor: AppColors.black,
-          style: NativeTemplateFontStyle.bold,
-          size: 15.0,
-        ),
-        secondaryTextStyle: NativeTemplateTextStyle(
-          textColor: AppColors.gray600,
-          size: 13.0,
-        ),
-        tertiaryTextStyle: NativeTemplateTextStyle(
-          textColor: AppColors.gray400,
-          size: 12.0,
-        ),
-      );
+  static NativeTemplateStyle _style() {
+    // iOS만 폰트 축소(사용자 요청). Android는 원래 크기 유지.
+    final ios = Platform.isIOS;
+    return NativeTemplateStyle(
+      // small = 아이콘+제목+본문+CTA 컴팩트(큰 미디어 이미지 없음) → 공고 카드에 가까움
+      templateType: TemplateType.small,
+      // 배경 흰색(모서리 구멍 방지). 라운드/테두리는 감싸는 Container가 담당.
+      mainBackgroundColor: Colors.white,
+      cornerRadius: 0.0,
+      callToActionTextStyle: NativeTemplateTextStyle(
+        textColor: Colors.white,
+        backgroundColor: AppColors.carrot,
+        style: NativeTemplateFontStyle.bold,
+        size: ios ? 12.0 : 14.0,
+      ),
+      primaryTextStyle: NativeTemplateTextStyle(
+        textColor: AppColors.black,
+        style: NativeTemplateFontStyle.bold,
+        size: ios ? 13.0 : 15.0,
+      ),
+      secondaryTextStyle: NativeTemplateTextStyle(
+        textColor: AppColors.gray600,
+        size: ios ? 11.0 : 13.0,
+      ),
+      tertiaryTextStyle: NativeTemplateTextStyle(
+        textColor: AppColors.gray400,
+        size: ios ? 10.0 : 12.0,
+      ),
+    );
+  }
 }

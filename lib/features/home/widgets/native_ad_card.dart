@@ -16,7 +16,7 @@ class NativeAdCard extends StatefulWidget {
   final NativeAdController controller;
   final int slot;
 
-  /// small 템플릿 표시 높이(null이면 92).
+  /// small 템플릿 표시 높이(null이면 iOS 96 / Android 92).
   /// 주의: iOS small 템플릿은 미디어뷰가 고정 크기라 높이를 키워도
   /// 120x120 validator 경고는 안 사라짐(영상 광고 한정 WARNING이라 수용).
   final double? height;
@@ -46,8 +46,8 @@ class _NativeAdCardState extends State<NativeAdCard> {
     }
     // 안드로이드에서 플랫폼뷰(광고)를 둥글게 클리핑하면 모서리가 뚫리는 이슈가 있어
     // 라운드 클리핑 없이 사각 단일 테두리만 적용(구멍/이중선 방지).
-    // iOS small 템플릿은 같은 높이에서 텍스트가 위아래로 잘려 조금 더 확보(미디어는 고정).
-    final h = widget.height ?? (Platform.isIOS ? 108.0 : 92.0);
+    // iOS만 축소(폰트+높이 108→96). Android는 원래 92 유지. small 템플릿 미디어는 고정.
+    final h = widget.height ?? (Platform.isIOS ? 96.0 : 92.0);
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
       height: h,

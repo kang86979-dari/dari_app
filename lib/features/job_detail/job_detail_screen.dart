@@ -8,7 +8,7 @@ import '../../core/utils/ad_helper.dart';
 import '../../core/utils/native_ad_controller.dart';
 import '../home/widgets/native_ad_card.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../apply/apply_webview_screen.dart';
 import '../apply/site_lang.dart';
 import '../../core/constants/colors.dart';
@@ -147,28 +147,46 @@ class _DetailBody extends StatefulWidget {
 }
 
 class _DetailBodyState extends State<_DetailBody> {
-  InterstitialAd? _interstitialAd;
   String? _pendingUrl;
   bool _showKoreanAddress = false;
   final _adController = NativeAdController(); // 상세 상단 small 네이티브
 
-  // 지원하기 광고: 공고 구분 없는 전체 지원 횟수 기준
-  // 1번째 무조건 / 3배수(3,6,9…)마다 광고, 단 동일 공고 이미 봤으면 스킵
+  // 지원하기 광고: 세션당 1회 + 하루 1회(최소 보장) 결합.
+  //  - 세션 내 2번째 지원 클릭부터 노출 시도(공고 무관 전역 카운트)
+  //  - "이번 세션에도 봤고 AND 오늘도 봤을 때만" 스킵 → 새 세션이면 뜨고, 날 바뀌면 웜이어도 뜸
+  //  - 광고 미준비면 다음 클릭에서 재시도
+  // 광고 객체도 카운터처럼 세션 전역(static) — 화면 간 공유 + 미리 로드하여
+  // 다른 공고로 넘어가도 2번째 클릭에 준비돼 있도록 함.
+  static const _prefsKey = 'last_interstitial_ad_date'; // 하루 1회(날짜 영속)
   static int _applyCount = 0;
-  static final Set<String> _adShownJobs = {}; // 이미 광고 본 공고
-  static void clearApplyCount() {
-    _applyCount = 0;
-    _adShownJobs.clear();
+  static bool _adShownThisSession = false;
+  static String? _adLastShownDate; // 마지막 노출 날짜(yyyy-mm-dd), prefs 동기화
+  static bool _adDateLoaded = false;
+  static InterstitialAd? _interstitialAd;
+  static bool _interstitialLoading = false;
+
+  static String _todayKey() =>
+      DateTime.now().toIso8601String().substring(0, 10);
+
+  /// 오늘 이미 노출했는지 (세션+날짜 결합 스킵 판정용)
+  bool get _adAlreadyShown =>
+      _adShownThisSession && _adLastShownDate == _todayKey();
+
+  Future<void> _loadAdDate() async {
+    if (_adDateLoaded) return;
+    final prefs = await SharedPreferences.getInstance();
+    _adLastShownDate = prefs.getString(_prefsKey);
+    _adDateLoaded = true;
   }
-  int _adApplyInterval = 3; // 기본값
-  bool _configLoaded = false;
 
   @override
   void initState() {
     super.initState();
     analytics.jobDetailView(widget.job.id, 'detail');
-    _loadInterstitialAd();
-    _loadAdConfig();
+    _loadAdDate().then((_) {
+      if (!mounted) return;
+      if (!_adAlreadyShown) _loadInterstitialAd(); // 노출 여지 있을 때만 미리 로드
+    });
   }
 
   @override
@@ -181,48 +199,24 @@ class _DetailBodyState extends State<_DetailBody> {
 
 
 
-  Future<void> _loadAdConfig() async {
-    if (_configLoaded) return;
-    try {
-      final data = await Supabase.instance.client
-          .from('app_config')
-          .select('value')
-          .eq('key', 'ad_apply_interval')
-          .maybeSingle();
-      if (data != null) {
-        _adApplyInterval = int.tryParse(data['value'] as String) ?? 3;
-      }
-      _configLoaded = true;
-    } catch (_) {}
-  }
-
   void _loadInterstitialAd() {
+    // 이미 준비됐거나 로딩 중이면 스킵 (세션 전역 공유)
+    if (_interstitialAd != null || _interstitialLoading) return;
+    _interstitialLoading = true;
     InterstitialAd.load(
       adUnitId: AdHelper.interstitialId,
       request: const AdRequest(),
       adLoadCallback: InterstitialAdLoadCallback(
         onAdLoaded: (ad) {
-          if (!mounted) { ad.dispose(); return; }
+          _interstitialLoading = false;
           _interstitialAd = ad;
-          _interstitialAd!.fullScreenContentCallback = FullScreenContentCallback(
-            onAdDismissedFullScreenContent: (ad) {
-              ad.dispose();
-              _interstitialAd = null;
-              if (!mounted) return;
-              _loadInterstitialAd();
-              _navigateToUrl();
-            },
-            onAdFailedToShowFullScreenContent: (ad, error) {
-              ad.dispose();
-              _interstitialAd = null;
-              if (!mounted) return;
-              _loadInterstitialAd();
-              _navigateToUrl();
-            },
-          );
+          // fullScreenContentCallback은 show 시점(현재 화면 기준)에 설정한다.
+          // static 공유 광고라 로드 시점 화면에 묶으면 파괴된 화면을 참조할 수 있음.
         },
         onAdFailedToLoad: (_) {
+          _interstitialLoading = false;
           _interstitialAd = null;
+          // 재시도: 다음 상세 진입/다음 지원 클릭 때 다시 로드 착수됨.
         },
       ),
     );
@@ -231,19 +225,41 @@ class _DetailBodyState extends State<_DetailBody> {
   void _onApplyTap(String? url) {
     analytics.applyTap(widget.job.id, widget.job.siteName);
     _pendingUrl = _validateJobUrl(url, widget.job.siteUrl);
-    final jobId = widget.job.id;
     _applyCount++;
-    final isFirst = _applyCount == 1;
-    final isMultiple = _adApplyInterval > 0 && _applyCount % _adApplyInterval == 0;
-    // 첫 지원은 무조건 / 3배수는 동일 공고 이미 봤으면 스킵
-    final showAd = isFirst || (isMultiple && !_adShownJobs.contains(jobId));
+    // 세션 내 2번째 클릭부터, "세션에도 봤고 오늘도 봤을 때만" 스킵.
+    // 광고 미준비면 스킵(카운트/플래그 유지) → 다음 클릭에서 재시도.
+    final showAd = _applyCount >= 2 && !_adAlreadyShown;
     if (showAd && _interstitialAd != null) {
-      _adShownJobs.add(jobId); // 광고 실제 노출 시 기록
+      _adShownThisSession = true;
+      _adLastShownDate = _todayKey();
+      _persistAdDate(_adLastShownDate!);
       analytics.applyAdShown(widget.job.id);
-      _interstitialAd!.show();
+      final ad = _interstitialAd!;
+      _interstitialAd = null; // 소비
+      // 콜백은 현재 화면 기준으로 설정 (닫히면 URL 이동)
+      ad.fullScreenContentCallback = FullScreenContentCallback(
+        onAdDismissedFullScreenContent: (ad) {
+          ad.dispose();
+          if (!mounted) return;
+          _navigateToUrl();
+        },
+        onAdFailedToShowFullScreenContent: (ad, error) {
+          ad.dispose();
+          if (!mounted) return;
+          _navigateToUrl();
+        },
+      );
+      ad.show();
     } else {
+      // 광고 미준비면 스킵하고 이동 → 다음 클릭 위해 로드 착수(재시도)
+      if (!_adAlreadyShown) _loadInterstitialAd();
       _navigateToUrl();
     }
+  }
+
+  Future<void> _persistAdDate(String date) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_prefsKey, date);
   }
 
   /// job.url 도메인이 sites.url 도메인과 다르면 사이트 홈페이지로 폴백
@@ -284,6 +300,8 @@ class _DetailBodyState extends State<_DetailBody> {
       if (Platform.isIOS && !SiteLang.useWebViewOnIOS(url)) {
         // iOS 기본: 인앱 사파리 — URL 로케일 사이트는 언어 치환 적용,
         // ko·en뿐인 사이트는 사파리 네이티브 번역(aA)으로 소수언어 보완 가능.
+        // 지원/출처로 사파리 이동 → 복귀 시 오프닝 광고 스킵(광고 겹침 방지)
+        AdHelper.markAdClicked();
         ChromeSafariBrowser().open(
           url: WebUri(SiteLang.entryUrl(url, widget.langCode)),
           settings: ChromeSafariBrowserSettings(barCollapsingEnabled: true),
@@ -296,6 +314,8 @@ class _DetailBodyState extends State<_DetailBody> {
         ));
       }
     } else {
+      // 외부 앱 이동 → 복귀 시 오프닝 광고 스킵(광고 겹침 방지)
+      AdHelper.markAdClicked();
       launchUrl(uri, mode: LaunchMode.externalApplication);
     }
   }
@@ -351,7 +371,7 @@ class _DetailBodyState extends State<_DetailBody> {
 
   @override
   void dispose() {
-    _interstitialAd?.dispose();
+    // _interstitialAd는 세션 전역(static) 공유 자산이라 화면 dispose 시 파괴하지 않음.
     _adController.disposeAll();
     super.dispose();
   }
