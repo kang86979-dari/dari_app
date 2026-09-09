@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/ad_helper.dart';
@@ -57,6 +58,13 @@ class AppOpenAdService {
     }
 
     _isShowingAd = true;
+    // 광고가 완전히 닫힐 때까지 완료되지 않는 Completer.
+    // 스플래시가 이 Future를 await → 광고가 닫힌 뒤에야 홈으로 전환하므로,
+    // 전환 중 프레임에 앱 화면이 광고 뒤로 비쳐 보이는 "modified ad behavior"(투명 겹침) 방지.
+    final completer = Completer<void>();
+    void finish() {
+      if (!completer.isCompleted) completer.complete();
+    }
     _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
         _isShowingAd = false;
@@ -65,6 +73,7 @@ class AppOpenAdService {
         // 광고 닫힘 → resumed 발생 → 홈이 불필요하게 리로드하는 것 방지
         AdHelper.markAdClicked();
         loadAd(); // 다음을 위해 다시 로드
+        finish();
       },
       onAdFailedToShowFullScreenContent: (ad, _) {
         _isShowingAd = false;
@@ -72,12 +81,15 @@ class AppOpenAdService {
         _appOpenAd = null;
         AdHelper.markAdClicked();
         loadAd();
+        finish();
       },
     );
 
     _shownThisSession = true;
     await prefs.setString(_prefsKey, today);
     _appOpenAd!.show();
+    // 광고가 닫힐 때까지 대기 → 스플래시가 이후 홈으로 전환(겹침 방지)
+    await completer.future;
   }
 }
 

@@ -500,13 +500,13 @@ class _DetailBodyState extends State<_DetailBody> {
                       ),
                       const SizedBox(height: 10),
                       Text(
-                          (job.company != null && job.company!.isNotEmpty)
-                              ? job.company!
+                          job.getDisplayCompany(langCode).isNotEmpty
+                              ? job.getDisplayCompany(langCode)
                               : s.companyUndisclosed,
                           style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w500,
-                              color: (job.company != null && job.company!.isNotEmpty)
+                              color: job.getDisplayCompany(langCode).isNotEmpty
                                   ? AppColors.gray600
                                   : AppColors.gray400)),
                       if (job.visas.isNotEmpty) ...[
@@ -896,7 +896,7 @@ class _ApplyMethodsRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(label,
+          Text('$label(${renderable.length})',
               style: const TextStyle(
                   fontSize: 13,
                   fontWeight: FontWeight.w500,

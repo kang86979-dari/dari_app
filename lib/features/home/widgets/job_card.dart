@@ -105,13 +105,13 @@ class JobCard extends StatelessWidget {
 
             // 회사명 (없으면 '비공개' placeholder — 옅은 회색)
             Text(
-              (job.company != null && job.company!.isNotEmpty)
-                  ? job.company!
+              job.getDisplayCompany(langCode).isNotEmpty
+                  ? job.getDisplayCompany(langCode)
                   : (strings?.companyUndisclosed ?? 'Undisclosed'),
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: (job.company != null && job.company!.isNotEmpty)
+                color: job.getDisplayCompany(langCode).isNotEmpty
                     ? AppColors.gray600
                     : AppColors.gray400,
               ),

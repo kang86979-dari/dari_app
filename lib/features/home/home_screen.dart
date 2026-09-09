@@ -246,10 +246,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       JobRepository.clearCountCache();
       final isCurrent = ModalRoute.of(context)?.isCurrent == true;
       if (kDebugMode) print('🔵 resumed: isCurrent=$isCurrent');
-      // 홈 화면이 최상단이면 갱신 + 광고
+      // 홈 화면이 최상단이면: 광고 먼저 표시 → 닫힌 뒤 새로고침.
+      // (동시에 하면 광고 진입 순간 _forceRefresh의 재렌더(검색창+스켈레톤)가
+      //  광고 위로 비쳐 "modified ad behavior"로 보임 → 순서 분리로 방지)
+      // 광고 미노출(스킵/로드실패)이어도 Future는 즉시 완료돼 새로고침은 항상 실행됨.
       if (isCurrent) {
-        _forceRefresh();
-        appOpenAdService.showIfAvailable();
+        appOpenAdService.showIfAvailable().then((_) {
+          if (mounted) _forceRefresh();
+        });
       } else {
         _pendingAppOpenAd = true;
       }

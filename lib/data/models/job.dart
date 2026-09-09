@@ -186,6 +186,12 @@ class Job {
   final List<String> applyMethods;
   final Map<String, dynamic>? applyContact;
 
+  // 근무처(인력사무소 공고만 값 있음): 실제 근무처 회사·지역.
+  // office_address(모집업체 사무소 주소)는 화면 표시 안 함 — 추후 회사평가용.
+  final String? workplaceCompany;    // ko, 예 "쿠팡 · 인천 부평구"
+  final String? workplaceCompanyEn;  // en, 예 "Coupang · Incheon Bupyeong-gu"
+  final String? officeAddress;       // 모집업체 사무소 주소(미표시)
+
   // 조인된 관계 데이터
   final List<VisaInfo> visas;
   final CategoryInfo? jobCategory;
@@ -238,6 +244,9 @@ class Job {
     this.visaSponsorship,
     this.applyMethods = const [],
     this.applyContact,
+    this.workplaceCompany,
+    this.workplaceCompanyEn,
+    this.officeAddress,
     this.visas = const [],
     this.jobCategory,
     this.employmentType,
@@ -252,6 +261,20 @@ class Job {
   String getTitle(String langCode) {
     if (langCode == 'ko') return title ?? _translated(titleTranslations, 'ko') ?? '';
     return _translated(titleTranslations, langCode) ?? title ?? '';
+  }
+
+  /// 표시용 회사명: 근무처(인력사무소) 있으면 "회사 (근무처)", 없으면 회사명.
+  /// 근무처 원본이 "쿠팡 · 인천 부평구" 형식이면 '·' 앞(회사)만 사용.
+  String getDisplayCompany(String langCode) {
+    final base = company ?? '';
+    final wcRaw = langCode == 'ko'
+        ? (workplaceCompany ?? '')
+        : (workplaceCompanyEn ?? workplaceCompany ?? '');
+    final wc = wcRaw.split('·').first.trim();
+    if (wc.isNotEmpty) {
+      return base.isNotEmpty ? '$base ($wc)' : wc;
+    }
+    return base;
   }
 
   /// 현재 언어에 맞는 직종명 (app_strings 번역 우선, 폴백: translations jsonb → 원문)
@@ -696,6 +719,9 @@ class Job {
       siteUrl: sitesJson['url']?.toString(),
       title: json['title']?.toString(),
       company: json['company']?.toString(),
+      workplaceCompany: json['workplace_company']?.toString(),
+      workplaceCompanyEn: json['workplace_company_en']?.toString(),
+      officeAddress: json['office_address']?.toString(),
       location: json['location']?.toString(),
       addressDetail: json['address_detail']?.toString(),
       salary: json['salary']?.toString(),
@@ -899,6 +925,9 @@ class Job {
       siteUrl: sitesJson['url']?.toString(),
       title: rpcJobData['title']?.toString(),
       company: rpcJobData['company']?.toString(),
+      workplaceCompany: rpcJobData['workplace_company']?.toString(),
+      workplaceCompanyEn: rpcJobData['workplace_company_en']?.toString(),
+      officeAddress: rpcJobData['office_address']?.toString(),
       location: rpcJobData['location']?.toString(),
       addressDetail: rpcJobData['address_detail']?.toString(),
       salary: rpcJobData['salary']?.toString(),
