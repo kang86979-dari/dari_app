@@ -3,6 +3,10 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
+import 'core/navigation.dart';
+import 'data/services/app_open_ad_service.dart';
+import 'features/account/additional_info_screen.dart';
+import 'features/account/my_page_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/onboarding/language_select_screen.dart';
 import 'features/onboarding/visa_select_screen.dart';
@@ -17,8 +21,23 @@ import 'features/dev/apply_webview_debug_screen.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
+    navigatorKey: rootNavigatorKey,
     initialLocation: '/splash',
     routes: [
+      GoRoute(
+        path: '/my-page',
+        builder: (context, state) => const MyPageScreen(),
+      ),
+      GoRoute(
+        path: '/account/additional-info',
+        builder: (context, state) {
+          final extra = state.extra as Map<String, dynamic>?;
+          return AdditionalInfoScreen(
+            snsProvider: extra?['provider'] as String?,
+            initialEmail: extra?['email'] as String?,
+          );
+        },
+      ),
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
@@ -35,10 +54,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/onboarding/location',
         builder: (context, state) => const LocationSelectScreen(),
       ),
-      GoRoute(
-        path: '/home',
-        builder: (context, state) => const HomeScreen(),
-      ),
+      GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
       GoRoute(
         path: '/favorites',
         builder: (context, state) => const FavoritesScreen(),
@@ -86,6 +102,22 @@ class DariApp extends ConsumerWidget {
       theme: AppTheme.light,
       routerConfig: router,
       debugShowCheckedModeBanner: false,
+      // 앱오픈 광고 표시 중엔 앱 화면을 불투명 커버로 가림.
+      // 광고 뒤/전환 순간에 홈 등 앱 화면이 비치는 "modified ad behavior" 방지(iOS·Android 공통).
+      builder: (context, child) => Stack(
+        children: [
+          child ?? const SizedBox.shrink(),
+          ValueListenableBuilder<bool>(
+            valueListenable: appOpenAdService.isAdShowing,
+            builder: (context, showing, _) => showing
+                ? const ColoredBox(
+                    color: Colors.white,
+                    child: SizedBox.expand(),
+                  )
+                : const SizedBox.shrink(),
+          ),
+        ],
+      ),
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

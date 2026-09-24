@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../apply/apply_webview_screen.dart';
 import '../apply/site_lang.dart';
+import 'apply_method_sheet.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -653,7 +654,12 @@ class _DetailBodyState extends State<_DetailBody> {
               child: GestureDetector(
                 onTap: isExpired
                     ? null
-                    : () => _onApplyTap(job.url),
+                    : () => showApplyMethodSheet(
+                          context,
+                          job: job,
+                          strings: s,
+                          onProceedToSite: () => _onApplyTap(job.url),
+                        ),
                 child: Container(
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   decoration: BoxDecoration(

@@ -27,6 +27,8 @@ import '../../core/utils/native_ad_controller.dart';
 import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/notice_service.dart';
+import '../../providers/account_provider.dart';
+import '../account/login_signup_sheet.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../data/services/app_open_ad_service.dart';
@@ -521,6 +523,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 ),
                             ],
                           ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          if (ref.read(accountProvider).isLoggedIn) {
+                            context.push('/my-page');
+                          } else {
+                            showLoginSignupSheet(context);
+                          }
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.only(right: 14),
+                          child: Icon(Icons.person_outline, size: 24, color: AppColors.gray600),
                         ),
                       ),
                       GestureDetector(

@@ -197,8 +197,15 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
         }
       },
       // intent://, market://, 앱스킴 등 비-http 이동 차단 (스토어 이탈 방지)
+      // 단 tel:/sms:/mailto:는 지원방법(전화/문자) 클릭이 여는 것이라 외부 앱으로 직접 열어줘야 함
       shouldOverrideUrlLoading: (c, action) async {
-        final u = action.request.url?.toString() ?? '';
+        final uri = action.request.url;
+        final scheme = uri?.scheme ?? '';
+        if (scheme == 'tel' || scheme == 'sms' || scheme == 'mailto') {
+          launchUrl(uri!, mode: LaunchMode.externalApplication);
+          return NavigationActionPolicy.CANCEL;
+        }
+        final u = uri?.toString() ?? '';
         if (!u.startsWith('http')) {
           return NavigationActionPolicy.CANCEL;
         }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/utils/ad_helper.dart';
@@ -14,6 +15,10 @@ class AppOpenAdService {
   AppOpenAd? _appOpenAd;
   bool _isShowingAd = false;
   bool _shownThisSession = false; // 세션당 1회 (앱 재시작 시 리셋)
+
+  /// 광고 표시 중 여부 — true면 앱 화면을 불투명 커버로 가림.
+  /// 앱오픈 광고 뒤/전환 순간에 홈 등 앱 화면이 비치는 것 방지(iOS·Android 공통).
+  final ValueNotifier<bool> isAdShowing = ValueNotifier<bool>(false);
 
   /// 광고 로드
   void loadAd() {
@@ -62,8 +67,13 @@ class AppOpenAdService {
     // 스플래시가 이 Future를 await → 광고가 닫힌 뒤에야 홈으로 전환하므로,
     // 전환 중 프레임에 앱 화면이 광고 뒤로 비쳐 보이는 "modified ad behavior"(투명 겹침) 방지.
     final completer = Completer<void>();
+    Timer? safety;
     void finish() {
-      if (!completer.isCompleted) completer.complete();
+      if (completer.isCompleted) return;
+      safety?.cancel();
+      _isShowingAd = false;
+      isAdShowing.value = false; // 커버 해제
+      completer.complete();
     }
     _appOpenAd!.fullScreenContentCallback = FullScreenContentCallback(
       onAdDismissedFullScreenContent: (ad) {
@@ -87,6 +97,9 @@ class AppOpenAdService {
 
     _shownThisSession = true;
     await prefs.setString(_prefsKey, today);
+    isAdShowing.value = true; // 광고 뜨기 직전 앱 화면 가림(iOS·Android 공통)
+    // 콜백 미발동 대비 안전장치: 30초 후 자동 해제(커버 stuck=흰 화면 방지)
+    safety = Timer(const Duration(seconds: 30), finish);
     _appOpenAd!.show();
     // 광고가 닫힐 때까지 대기 → 스플래시가 이후 홈으로 전환(겹침 방지)
     await completer.future;

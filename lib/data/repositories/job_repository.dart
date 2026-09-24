@@ -13,7 +13,7 @@ class JobRepository {
   static const _timeout = Duration(seconds: 15);
 
   JobRepository({SupabaseClient? client})
-      : _client = client ?? Supabase.instance.client;
+    : _client = client ?? Supabase.instance.client;
 
   /// 타임아웃 래퍼
   Future<T> _t<T>(Future<T> future) => future.timeout(_timeout);
@@ -43,12 +43,25 @@ class JobRepository {
   static const _pageSize = 20;
 
   /// 제외할 사이트 이름 목록
-  static const _excludedSiteNames = {'OKJob', 'KLiK', 'Here-Ro', 'Foreigner-Jobs'};
+  static const _excludedSiteNames = {
+    'OKJob',
+    'KLiK',
+    'Here-Ro',
+    'Foreigner-Jobs',
+  };
 
   /// education Set에서 가장 높은 값 반환
   static String? _maxEducation(Set<String> educations) {
     if (educations.isEmpty) return null;
-    const order = ['none', 'middle_school', 'high_school', 'college', 'bachelor', 'master', 'doctor'];
+    const order = [
+      'none',
+      'middle_school',
+      'high_school',
+      'college',
+      'bachelor',
+      'master',
+      'doctor',
+    ];
     int maxIdx = 0;
     for (final e in educations) {
       final idx = order.indexOf(e);
@@ -138,7 +151,8 @@ class JobRepository {
       final validRegionIds = filter.regionIds.where(validIds.contains).toList();
       if (validRegionIds.isNotEmpty) {
         // 전국(nationwide) 공고도 함께 표시
-        if (_nationwideRegionId != null) validRegionIds.add(_nationwideRegionId!);
+        if (_nationwideRegionId != null)
+          validRegionIds.add(_nationwideRegionId!);
         params['p_region_ids'] = validRegionIds;
       }
     }
@@ -148,7 +162,8 @@ class JobRepository {
     if (filter.employmentTypeIds.isNotEmpty) {
       const negotiableEmploymentId = '977e9c8e-7aa3-4528-9cbc-173d466b987f';
       final ids = filter.employmentTypeIds.toList();
-      if (!ids.contains(negotiableEmploymentId)) ids.add(negotiableEmploymentId);
+      if (!ids.contains(negotiableEmploymentId))
+        ids.add(negotiableEmploymentId);
       params['p_employment_ids'] = ids;
     }
     if (filter.koreanLevelIds.isNotEmpty) {
@@ -215,7 +230,10 @@ class JobRepository {
     );
 
     try {
-      final data = await _traced('get_jobs_page', () => _t(_client.rpc('get_jobs_page', params: params)));
+      final data = await _traced(
+        'get_jobs_page',
+        () => _t(_client.rpc('get_jobs_page', params: params)),
+      );
       final rows = data as List;
       if (rows.isEmpty) {
         _lastTotalCount = 0;
@@ -289,21 +307,37 @@ class JobRepository {
     }
   }
 
-  Future<List<Job>> searchJobs(String queryText, {int page = 0, String langCode = 'en', String sortBy = 'relevance', bool includeTesting = false}) async {
+  Future<List<Job>> searchJobs(
+    String queryText, {
+    int page = 0,
+    String langCode = 'en',
+    String sortBy = 'relevance',
+    bool includeTesting = false,
+  }) async {
     final q = queryText.trim();
     if (q.isEmpty) return [];
 
     final offset = page * _pageSize;
     final appBuild = await AppInfo.buildNumber();
-    final data = await _traced('search_jobs_fuzzy', () => _t(_client.rpc('search_jobs_fuzzy', params: {
-      'search_query': q,
-      'lang_code': langCode,
-      'sort_by': sortBy,
-      'result_limit': _pageSize,
-      'result_offset': offset,
-      if (includeTesting) 'include_testing': true, // 테스트 모드 (search는 p_ 없음)
-      if (appBuild != null) 'app_build': appBuild, // 버전 게이트 (search는 p_ 없음)
-    })));
+    final data = await _traced(
+      'search_jobs_fuzzy',
+      () => _t(
+        _client.rpc(
+          'search_jobs_fuzzy',
+          params: {
+            'search_query': q,
+            'lang_code': langCode,
+            'sort_by': sortBy,
+            'result_limit': _pageSize,
+            'result_offset': offset,
+            if (includeTesting)
+              'include_testing': true, // 테스트 모드 (search는 p_ 없음)
+            if (appBuild != null)
+              'app_build': appBuild, // 버전 게이트 (search는 p_ 없음)
+          },
+        ),
+      ),
+    );
 
     final rows = data as List;
     if (rows.isEmpty) return [];
@@ -341,22 +375,35 @@ class JobRepository {
         .toList();
   }
 
-  Future<int> searchJobsCount(String queryText, {String langCode = 'en', bool includeTesting = false}) async {
+  Future<int> searchJobsCount(
+    String queryText, {
+    String langCode = 'en',
+    bool includeTesting = false,
+  }) async {
     final q = queryText.trim();
     if (q.isEmpty) return 0;
     final appBuild = await AppInfo.buildNumber();
-    final data = await _t(_client.rpc('search_jobs_count', params: {
-      'search_query': q,
-      'lang_code': langCode,
-      if (includeTesting) 'include_testing': true,
-      if (appBuild != null) 'app_build': appBuild,
-    }));
+    final data = await _t(
+      _client.rpc(
+        'search_jobs_count',
+        params: {
+          'search_query': q,
+          'lang_code': langCode,
+          if (includeTesting) 'include_testing': true,
+          if (appBuild != null) 'app_build': appBuild,
+        },
+      ),
+    );
     return (data as int?) ?? 0;
   }
 
   Future<Job?> getJobById(String id) async {
     final data = await _t(
-      _client.from('jobs').select(_detailSelectQuery).eq('id', id).maybeSingle(),
+      _client
+          .from('jobs')
+          .select(_detailSelectQuery)
+          .eq('id', id)
+          .maybeSingle(),
     );
     if (data == null) return null;
     return Job.fromJson(data);
@@ -365,7 +412,8 @@ class JobRepository {
   /// 중복 그룹 공고 조회 (같은 duplicate_group_id를 가진 다른 사이트 공고)
   Future<List<DuplicateSource>> getDuplicateSources(String groupId) async {
     final data = await _t(
-      _client.from('jobs')
+      _client
+          .from('jobs')
           .select('id, url, site_id, sites(name, url)')
           .eq('duplicate_group_id', groupId)
           .eq('is_active', true),
@@ -386,7 +434,8 @@ class JobRepository {
     if (groupIds.isEmpty) return {};
     try {
       final data = await _t(
-        _client.from('jobs')
+        _client
+            .from('jobs')
             .select('duplicate_group_id')
             .inFilter('duplicate_group_id', groupIds.toList())
             .eq('is_active', true),
@@ -416,9 +465,12 @@ class JobRepository {
   /// RPC가 p_app_build 기준으로 노출 대상을 돌려준다. 반환: id, name, url, supports_english
   Future<List<Map<String, dynamic>>> _fetchSites() async {
     final appBuild = await AppInfo.buildNumber();
-    final data = await _t(_client.rpc('get_sites', params: {
-      if (appBuild != null) 'p_app_build': appBuild,
-    }));
+    final data = await _t(
+      _client.rpc(
+        'get_sites',
+        params: {if (appBuild != null) 'p_app_build': appBuild},
+      ),
+    );
     return (data as List).cast<Map<String, dynamic>>();
   }
 
@@ -427,10 +479,12 @@ class JobRepository {
     final sites = await _fetchSites();
     final options = sites
         .where((e) => !_excludedSiteNames.contains(e['name'] as String? ?? ''))
-        .map((e) => FilterOption(
-              id: e['id'].toString(),
-              label: e['name'] as String? ?? '',
-            ))
+        .map(
+          (e) => FilterOption(
+            id: e['id'].toString(),
+            label: e['name'] as String? ?? '',
+          ),
+        )
         .toList();
     options.sort((a, b) => a.label.compareTo(b.label));
     return options;
@@ -453,7 +507,10 @@ class JobRepository {
 
   Future<List<FilterOption>> getVisaOptions() async {
     final data = await _t(
-      _client.from('visa_master').select('id, code, name_ko, name_en, job_visas(count)').order('code'),
+      _client
+          .from('visa_master')
+          .select('id, code, name_ko, name_en, job_visas(count)')
+          .order('code'),
     );
     final list = (data as List).map((e) {
       final countData = e['job_visas'] as List?;
@@ -478,16 +535,16 @@ class JobRepository {
 
   /// 인기 비자 (한국 거주 외국인 소유 상위 10개)
   static const popularVisaCodes = {
-    'H-2',   // 방문취업 (중국동포)
-    'E-9',   // 비전문취업 (제조/농축산/건설)
-    'F-4',   // 재외동포
-    'F-2',   // 거주
-    'F-5',   // 영주
-    'F-6',   // 결혼이민
-    'D-2',   // 유학
-    'E-7',   // 특정활동 (IT/전문직)
-    'D-4',   // 일반연수
-    'D-10',  // 구직활동
+    'H-2', // 방문취업 (중국동포)
+    'E-9', // 비전문취업 (제조/농축산/건설)
+    'F-4', // 재외동포
+    'F-2', // 거주
+    'F-5', // 영주
+    'F-6', // 결혼이민
+    'D-2', // 유학
+    'E-7', // 특정활동 (IT/전문직)
+    'D-4', // 일반연수
+    'D-10', // 구직활동
   };
 
   Future<List<FilterOption>> getCategoryOptions(String langCode) async {
@@ -495,18 +552,16 @@ class JobRepository {
       _client.from('job_categories').select('*').order('name_ko'),
     );
     final s = AppStrings.of(langCode);
-    return (data as List)
-        .map((e) {
-          final nameEn = (e['name_en'] as String?) ?? '';
-          final translated = s.translateJobCategory(nameEn);
-          return FilterOption(
-            id: e['id'].toString(),
-            label: (translated != nameEn || langCode == 'en')
-                ? translated
-                : (e['name_$langCode'] as String?) ?? nameEn,
-          );
-        })
-        .toList();
+    return (data as List).map((e) {
+      final nameEn = (e['name_en'] as String?) ?? '';
+      final translated = s.translateJobCategory(nameEn);
+      return FilterOption(
+        id: e['id'].toString(),
+        label: (translated != nameEn || langCode == 'en')
+            ? translated
+            : (e['name_$langCode'] as String?) ?? nameEn,
+      );
+    }).toList();
   }
 
   Future<List<FilterOption>> getEmploymentTypeOptions(String langCode) async {
@@ -535,30 +590,36 @@ class JobRepository {
       _client.from('benefits').select('*').order('name_ko'),
     );
     final s = AppStrings.of(langCode);
-    return (data as List)
-        .map((e) {
-          final nameEn = (e['name_en'] as String?) ?? '';
-          final translated = s.translateBenefit(nameEn);
-          return FilterOption(
-            id: e['id'].toString(),
-            label: (translated != nameEn || langCode == 'en')
-                ? translated
-                : (e['name_$langCode'] as String?) ?? nameEn,
-          );
-        })
-        .toList();
+    return (data as List).map((e) {
+      final nameEn = (e['name_en'] as String?) ?? '';
+      final translated = s.translateBenefit(nameEn);
+      return FilterOption(
+        id: e['id'].toString(),
+        label: (translated != nameEn || langCode == 'en')
+            ? translated
+            : (e['name_$langCode'] as String?) ?? nameEn,
+      );
+    }).toList();
   }
 
   /// 전체 지역 데이터 캐시 (id, si_name, gu_name, sort_order)
   static List<Map<String, dynamic>>? _allRegionsCache;
-  static List<Map<String, dynamic>>? get allRegionsCacheSync => _allRegionsCache;
+  static List<Map<String, dynamic>>? get allRegionsCacheSync =>
+      _allRegionsCache;
+
   /// "전국" region ID (지역 필터 시 항상 포함)
   static int? _nationwideRegionId;
 
   Future<List<Map<String, dynamic>>> _getAllRegions() async {
     if (_allRegionsCache == null) {
       final raw = List<Map<String, dynamic>>.from(
-        await _t(_client.from('regions').select('id, si_name, gu_name, sort_order').order('sort_order', ascending: true).order('gu_name', ascending: true, nullsFirst: true)),
+        await _t(
+          _client
+              .from('regions')
+              .select('id, si_name, gu_name, sort_order')
+              .order('sort_order', ascending: true)
+              .order('gu_name', ascending: true, nullsFirst: true),
+        ),
       );
       final nationwide = raw.where((e) => e['si_name'] == '전국').firstOrNull;
       _nationwideRegionId = nationwide != null ? nationwide['id'] as int : null;
@@ -578,10 +639,12 @@ class JobRepository {
     for (final e in data) {
       final siName = e['si_name'] as String? ?? '';
       if (siName.isNotEmpty && e['gu_name'] == null && seen.add(siName)) {
-        options.add(FilterOption(
-          id: siName,
-          label: RegionMapper.getLocalizedName(siName, langCode),
-        ));
+        options.add(
+          FilterOption(
+            id: siName,
+            label: RegionMapper.getLocalizedName(siName, langCode),
+          ),
+        );
       }
     }
     return options;
@@ -589,14 +652,19 @@ class JobRepository {
 
   /// 특정 시/도의 구/군 목록
   /// 구/군 옵션 — label은 항상 한글 원본 (화면에서 다국어 조합)
-  Future<List<FilterOption>> getGuGunOptions(String siName, String langCode) async {
+  Future<List<FilterOption>> getGuGunOptions(
+    String siName,
+    String langCode,
+  ) async {
     final data = await _getAllRegions();
     return data
         .where((e) => e['si_name'] == siName && e['gu_name'] != null)
-        .map((e) => FilterOption(
-              id: (e['id'] as int).toString(),
-              label: e['gu_name'] as String,
-            ))
+        .map(
+          (e) => FilterOption(
+            id: (e['id'] as int).toString(),
+            label: e['gu_name'] as String,
+          ),
+        )
         .toList();
   }
 
@@ -622,63 +690,73 @@ class JobRepository {
 
   Future<List<FilterOption>> getKoreanLevelOptions(String langCode) async {
     final data = await _t(
-      _client.from('korean_levels').select('id, code, name_ko, name_en').order('sort_order'),
+      _client
+          .from('korean_levels')
+          .select('id, code, name_ko, name_en')
+          .order('sort_order'),
     );
     final s = AppStrings.of(langCode);
-    return (data as List)
-        .map((e) {
-          final nameEn = (e['name_en'] as String?) ?? e['code'] as String;
-          final translated = s.translateKoreanLevel(nameEn);
-          return FilterOption(
-            id: e['id'].toString(),
-            label: (translated != nameEn || langCode == 'en')
-                ? translated
-                : langCode == 'ko'
-                    ? (e['name_ko'] as String?) ?? nameEn
-                    : nameEn,
-          );
-        })
-        .toList();
+    return (data as List).map((e) {
+      final nameEn = (e['name_en'] as String?) ?? e['code'] as String;
+      final translated = s.translateKoreanLevel(nameEn);
+      return FilterOption(
+        id: e['id'].toString(),
+        label: (translated != nameEn || langCode == 'en')
+            ? translated
+            : langCode == 'ko'
+            ? (e['name_ko'] as String?) ?? nameEn
+            : nameEn,
+      );
+    }).toList();
   }
 
   Future<List<FilterOption>> getWorkScheduleOptions(String langCode) async {
     final data = await _t(
-      _client.from('work_schedules').select('id, code, name_ko, name_en').order('sort_order'),
+      _client
+          .from('work_schedules')
+          .select('id, code, name_ko, name_en')
+          .order('sort_order'),
     );
     final s = AppStrings.of(langCode);
-    return (data as List)
-        .map((e) {
-          final nameEn = (e['name_en'] as String?) ?? e['code'] as String;
-          final translated = s.translateWorkSchedule(nameEn);
-          return FilterOption(
-            id: e['id'].toString(),
-            label: (translated != nameEn || langCode == 'en')
-                ? translated
-                : langCode == 'ko'
-                    ? (e['name_ko'] as String?) ?? nameEn
-                    : nameEn,
-          );
-        })
-        .toList();
+    return (data as List).map((e) {
+      final nameEn = (e['name_en'] as String?) ?? e['code'] as String;
+      final translated = s.translateWorkSchedule(nameEn);
+      return FilterOption(
+        id: e['id'].toString(),
+        label: (translated != nameEn || langCode == 'en')
+            ? translated
+            : langCode == 'ko'
+            ? (e['name_ko'] as String?) ?? nameEn
+            : nameEn,
+      );
+    }).toList();
   }
 
   Future<List<FilterOption>> getLanguageOptions(String langCode) async {
     final data = await _t(
-      _client.from('languages').select('id, code, name_ko, name_en').order('name_en'),
+      _client
+          .from('languages')
+          .select('id, code, name_ko, name_en')
+          .order('name_en'),
     );
     return (data as List)
-        .map((e) => FilterOption(
-              id: e['id'].toString(),
-              label: langCode == 'ko'
-                  ? (e['name_ko'] as String?) ?? e['code'] as String
-                  : (e['name_en'] as String?) ?? e['code'] as String,
-            ))
+        .map(
+          (e) => FilterOption(
+            id: e['id'].toString(),
+            label: langCode == 'ko'
+                ? (e['name_ko'] as String?) ?? e['code'] as String
+                : (e['name_en'] as String?) ?? e['code'] as String,
+          ),
+        )
         .toList();
   }
 
   Future<List<FilterOption>> getCountryOptions(String langCode) async {
     final data = await _t(
-      _client.from('countries').select('id, name_ko, name_en, code').order('name_en'),
+      _client
+          .from('countries')
+          .select('id, name_ko, name_en, code')
+          .order('name_en'),
     );
     final s = AppStrings.of(langCode);
     return (data as List)
@@ -698,24 +776,33 @@ class JobRepository {
   /// 필터 옵션별 공고 건수 조회 (RPC)
   Future<FilterCounts> getFilterCounts({bool includeTesting = false}) async {
     final appBuild = await AppInfo.buildNumber();
-    final data = await _t(_client.rpc('get_filter_counts', params: {
-      if (includeTesting) 'p_include_testing': true,
-      if (appBuild != null) 'p_app_build': appBuild,
-    }));
+    final data = await _t(
+      _client.rpc(
+        'get_filter_counts',
+        params: {
+          if (includeTesting) 'p_include_testing': true,
+          if (appBuild != null) 'p_app_build': appBuild,
+        },
+      ),
+    );
     return FilterCounts.fromJson(data as Map<String, dynamic>);
   }
 
   /// 공고 설명 Lazy 번역 (Edge Function: 캐시 히트 시 즉시, 미스 시 Google Translate 호출)
   Future<String> translateDescription(String jobId, String langCode) async {
     // 번역은 긴 설명 + 콜드스타트 시 15초를 넘길 수 있어 전용 타임아웃 사용
-    final response = await _client.functions.invoke(
-      'translate-description',
-      body: {'job_id': jobId, 'lang': langCode},
-    ).timeout(const Duration(seconds: 30));
-    if (response.status != 200) throw Exception('Translation failed: ${response.status}');
+    final response = await _client.functions
+        .invoke(
+          'translate-description',
+          body: {'job_id': jobId, 'lang': langCode},
+        )
+        .timeout(const Duration(seconds: 30));
+    if (response.status != 200)
+      throw Exception('Translation failed: ${response.status}');
     final data = response.data as Map<String, dynamic>;
     final description = data['description'] as String?;
-    if (description == null || description.isEmpty) throw Exception('Empty translation');
+    if (description == null || description.isEmpty)
+      throw Exception('Empty translation');
     return description;
   }
 }

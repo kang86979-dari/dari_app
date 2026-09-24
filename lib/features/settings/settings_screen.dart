@@ -12,6 +12,8 @@ import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/test_mode_provider.dart';
+import '../../providers/account_provider.dart';
+import '../account/login_signup_sheet.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -20,7 +22,8 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
+class _SettingsScreenState extends ConsumerState<SettingsScreen>
+    with WidgetsBindingObserver {
   bool _pushEnabled = true;
   bool _loaded = false;
 
@@ -33,7 +36,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     if (_versionTapCount >= 7 && !_testUnlocked) {
       setState(() => _testUnlocked = true);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('테스트 모드 잠금 해제됨'), duration: Duration(seconds: 1)),
+        const SnackBar(
+          content: Text('테스트 모드 잠금 해제됨'),
+          duration: Duration(seconds: 1),
+        ),
       );
     }
   }
@@ -71,7 +77,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
       });
       return;
     }
-    final osAllowed = settings.authorizationStatus == AuthorizationStatus.authorized ||
+    final osAllowed =
+        settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional;
     final appEnabled = await pushService.isEnabled();
     if (!mounted) return;
@@ -90,12 +97,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     if (!await pushService.canToggle()) {
       if (!mounted) return;
       final s = ref.read(stringsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ref.read(languageProvider) == 'ko'
-            ? '오늘 변경 횟수를 초과했습니다. 내일 다시 시도해주세요.'
-            : 'Daily limit reached. Please try again tomorrow.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ref.read(languageProvider) == 'ko'
+                ? '오늘 변경 횟수를 초과했습니다. 내일 다시 시도해주세요.'
+                : 'Daily limit reached. Please try again tomorrow.',
+          ),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
       return;
     }
 
@@ -115,7 +126,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
         showDialog(
           context: context,
           builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
             content: Text(
               s.enableNotificationsInSettings,
               style: const TextStyle(fontSize: 15, height: 1.5),
@@ -123,16 +136,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text(ref.read(languageProvider) == 'ko' ? '닫기' : 'Close',
-                  style: const TextStyle(color: Color(0xFF999999))),
+                child: Text(
+                  ref.read(languageProvider) == 'ko' ? '닫기' : 'Close',
+                  style: const TextStyle(color: Color(0xFF999999)),
+                ),
               ),
               TextButton(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  AppSettings.openAppSettings(type: AppSettingsType.notification);
+                  AppSettings.openAppSettings(
+                    type: AppSettingsType.notification,
+                  );
                 },
-                child: Text(s.settings,
-                  style: const TextStyle(color: AppColors.carrot, fontWeight: FontWeight.w700)),
+                child: Text(
+                  s.settings,
+                  style: const TextStyle(
+                    color: AppColors.carrot,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
@@ -185,6 +207,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     final s = ref.watch(stringsProvider);
     final langCode = ref.watch(languageProvider);
     final testMode = ref.watch(testModeProvider);
+    final isLoggedIn = ref.watch(accountProvider).isLoggedIn;
 
     return Scaffold(
       body: SafeArea(
@@ -201,7 +224,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                   GestureDetector(
                     onTap: () => context.pop(),
                     child: const SizedBox(
-                      width: 40, height: 40,
+                      width: 40,
+                      height: 40,
                       child: Icon(Icons.arrow_back_ios_new, size: 20),
                     ),
                   ),
@@ -211,13 +235,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                       behavior: HitTestBehavior.opaque,
                       onTap: _onVersionTap,
                       child: Text(
-                      s.settings,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.black,
-                      ),
+                        s.settings,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                        ),
                       ),
                     ),
                   ),
@@ -230,6 +254,26 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
               child: ListView(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
+                  // 계정 섹션
+                  _SectionHeader(title: s.settingsAccountSection),
+                  _SettingsTile(
+                    title: isLoggedIn ? s.myPageTitle : s.accountLoginTitle,
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                      size: 20,
+                      color: AppColors.gray300,
+                    ),
+                    onTap: () {
+                      if (isLoggedIn) {
+                        context.push('/my-page');
+                      } else {
+                        showLoginSignupSheet(context);
+                      }
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
                   // 알림 섹션
                   _SectionHeader(title: s.notifications),
                   _SettingsTile(
@@ -261,7 +305,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                           ),
                         ),
                         const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
+                        const Icon(
+                          Icons.chevron_right,
+                          size: 20,
+                          color: AppColors.gray300,
+                        ),
                       ],
                     ),
                     onTap: _showLanguageSheet,
@@ -276,7 +324,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                       subtitle: 'testing 사이트(JobnShop) 포함 표시',
                       trailing: Switch(
                         value: testMode,
-                        onChanged: (v) => ref.read(testModeProvider.notifier).set(v),
+                        onChanged: (v) =>
+                            ref.read(testModeProvider.notifier).set(v),
                         activeColor: AppColors.carrot,
                       ),
                     ),
@@ -289,7 +338,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                     _SettingsTile(
                       title: 'Apply WebView 분석',
                       subtitle: 'K-HIRE 로그인/폼 HTML 덤프 도구',
-                      trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                        size: 20,
+                        color: AppColors.gray300,
+                      ),
                       onTap: () => context.push('/dev/apply-webview'),
                     ),
                   ],
@@ -402,7 +455,8 @@ class _LanguageBottomSheet extends ConsumerWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Container(
-          width: 40, height: 4,
+          width: 40,
+          height: 4,
           margin: const EdgeInsets.only(top: 14, bottom: 4),
           decoration: BoxDecoration(
             color: AppColors.gray100,
@@ -414,11 +468,20 @@ class _LanguageBottomSheet extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.black)),
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
+              ),
               GestureDetector(
                 onTap: () => Navigator.pop(context),
-                child: const Text('×', style: TextStyle(fontSize: 24, color: Color(0xFFBBBBBB))),
+                child: const Text(
+                  '×',
+                  style: TextStyle(fontSize: 24, color: Color(0xFFBBBBBB)),
+                ),
               ),
             ],
           ),
@@ -427,7 +490,9 @@ class _LanguageBottomSheet extends ConsumerWidget {
         Flexible(
           child: ListView.builder(
             shrinkWrap: true,
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).padding.bottom,
+            ),
             itemCount: languages.length,
             itemBuilder: (context, index) {
               final lang = languages[index];
@@ -435,25 +500,46 @@ class _LanguageBottomSheet extends ConsumerWidget {
               return GestureDetector(
                 onTap: () => onSelect(lang.code),
                 child: Container(
-                  color: isSelected ? AppColors.carrotLight : Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  color: isSelected
+                      ? AppColors.carrotLight
+                      : Colors.transparent,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(lang.name,
-                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500, color: AppColors.black)),
+                      Text(
+                        lang.name,
+                        style: const TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w500,
+                          color: AppColors.black,
+                        ),
+                      ),
                       Container(
-                        width: 22, height: 22,
+                        width: 22,
+                        height: 22,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isSelected ? AppColors.carrot : Colors.transparent,
+                          color: isSelected
+                              ? AppColors.carrot
+                              : Colors.transparent,
                           border: Border.all(
-                            color: isSelected ? AppColors.carrot : const Color(0xFFDDDDDD),
+                            color: isSelected
+                                ? AppColors.carrot
+                                : const Color(0xFFDDDDDD),
                             width: 2,
                           ),
                         ),
                         child: isSelected
-                            ? const Center(child: CircleAvatar(radius: 4, backgroundColor: Colors.white))
+                            ? const Center(
+                                child: CircleAvatar(
+                                  radius: 4,
+                                  backgroundColor: Colors.white,
+                                ),
+                              )
                             : null,
                       ),
                     ],

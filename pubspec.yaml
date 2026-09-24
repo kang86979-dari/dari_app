@@ -63,6 +63,9 @@ dependencies:
   url_launcher: ^6.2.6
   connectivity_plus: ^7.1.1
 
+  # SNS 로그인 버튼 공식 브랜드 아이콘 렌더링
+  flutter_svg: ^2.0.10+1
+
   # [DEV] 지원하기 WebView 분석 도구 (인앱 WebView + JS 주입 + HTML 덤프)
   flutter_inappwebview: ^6.1.5
   path_provider: ^2.1.4
@@ -128,6 +131,7 @@ flutter:
     - assets/icon/
     - assets/wordmark.png
     - assets/settings_icon.png
+    - assets/brand/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

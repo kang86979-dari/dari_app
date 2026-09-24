@@ -14,8 +14,8 @@ final jobRepositoryProvider = Provider<JobRepository>((ref) {
 
 final filterStateProvider =
     StateNotifierProvider<FilterStateNotifier, FilterState>((ref) {
-  return FilterStateNotifier();
-});
+      return FilterStateNotifier();
+    });
 
 class FilterStateNotifier extends StateNotifier<FilterState> {
   static const _prefsKey = 'filter_state';
@@ -200,13 +200,20 @@ class FilterStateNotifier extends StateNotifier<FilterState> {
 // [DEV] 사이트 필터
 final selectedSiteIdProvider = StateProvider<String?>((ref) => null);
 
-final jobListProvider =
-    FutureProvider.family<List<Job>, int>((ref, page) async {
+final jobListProvider = FutureProvider.family<List<Job>, int>((
+  ref,
+  page,
+) async {
   final repo = ref.watch(jobRepositoryProvider);
   final filter = ref.watch(filterStateProvider);
   final langCode = ref.watch(languageProvider);
   final includeTesting = ref.watch(testModeProvider);
-  return repo.getJobs(filter: filter, page: page, langCode: langCode, includeTesting: includeTesting);
+  return repo.getJobs(
+    filter: filter,
+    page: page,
+    langCode: langCode,
+    includeTesting: includeTesting,
+  );
 });
 
 // [DEV] 사이트 목록
@@ -220,11 +227,14 @@ final jobTotalCountProvider = FutureProvider<int>((ref) async {
   final filter = ref.watch(filterStateProvider);
   final langCode = ref.watch(languageProvider);
   final includeTesting = ref.watch(testModeProvider);
-  return repo.getJobCount(filter: filter, langCode: langCode, includeTesting: includeTesting);
+  return repo.getJobCount(
+    filter: filter,
+    langCode: langCode,
+    includeTesting: includeTesting,
+  );
 });
 
-final jobDetailProvider =
-    FutureProvider.family<Job?, String>((ref, id) async {
+final jobDetailProvider = FutureProvider.family<Job?, String>((ref, id) async {
   final repo = ref.watch(jobRepositoryProvider);
   return repo.getJobById(id);
 });
@@ -250,57 +260,58 @@ final categoryOptionsProvider = FutureProvider<List<FilterOption>>((ref) async {
   return repo.getCategoryOptions(lang);
 });
 
-final employmentTypeOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final employmentTypeOptionsProvider = FutureProvider<List<FilterOption>>((
+  ref,
+) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getEmploymentTypeOptions(lang);
 });
 
-final benefitOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final benefitOptionsProvider = FutureProvider<List<FilterOption>>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getBenefitOptions(lang);
 });
 
-final siDoOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final siDoOptionsProvider = FutureProvider<List<FilterOption>>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getSiDoOptions(lang);
 });
 
-final guGunOptionsProvider =
-    FutureProvider.family<List<FilterOption>, String>((ref, siName) async {
+final guGunOptionsProvider = FutureProvider.family<List<FilterOption>, String>((
+  ref,
+  siName,
+) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getGuGunOptions(siName, lang);
 });
 
-final koreanLevelOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final koreanLevelOptionsProvider = FutureProvider<List<FilterOption>>((
+  ref,
+) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getKoreanLevelOptions(lang);
 });
 
-final workScheduleOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final workScheduleOptionsProvider = FutureProvider<List<FilterOption>>((
+  ref,
+) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getWorkScheduleOptions(lang);
 });
 
-final languageOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final languageOptionsProvider = FutureProvider<List<FilterOption>>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getLanguageOptions(lang);
 });
 
-final countryOptionsProvider =
-    FutureProvider<List<FilterOption>>((ref) async {
+final countryOptionsProvider = FutureProvider<List<FilterOption>>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
   final lang = ref.watch(languageProvider);
   return repo.getCountryOptions(lang);
