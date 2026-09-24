@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
+import 'dart:math';
 
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -134,18 +138,65 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
     );
   }
 
+  /// 애플: 네이티브 인증 (sign_in_with_apple → Supabase signInWithIdToken).
+  /// nonce는 앱이 직접 생성 — 원문을 Supabase에, sha256 해시를 애플에 전달해
+  /// 토큰 위조를 방지함. iOS 전용(안드로이드에서는 버튼 자체를 숨김).
+  Future<void> _onAppleTap(BuildContext context) async {
+    final s = ref.read(stringsProvider);
+    try {
+      final rawNonce = _generateNonce();
+      final hashedNonce = sha256.convert(utf8.encode(rawNonce)).toString();
+      final credential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: hashedNonce,
+      );
+      final idToken = credential.identityToken;
+      if (idToken == null) {
+        throw const AuthException('Apple sign-in returned no identityToken');
+      }
+      final res = await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.apple,
+        idToken: idToken,
+        nonce: rawNonce,
+      );
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      // 애플은 최초 1회만 credential.email을 주고 이후엔 토큰(세션)에만 있음.
+      // "이메일 가리기"로 받은 릴레이 주소(@privaterelay.appleid.com)는 애플에
+      // 등록된 도메인의 발신만 전달돼 구인처 연락용으로 못 씀 — 칸을 비워서
+      // 사용자가 실제 이메일을 직접 입력하게 함(2026-09-24 사용자 결정).
+      final email = res.user?.email ?? credential.email ?? '';
+      final usableEmail = email.endsWith('@privaterelay.appleid.com')
+          ? ''
+          : email;
+      context.push(
+        '/account/additional-info',
+        extra: {'provider': 'apple', 'email': usableEmail},
+      );
+    } on SignInWithAppleAuthorizationException catch (e) {
+      if (e.code == AuthorizationErrorCode.canceled) return; // 사용자 취소.
+      if (context.mounted) _showLoginFailed(context, s.accountLoginFailed);
+    } catch (_) {
+      if (context.mounted) _showLoginFailed(context, s.accountLoginFailed);
+    }
+  }
+
+  String _generateNonce([int length = 32]) {
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-._';
+    final random = Random.secure();
+    return List.generate(
+      length,
+      (_) => charset[random.nextInt(charset.length)],
+    ).join();
+  }
+
   void _showLoginFailed(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
-  }
-
-  void _onSocialTap(BuildContext context, String provider) {
-    // [TEMP] 애플은 아직 stub — 실제 인증 없이 추가정보 입력으로 이동.
-    Navigator.of(context).pop();
-    context.push(
-      '/account/additional-info',
-      extra: {'provider': provider, 'email': 'alex.kim@icloud.com'},
     );
   }
 
@@ -225,23 +276,27 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
               ),
               onTap: () => _onGoogleTap(context, ref),
             ),
-            const SizedBox(height: 12),
-            _SocialButton(
-              label: s.accountContinueApple,
-              background: AppColors.black,
-              foreground: Colors.white,
-              border: AppColors.black,
-              icon: SvgPicture.asset(
-                'assets/brand/apple.svg',
-                width: 20,
-                height: 20,
-                colorFilter: const ColorFilter.mode(
-                  Colors.white,
-                  BlendMode.srcIn,
+            // 애플 로그인은 iOS 전용 — 안드로이드에서는 버튼 숨김(웹 방식은
+            // Service ID 별도 세팅이 필요해 미지원, App Store 요건은 iOS만 해당).
+            if (Platform.isIOS) ...[
+              const SizedBox(height: 12),
+              _SocialButton(
+                label: s.accountContinueApple,
+                background: AppColors.black,
+                foreground: Colors.white,
+                border: AppColors.black,
+                icon: SvgPicture.asset(
+                  'assets/brand/apple.svg',
+                  width: 20,
+                  height: 20,
+                  colorFilter: const ColorFilter.mode(
+                    Colors.white,
+                    BlendMode.srcIn,
+                  ),
                 ),
+                onTap: () => _onAppleTap(context),
               ),
-              onTap: () => _onSocialTap(context, 'apple'),
-            ),
+            ],
             const SizedBox(height: 12),
             _SocialButton(
               label: s.accountContinueFacebook,
