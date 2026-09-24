@@ -214,7 +214,7 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
     focus?.requestFocus();
   }
 
-  void _onComplete() {
+  Future<void> _onComplete() async {
     FocusScope.of(context).unfocus();
     final errors = {
       'email':
@@ -287,7 +287,22 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       visaLabel: _visaLabel!,
       phone: _phoneController.text.trim(),
     );
-    ref.read(accountProvider.notifier).completeSignup(profile);
+    // 서버 저장(applicant_profiles upsert)이 성공해야 완료 — 실패하면 화면에
+    // 남아서 재시도 가능(2026-09-24 서버 저장 전환).
+    try {
+      await ref.read(accountProvider.notifier).completeSignup(profile);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(stringsProvider).accountSaveFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
     // 완료 토스트 — ScaffoldMessenger는 앱 루트 소속이라 pop 후에도 이전 화면
     // 위에 정상 표시됨. 신규 가입은 항상, 수정 모드는 실제 변경이 있을 때만.
     // 이름은 저장 시 대문자로 통일되므로 기존값도 대문자로 맞춰 비교(대문자

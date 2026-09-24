@@ -62,7 +62,11 @@ class _ApplyMethodSheet extends ConsumerWidget {
     'other': Icons.more_horiz,
   };
 
-  void _selectMethod(BuildContext context, WidgetRef ref, String code) {
+  Future<void> _selectMethod(
+    BuildContext context,
+    WidgetRef ref,
+    String code,
+  ) async {
     analytics.log('apply_method_selected', {'job_id': job.id, 'method': code});
     Navigator.of(context).pop();
 
@@ -74,14 +78,19 @@ class _ApplyMethodSheet extends ConsumerWidget {
       return;
     }
 
-    if (ref.read(accountProvider).isLoggedIn) {
+    // 세션 복원이 안 끝났을 수 있어 서버 확인까지 대기.
+    final loggedIn = await ref.read(accountProvider.notifier).ensureLoaded();
+    if (loggedIn) {
       onProceedToSite();
       return;
     }
+    if (!context.mounted) return;
     showLoginSignupSheet(
       context,
       showSkipOption: true,
       onSkip: onProceedToSite,
+      // 로그인 성공(기존 회원) 시 지원 흐름을 끊지 않고 바로 사이트로 진행.
+      onLoggedIn: onProceedToSite,
     );
   }
 

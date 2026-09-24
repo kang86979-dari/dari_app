@@ -14,15 +14,19 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
+import '../../providers/account_provider.dart';
 
 /// 로그인·회원가입 팝업 (바텀시트).
 /// - showSkipOption=true: 지원하기 흐름에서 트리거된 경우 — "로그인 없이 계속하기" 노출.
 /// - showSkipOption=false: My Page 아이콘 / 설정 화면에서 트리거된 경우 — 스킵할 대상이 없어 미노출.
 /// - X로 닫으면 팝업만 닫힘(스킵과 별개 동작, 아무것도 진행 안 함).
+/// - onLoggedIn: 기존 회원 로그인 성공 시(시트 닫힌 뒤) 호출 — 마이프로필
+///   진입이면 마이페이지로 자동 이동하는 용도(2026-09-24).
 void showLoginSignupSheet(
   BuildContext context, {
   bool showSkipOption = false,
   VoidCallback? onSkip,
+  VoidCallback? onLoggedIn,
 }) {
   showModalBottomSheet(
     context: context,
@@ -31,16 +35,24 @@ void showLoginSignupSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
     ),
-    builder: (sheetContext) =>
-        _LoginSignupSheet(showSkipOption: showSkipOption, onSkip: onSkip),
+    builder: (sheetContext) => _LoginSignupSheet(
+      showSkipOption: showSkipOption,
+      onSkip: onSkip,
+      onLoggedIn: onLoggedIn,
+    ),
   );
 }
 
 class _LoginSignupSheet extends ConsumerStatefulWidget {
   final bool showSkipOption;
   final VoidCallback? onSkip;
+  final VoidCallback? onLoggedIn;
 
-  const _LoginSignupSheet({required this.showSkipOption, this.onSkip});
+  const _LoginSignupSheet({
+    required this.showSkipOption,
+    this.onSkip,
+    this.onLoggedIn,
+  });
 
   @override
   ConsumerState<_LoginSignupSheet> createState() => _LoginSignupSheetState();
@@ -60,9 +72,32 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
     super.dispose();
   }
 
+  /// 인증 성공 후 공통 처리: 서버에 프로필이 있으면 기존 회원 → 시트만 닫고
+  /// 로그인 토스트, 없으면 신규 → 추가정보 입력으로 이동(2026-09-24 서버 저장).
+  Future<void> _finishLogin(String provider, String email) async {
+    final s = ref.read(stringsProvider);
+    final hasProfile = await ref
+        .read(accountProvider.notifier)
+        .refreshFromServer();
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    if (hasProfile) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(s.accountLoginDoneToast),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+      widget.onLoggedIn?.call();
+    } else {
+      context.push(
+        '/account/additional-info',
+        extra: {'provider': provider, 'email': email},
+      );
+    }
+  }
+
   /// 구글: 실제 네이티브 인증 (google_sign_in → Supabase signInWithIdToken).
-  /// 프로필 서버 저장은 다음 단계 — 지금은 인증만 실연동(2026-09-24 사용자 확정).
-  /// 추후: 인증 → 서버 프로필 존재 확인 → 있으면 그냥 닫기(로그인), 없으면 추가정보 입력.
   Future<void> _onGoogleTap(BuildContext context, WidgetRef ref) async {
     final s = ref.read(stringsProvider);
     final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
@@ -91,13 +126,8 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
         idToken: idToken,
         accessToken: auth.accessToken,
       );
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
       // 이름은 여권·신분증과 다를 수 있어 자동 세팅 안 함, 사용자 직접 입력.
-      context.push(
-        '/account/additional-info',
-        extra: {'provider': 'google', 'email': account.email},
-      );
+      await _finishLogin('google', account.email);
     } catch (_) {
       if (context.mounted) _showLoginFailed(context, s.accountLoginFailed);
     }
@@ -130,12 +160,7 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
     if (!_awaitingOAuthReturn || data.event != AuthChangeEvent.signedIn) return;
     _awaitingOAuthReturn = false;
     if (!mounted) return;
-    final email = data.session?.user.email ?? '';
-    Navigator.of(context).pop();
-    context.push(
-      '/account/additional-info',
-      extra: {'provider': 'facebook', 'email': email},
-    );
+    _finishLogin('facebook', data.session?.user.email ?? '');
   }
 
   /// 애플: 네이티브 인증 (sign_in_with_apple → Supabase signInWithIdToken).
@@ -162,8 +187,6 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
         idToken: idToken,
         nonce: rawNonce,
       );
-      if (!context.mounted) return;
-      Navigator.of(context).pop();
       // 애플은 최초 1회만 credential.email을 주고 이후엔 토큰(세션)에만 있음.
       // "이메일 가리기"로 받은 릴레이 주소(@privaterelay.appleid.com)는 애플에
       // 등록된 도메인의 발신만 전달돼 구인처 연락용으로 못 씀 — 칸을 비워서
@@ -172,10 +195,7 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
       final usableEmail = email.endsWith('@privaterelay.appleid.com')
           ? ''
           : email;
-      context.push(
-        '/account/additional-info',
-        extra: {'provider': 'apple', 'email': usableEmail},
-      );
+      await _finishLogin('apple', usableEmail);
     } on SignInWithAppleAuthorizationException catch (e) {
       if (e.code == AuthorizationErrorCode.canceled) return; // 사용자 취소.
       if (context.mounted) _showLoginFailed(context, s.accountLoginFailed);

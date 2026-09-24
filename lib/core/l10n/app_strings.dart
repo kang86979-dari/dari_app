@@ -5211,6 +5211,12 @@ class AppStrings {
     'ko': '수정되었습니다',
     'en': 'Changes saved',
   }, 'Changes saved');
+  String get accountLoginDoneToast =>
+      _t({'ko': '로그인되었습니다', 'en': 'Logged in'}, 'Logged in');
+  String get accountSaveFailed => _t({
+    'ko': '저장에 실패했습니다. 다시 시도해주세요.',
+    'en': 'Failed to save. Please try again.',
+  }, 'Failed to save. Please try again.');
   String get accountLoginFailed => _t({
     'ko': '로그인에 실패했습니다. 다시 시도해주세요.',
     'en': 'Login failed. Please try again.',

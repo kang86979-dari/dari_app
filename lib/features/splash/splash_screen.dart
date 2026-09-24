@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
+import '../../providers/account_provider.dart';
 import '../onboarding/widgets/bridge_illustration.dart';
 import '../../data/services/app_open_ad_service.dart';
 import '../../data/services/analytics_service.dart';
@@ -22,6 +23,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // 계정 프로바이더를 미리 깨워 세션 복원(서버 프로필 로드)을 스플래시에서
+    // 시작 — 첫 마이페이지/지원 탭에서 기다리는 시간을 없앰(2026-09-24).
+    ref.read(accountProvider);
     _navigate();
   }
 

@@ -526,11 +526,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {
-                          if (ref.read(accountProvider).isLoggedIn) {
+                        onTap: () async {
+                          // 세션 복원이 안 끝났을 수 있어 서버 확인까지 대기.
+                          final loggedIn = await ref
+                              .read(accountProvider.notifier)
+                              .ensureLoaded();
+                          if (!context.mounted) return;
+                          if (loggedIn) {
                             context.push('/my-page');
                           } else {
-                            showLoginSignupSheet(context);
+                            // 로그인 성공(기존 회원) 시 마이페이지로 자동 이동.
+                            showLoginSignupSheet(
+                              context,
+                              onLoggedIn: () => context.push('/my-page'),
+                            );
                           }
                         },
                         child: const Padding(
