@@ -57,3 +57,4 @@ ios/Runner/GoogleService-Info.plist
 # Android release signing
 android/key.properties
 **/*.jks
+supabase/.temp/
