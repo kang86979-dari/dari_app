@@ -5211,6 +5211,10 @@ class AppStrings {
     'ko': '수정되었습니다',
     'en': 'Changes saved',
   }, 'Changes saved');
+  String get accountLoginFailed => _t({
+    'ko': '로그인에 실패했습니다. 다시 시도해주세요.',
+    'en': 'Login failed. Please try again.',
+  }, 'Login failed. Please try again.');
   String get accountKeypadDone => _t({'ko': '완료', 'en': 'Done'}, 'Done');
   String get accountKeypadNext => _t({'ko': '다음', 'en': 'Next'}, 'Next');
   String get accountNationalitySearchHint =>

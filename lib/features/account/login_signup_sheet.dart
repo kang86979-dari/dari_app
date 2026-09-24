@@ -1,7 +1,13 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 
@@ -26,31 +32,125 @@ void showLoginSignupSheet(
   );
 }
 
-class _LoginSignupSheet extends ConsumerWidget {
+class _LoginSignupSheet extends ConsumerStatefulWidget {
   final bool showSkipOption;
   final VoidCallback? onSkip;
 
   const _LoginSignupSheet({required this.showSkipOption, this.onSkip});
 
-  void _onSocialTap(BuildContext context, String provider) {
-    // [TEMP] SNS 연동 전 — 실제 인증 없이 바로 추가정보 입력으로 이동.
-    // 이메일은 실제 OAuth 연동 전까지 임시 stub 값(실제 값으로 자동 교체 예정).
-    // 이름은 여권·신분증과 다를 수 있어 자동 세팅 안 함, 사용자 직접 입력.
-    // 추후: 소셜 인증 → 프로필 완료 여부 확인 → 완료면 그냥 닫기, 미완료면 아래와 동일하게 이동.
+  @override
+  ConsumerState<_LoginSignupSheet> createState() => _LoginSignupSheetState();
+}
+
+class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
+  // 페이스북 웹 OAuth는 브라우저를 갔다가 dari:// 딥링크로 복귀하고, 그때
+  // supabase_flutter가 세션을 만들면서 signedIn 이벤트가 옴 — 시트는 그 이벤트를
+  // 받아 다음 화면으로 이어감. 구글(네이티브)도 signedIn을 발생시키므로
+  // 페이스북 탭으로 시작한 경우에만 반응하도록 플래그로 구분.
+  StreamSubscription<AuthState>? _authSub;
+  bool _awaitingOAuthReturn = false;
+
+  @override
+  void dispose() {
+    _authSub?.cancel();
+    super.dispose();
+  }
+
+  /// 구글: 실제 네이티브 인증 (google_sign_in → Supabase signInWithIdToken).
+  /// 프로필 서버 저장은 다음 단계 — 지금은 인증만 실연동(2026-09-24 사용자 확정).
+  /// 추후: 인증 → 서버 프로필 존재 확인 → 있으면 그냥 닫기(로그인), 없으면 추가정보 입력.
+  Future<void> _onGoogleTap(BuildContext context, WidgetRef ref) async {
+    final s = ref.read(stringsProvider);
+    final webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'];
+    final iosClientId = dotenv.env['GOOGLE_IOS_CLIENT_ID'];
+    // 콘솔 설정 전(클라이언트 ID 미발급)에는 실패 안내만.
+    if (webClientId == null || webClientId.isEmpty) {
+      _showLoginFailed(context, s.accountLoginFailed);
+      return;
+    }
+    try {
+      final googleSignIn = GoogleSignIn(
+        // iOS는 iOS용 클라이언트 ID 필요, Android는 SHA-1 등록만으로 동작.
+        clientId: Platform.isIOS ? iosClientId : null,
+        // Supabase가 검증할 idToken의 audience = Web 클라이언트 ID.
+        serverClientId: webClientId,
+      );
+      final account = await googleSignIn.signIn();
+      if (account == null) return; // 사용자가 계정 선택을 취소함 — 시트 유지.
+      final auth = await account.authentication;
+      final idToken = auth.idToken;
+      if (idToken == null) {
+        throw const AuthException('Google sign-in returned no idToken');
+      }
+      await Supabase.instance.client.auth.signInWithIdToken(
+        provider: OAuthProvider.google,
+        idToken: idToken,
+        accessToken: auth.accessToken,
+      );
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      // 이름은 여권·신분증과 다를 수 있어 자동 세팅 안 함, 사용자 직접 입력.
+      context.push(
+        '/account/additional-info',
+        extra: {'provider': 'google', 'email': account.email},
+      );
+    } catch (_) {
+      if (context.mounted) _showLoginFailed(context, s.accountLoginFailed);
+    }
+  }
+
+  /// 페이스북: Supabase 웹 OAuth. Supabase가 페이스북 네이티브 토큰
+  /// (signInWithIdToken)을 지원하지 않아 브라우저 왕복 방식이 유일한 경로.
+  /// 승인 후 dari:// 딥링크로 복귀하면 supabase_flutter가 세션을 만들고,
+  /// 위의 onAuthStateChange 리스너(_onAuthEvent)가 다음 화면으로 이어감.
+  Future<void> _onFacebookTap(BuildContext context) async {
+    final s = ref.read(stringsProvider);
+    try {
+      _awaitingOAuthReturn = true;
+      _authSub ??= Supabase.instance.client.auth.onAuthStateChange.listen(
+        _onAuthEvent,
+      );
+      final launched = await Supabase.instance.client.auth.signInWithOAuth(
+        OAuthProvider.facebook,
+        redirectTo: 'dari://auth-callback',
+        authScreenLaunchMode: LaunchMode.externalApplication,
+      );
+      if (!launched) throw const AuthException('OAuth launch failed');
+    } catch (_) {
+      _awaitingOAuthReturn = false;
+      if (context.mounted) _showLoginFailed(context, s.accountLoginFailed);
+    }
+  }
+
+  void _onAuthEvent(AuthState data) {
+    if (!_awaitingOAuthReturn || data.event != AuthChangeEvent.signedIn) return;
+    _awaitingOAuthReturn = false;
+    if (!mounted) return;
+    final email = data.session?.user.email ?? '';
     Navigator.of(context).pop();
-    final stubEmail = switch (provider) {
-      'google' => 'alex.kim@gmail.com',
-      'apple' => 'alex.kim@icloud.com',
-      _ => 'alex.kim@facebook.com',
-    };
     context.push(
       '/account/additional-info',
-      extra: {'provider': provider, 'email': stubEmail},
+      extra: {'provider': 'facebook', 'email': email},
+    );
+  }
+
+  void _showLoginFailed(BuildContext context, String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
+    );
+  }
+
+  void _onSocialTap(BuildContext context, String provider) {
+    // [TEMP] 애플은 아직 stub — 실제 인증 없이 추가정보 입력으로 이동.
+    Navigator.of(context).pop();
+    context.push(
+      '/account/additional-info',
+      extra: {'provider': provider, 'email': 'alex.kim@icloud.com'},
     );
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
     return SafeArea(
       child: Padding(
@@ -123,7 +223,7 @@ class _LoginSignupSheet extends ConsumerWidget {
                 width: 20,
                 height: 20,
               ),
-              onTap: () => _onSocialTap(context, 'google'),
+              onTap: () => _onGoogleTap(context, ref),
             ),
             const SizedBox(height: 12),
             _SocialButton(
@@ -157,15 +257,15 @@ class _LoginSignupSheet extends ConsumerWidget {
                   BlendMode.srcIn,
                 ),
               ),
-              onTap: () => _onSocialTap(context, 'facebook'),
+              onTap: () => _onFacebookTap(context),
             ),
-            if (showSkipOption) ...[
+            if (widget.showSkipOption) ...[
               const SizedBox(height: 18),
               Center(
                 child: GestureDetector(
                   onTap: () {
                     Navigator.of(context).pop();
-                    onSkip?.call();
+                    widget.onSkip?.call();
                   },
                   child: Text(
                     s.accountSkipLogin,

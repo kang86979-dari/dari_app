@@ -48,6 +48,9 @@ dependencies:
   # DB
   supabase_flutter: ^2.3.4
 
+  # SNS 로그인 (네이티브 구글 → Supabase signInWithIdToken)
+  google_sign_in: ^6.2.1
+
   # 광고
   google_mobile_ads: ^5.3.0
 

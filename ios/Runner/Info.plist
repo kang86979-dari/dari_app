@@ -55,7 +55,16 @@
 				<string>dari</string>
 			</array>
 		</dict>
+		<!-- 구글 로그인 복귀용 — iOS 클라이언트 ID의 reversed 형태 -->
+		<dict>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.29409319004-rme3q8e6uc49n8sisko6irvf8aqneufr</string>
+			</array>
+		</dict>
 	</array>
+	<key>GIDClientID</key>
+	<string>29409319004-rme3q8e6uc49n8sisko6irvf8aqneufr.apps.googleusercontent.com</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
