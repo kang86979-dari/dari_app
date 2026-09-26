@@ -2876,24 +2876,25 @@ class AppStrings {
   }, 'Yes');
 
   // ── 지원방법 (Apply methods) ──
+  // 지원방법 시트 하단 — "원문 보기"에서 "상세정보 보기" 개념으로 변경(2026-09-26).
   String get applyViewOriginal => _t({
-    'ko': '공고 원문 보기',
-    'en': 'View original posting',
-    'zh': '查看原文',
-    'hi': 'मूल पोस्टिंग देखें',
-    'ja': '求人原文を見る',
-    'th': 'ดูประกาศต้นฉบับ',
-    'vi': 'Xem tin gốc',
-    'bn': 'মূল পোস্ট দেখুন',
-    'ru': 'Смотреть оригинал объявления',
-    'id': 'Lihat lowongan asli',
-    'ne': 'मूल पोस्ट हेर्नुहोस्',
-    'km': 'មើលការផ្សាយដើម',
-    'my': 'မူရင်းကြော်ငြာကြည့်ရန်',
-    'si': 'මුල් තැපැල් බලන්න',
-    'uz': "Asl e'lonni ko'rish",
-    'mn': 'Эх зарыг харах',
-  }, 'View original posting');
+    'ko': '상세정보 보기',
+    'en': 'View details',
+    'zh': '查看详情',
+    'hi': 'विवरण देखें',
+    'ja': '詳細情報を見る',
+    'th': 'ดูรายละเอียด',
+    'vi': 'Xem chi tiết',
+    'bn': 'বিস্তারিত দেখুন',
+    'ru': 'Смотреть подробности',
+    'id': 'Lihat detail',
+    'ne': 'विवरण हेर्नुहोस्',
+    'km': 'មើលព័ត៌មានលម្អិត',
+    'my': 'အသေးစိတ်ကြည့်ရန်',
+    'si': 'විස්තර බලන්න',
+    'uz': "Batafsil ma'lumotni ko'rish",
+    'mn': 'Дэлгэрэнгүй харах',
+  }, 'View details');
 
   String get infoApplyMethod => _t({
     'ko': '지원방법',
@@ -2915,7 +2916,7 @@ class AppStrings {
   }, 'How to apply');
 
   String get applyMethodOnline => _t({
-    'ko': '온라인 지원',
+    'ko': '온라인',
     'en': 'Online',
     'zh': '在线申请',
     'hi': 'ऑनलाइन',
@@ -2934,7 +2935,7 @@ class AppStrings {
   }, 'Online');
 
   String get applyMethodHomepage => _t({
-    'ko': '홈페이지 지원',
+    'ko': '홈페이지',
     'en': 'Homepage',
     'zh': '官网申请',
     'hi': 'वेबसाइट',
@@ -2953,7 +2954,7 @@ class AppStrings {
   }, 'Homepage');
 
   String get applyMethodEmail => _t({
-    'ko': '이메일 지원',
+    'ko': '이메일',
     'en': 'Email',
     'zh': '电子邮件',
     'hi': 'ईमेल',
@@ -2972,7 +2973,7 @@ class AppStrings {
   }, 'Email');
 
   String get applyMethodPhone => _t({
-    'ko': '전화 지원',
+    'ko': '전화',
     'en': 'Phone',
     'zh': '电话申请',
     'hi': 'फ़ोन',
@@ -2991,7 +2992,7 @@ class AppStrings {
   }, 'Phone');
 
   String get applyMethodSms => _t({
-    'ko': '문자 지원',
+    'ko': '문자',
     'en': 'Text (SMS)',
     'zh': '短信申请',
     'hi': 'एसएमएस',
@@ -3029,7 +3030,7 @@ class AppStrings {
   }, 'Easy apply');
 
   String get applyMethodChat => _t({
-    'ko': '채팅 문의',
+    'ko': '채팅',
     'en': 'Chat',
     'zh': '聊天咨询',
     'hi': 'चैट',
@@ -3048,7 +3049,7 @@ class AppStrings {
   }, 'Chat');
 
   String get applyMethodVisit => _t({
-    'ko': '방문 접수',
+    'ko': '방문',
     'en': 'Visit',
     'zh': '现场应聘',
     'hi': 'व्यक्तिगत रूप से',
@@ -5211,6 +5212,14 @@ class AppStrings {
     'ko': '수정되었습니다',
     'en': 'Changes saved',
   }, 'Changes saved');
+  String get accountWithdrawDoneToast => _t({
+    'ko': '탈퇴가 완료되었습니다',
+    'en': 'Your account has been deleted',
+  }, 'Your account has been deleted');
+  String get accountWithdrawFailed => _t({
+    'ko': '탈퇴 처리에 실패했습니다. 다시 시도해주세요.',
+    'en': 'Failed to delete account. Please try again.',
+  }, 'Failed to delete account. Please try again.');
   String get accountLoginDoneToast =>
       _t({'ko': '로그인되었습니다', 'en': 'Logged in'}, 'Logged in');
   String get accountSaveFailed => _t({
@@ -5334,18 +5343,54 @@ Until the application is completed
 You may refuse to consent to this third-party sharing. Refusing means applying manually without autofill.''',
   }, '');
   String get myPageTitle => _t({'ko': '마이페이지', 'en': 'My Page'}, 'My Page');
+  String get applyHistoryAppliedDate =>
+      _t({'ko': '지원일', 'en': 'Applied'}, 'Applied');
+  // 공고 메모 (즐겨찾기·지원 내역 공용, 2026-09-26)
+  String get jobMemoTitle => _t({'ko': '메모', 'en': 'Memo'}, 'Memo');
+  String get jobMemoAdd => _t({'ko': '+ 메모 남기기', 'en': '+ Add memo'}, '+ Add memo');
+  String get jobMemoPlaceholder => _t({
+    'ko': '이 공고에 대해 기억할 것을 적어보세요',
+    'en': 'Write anything to remember about this job',
+  }, 'Write anything to remember about this job');
+  String get jobMemoSave => _t({'ko': '저장', 'en': 'Save'}, 'Save');
+  String get myPageMemos => _t({'ko': '내 메모', 'en': 'My Memos'}, 'My Memos');
+  String get myMemosEmpty => _t({
+    'ko': '아직 메모한 공고가 없어요',
+    'en': "You haven't added any memos yet",
+  }, "You haven't added any memos yet");
+  String get myMemosEmptyDesc => _t({
+    'ko': '공고 상세에서 메모를 남기면\n여기에 모여요',
+    'en': 'Memos you write on job postings\nwill be collected here',
+  }, 'Memos you write on job postings\nwill be collected here');
+  String get applyHistoryEmptyDesc => _t({
+    'ko': '마음에 드는 공고에 지원하면\n여기서 한눈에 관리할 수 있어요',
+    'en': 'Apply to jobs you like and\nmanage them all in one place',
+  }, 'Apply to jobs you like and\nmanage them all in one place');
+  String get emptyBrowseJobs =>
+      _t({'ko': '공고 보러 가기', 'en': 'Browse jobs'}, 'Browse jobs');
+  // 상세 화면의 infoApplyMethod("지원방법/How to apply"=지원 안내)와 다른 맥락 —
+  // 지원 내역에서는 "내가 지원했던 방법"이라 별도 문자열(2026-09-26).
+  String get applyHistoryMethodLabel =>
+      _t({'ko': '지원한 방법', 'en': 'Applied via'}, 'Applied via');
+  String get sortOldest => _t({'ko': '오래된순', 'en': 'Oldest'}, 'Oldest');
+  String get applyHistoryEmpty => _t({
+    'ko': '아직 지원한 공고가 없어요',
+    'en': "You haven't applied to any jobs yet",
+  }, "You haven't applied to any jobs yet");
+  // 메뉴 4종 문구 정리(2026-09-26): 조회(지원 내역)와 설정(문자·이메일 관리)이
+  // 구분되게. 문자·이메일은 "보낸 기록"이 아니라 지원 시 쓸 내용 관리 기능.
   String get myPageApplyHistory =>
-      _t({'ko': '지원이력', 'en': 'Application history'}, 'Application history');
+      _t({'ko': '지원 내역', 'en': 'Applications'}, 'Applications');
   String get myPageResume =>
-      _t({'ko': '이력서 관리', 'en': 'Manage resume'}, 'Manage resume');
+      _t({'ko': '내 이력서', 'en': 'My Resume'}, 'My Resume');
   String get myPageSmsManage => _t({
     'ko': '지원 문자 관리',
-    'en': 'Sent applications (SMS)',
-  }, 'Sent applications (SMS)');
+    'en': 'Manage application SMS',
+  }, 'Manage application SMS');
   String get myPageEmailManage => _t({
     'ko': '지원 이메일 관리',
-    'en': 'Sent applications (Email)',
-  }, 'Sent applications (Email)');
+    'en': 'Manage application email',
+  }, 'Manage application email');
   String get myPageLogout => _t({'ko': '로그아웃', 'en': 'Log out'}, 'Log out');
   String get myPageWithdraw =>
       _t({'ko': '회원탈퇴', 'en': 'Delete account'}, 'Delete account');

@@ -11,6 +11,8 @@ import '../../data/models/job.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
+import '../../providers/applied_job_provider.dart';
+import '../../providers/job_note_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/test_mode_provider.dart';
@@ -542,9 +544,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             );
                           }
                         },
-                        child: const Padding(
-                          padding: EdgeInsets.only(right: 14),
-                          child: Icon(Icons.person_outline, size: 24, color: AppColors.gray600),
+                        // 마이페이지 아이콘 — 남색 원으로 강조(2026-09-26 사용자
+                        // 확정): 비로그인=흰 사람, 로그인=이름 이니셜(마이페이지
+                        // 아바타와 동일 톤).
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                            width: 28,
+                            height: 28,
+                            decoration: const BoxDecoration(
+                              color: AppColors.navy,
+                              shape: BoxShape.circle,
+                            ),
+                            alignment: Alignment.center,
+                            child: ref.watch(accountProvider).profile == null
+                                ? const Icon(
+                                    Icons.person,
+                                    size: 17,
+                                    color: Colors.white,
+                                  )
+                                : const Text(
+                                    'My',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w800,
+                                      fontSize: 11,
+                                      height: 1,
+                                    ),
+                                  ),
+                          ),
+                              // 미확인 지원 기록 N 뱃지 — 지원내역 확인 시 소멸.
+                              if (ref.watch(unseenAppliedCountProvider) > 0)
+                                Positioned(
+                                  top: -3,
+                                  right: -3,
+                                  child: Container(
+                                    width: 11,
+                                    height: 11,
+                                    decoration: BoxDecoration(
+                                      color: AppColors.carrot,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                       GestureDetector(
@@ -912,6 +963,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 salaryFallback: ref.read(stringsProvider).salaryByCompany,
                 strings: ref.read(stringsProvider),
                 isFavorite: ref.watch(isFavoriteProvider(job.id)),
+                memo: ref.watch(jobNotesProvider).valueOrNull?[job.id],
                 onTap: () {
                   analytics.jobCardTap(job.id, jobIndex);
                   context.push('/job/${job.id}');

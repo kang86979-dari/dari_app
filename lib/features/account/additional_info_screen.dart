@@ -10,6 +10,7 @@ import '../../providers/account_provider.dart';
 import 'legal_document_screen.dart';
 import 'nationality_select_screen.dart';
 import 'visa_type_select_screen.dart';
+import '../home/widgets/ad_banner.dart';
 import 'widgets/account_app_bar.dart';
 
 final _emailRegex = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
@@ -303,6 +304,7 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       return;
     }
     if (!mounted) return;
+    if (!_isEditMode) HapticFeedback.mediumImpact(); // 가입 완료(2026-09-26)
     // 완료 토스트 — ScaffoldMessenger는 앱 루트 소속이라 pop 후에도 이전 화면
     // 위에 정상 표시됨. 신규 가입은 항상, 수정 모드는 실제 변경이 있을 때만.
     // 이름은 저장 시 대문자로 통일되므로 기존값도 대문자로 맞춰 비교(대문자
@@ -420,6 +422,12 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                   children: [
+                    // 개인정보 수정 모드 상단 배너 광고(2026-09-26 사용자 확정).
+                    // 신규 가입 흐름에는 광고를 넣지 않음(온보딩 무광고 정책).
+                    if (_isEditMode) ...[
+                      const AdBanner(),
+                      const SizedBox(height: 20),
+                    ],
                     if (!_isEditMode) ...[
                       Text(
                         s.accountSignupBigTitle,

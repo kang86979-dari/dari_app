@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../core/constants/apply_method_style.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/sheet_handle.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../data/models/job.dart';
 import '../../data/services/analytics_service.dart';
 import '../../providers/account_provider.dart';
+import '../../providers/language_provider.dart';
+import '../../providers/applied_job_provider.dart';
 import '../account/login_signup_sheet.dart';
 
 /// 지원방법 선택 바텀시트 (2026-09-14 UI A안 + 2026-09-20 다리 로그인 연결).
-/// - 전화: 로그인 불필요, 광고 없이 즉시 발신.
+/// - 전화: 로그인 필수(2026-09-26 변경, 지원 기록 관리 목적), 광고 없이 발신.
 /// - 그 외 방법: 다리 계정 로그인 상태면 바로 진행, 아니면 로그인/가입 팝업(스킵 가능) 노출 후 진행.
 /// - 진행 = 기존 지원 이동 로직(광고+URL, [onProceedToSite]) 그대로 재사용 — 사이트 내 해당 방법 자동클릭까지는
 ///   아직 구현 범위 밖(각 사이트 JS 주입 자동화는 별도 작업, docs/apply_signup_scenario_2026-09-19.md 참고).
@@ -50,18 +54,6 @@ class _ApplyMethodSheet extends ConsumerWidget {
     required this.onProceedToSite,
   });
 
-  static const _icons = {
-    'online': Icons.computer_outlined,
-    'homepage': Icons.language,
-    'email': Icons.email_outlined,
-    'phone': Icons.phone_outlined,
-    'sms': Icons.sms_outlined,
-    'simple': Icons.flash_on,
-    'chat': Icons.chat_bubble_outline,
-    'visit': Icons.place_outlined,
-    'other': Icons.more_horiz,
-  };
-
   Future<void> _selectMethod(
     BuildContext context,
     WidgetRef ref,
@@ -72,9 +64,19 @@ class _ApplyMethodSheet extends ConsumerWidget {
 
     if (code == 'phone') {
       final phone = job.applyContact?['phone'] as String?;
-      if (phone != null && phone.isNotEmpty) {
-        launchUrl(Uri.parse('tel:$phone'));
+      if (phone == null || phone.isEmpty) return;
+      // 전화도 로그인 필수(2026-09-26 사용자 확정) — 지원 기록 관리를 위해.
+      // 비로그인이면 로그인/가입 유도(스킵 없음), 완료 후 자동 발신+기록.
+      final loggedIn = await ref.read(accountProvider.notifier).ensureLoaded();
+      if (!loggedIn) {
+        if (!context.mounted) return;
+        showLoginSignupSheet(
+          context,
+          onLoggedIn: () => _dialAndRecord(ref, phone),
+        );
+        return;
       }
+      await _dialAndRecord(ref, phone);
       return;
     }
 
@@ -91,6 +93,22 @@ class _ApplyMethodSheet extends ConsumerWidget {
       onSkip: onProceedToSite,
       // 로그인 성공(기존 회원) 시 지원 흐름을 끊지 않고 바로 사이트로 진행.
       onLoggedIn: onProceedToSite,
+    );
+  }
+
+  /// 전화 발신 + 지원 기록 — 전화 앱이 실제로 열렸을 때만 기록
+  /// (다이얼러 없는 기기 오기록 방지). 통화 여부까지는 감지 불가(B안).
+  Future<void> _dialAndRecord(WidgetRef ref, String phone) async {
+    final opened = await launchUrl(Uri.parse('tel:$phone'));
+    if (!opened) return;
+    final langCode = ref.read(languageProvider);
+    ref.read(appliedJobActionsProvider).record(
+      jobId: job.id,
+      method: 'phone',
+      title: job.getTitle(langCode),
+      company: job.getDisplayCompany(langCode),
+      siteName: job.siteName ?? '',
+      location: job.getShortLocation(langCode),
     );
   }
 
@@ -113,17 +131,8 @@ class _ApplyMethodSheet extends ConsumerWidget {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Center(
-              child: Container(
-                width: 36,
-                height: 4,
-                margin: const EdgeInsets.only(bottom: 18),
-                decoration: BoxDecoration(
-                  color: AppColors.gray100,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
+            const SheetHandle(),
+            const SizedBox(height: 12),
             Text(
               strings.infoApplyMethod,
               style: const TextStyle(
@@ -135,38 +144,49 @@ class _ApplyMethodSheet extends ConsumerWidget {
             const SizedBox(height: 12),
             for (final code in methods)
               _MethodTile(
-                icon: _icons[code] ?? Icons.more_horiz,
+                style: ApplyMethodStyle.of(code),
                 label: strings.applyMethodLabel(code)!,
                 subtitle: code == 'phone'
                     ? phone
                     : strings.applyMethodDesc(code),
                 onTap: () => _selectMethod(context, ref, code),
               ),
-            const SizedBox(height: 8),
-            const Divider(height: 1, color: AppColors.gray100),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
+            // 회색 텍스트 링크라 잘 안 보인다는 피드백 → 보조 버튼 형태로 톤업
+            // (연회색 박스+가운데 정렬, 2026-09-26).
             GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: () {
                 Navigator.of(context).pop();
                 onProceedToSite();
               },
-              child: Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                decoration: BoxDecoration(
+                  color: AppColors.gray50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.gray100),
+                ),
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     const Icon(
                       Icons.open_in_new,
                       size: 16,
-                      color: AppColors.gray400,
+                      color: AppColors.gray600,
                     ),
                     const SizedBox(width: 8),
-                    Text(
-                      '${strings.applyViewOriginal}${job.siteName != null ? ' · ${job.siteName}' : ''}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.gray400,
+                    Flexible(
+                      child: Text(
+                        '${strings.applyViewOriginal}${job.siteName != null ? ' · ${job.siteName}' : ''}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.gray600,
+                        ),
                       ),
                     ),
                   ],
@@ -181,13 +201,13 @@ class _ApplyMethodSheet extends ConsumerWidget {
 }
 
 class _MethodTile extends StatelessWidget {
-  final IconData icon;
+  final ApplyMethodStyle style;
   final String label;
   final String? subtitle;
   final VoidCallback onTap;
 
   const _MethodTile({
-    required this.icon,
+    required this.style,
     required this.label,
     required this.onTap,
     this.subtitle,
@@ -202,15 +222,16 @@ class _MethodTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 12),
         child: Row(
           children: [
+            // 방법별 색 원형 아이콘 — 공용 정의(ApplyMethodStyle)로 전 화면 통일.
             Container(
               width: 36,
               height: 36,
-              decoration: const BoxDecoration(
-                color: AppColors.carrotLight,
+              decoration: BoxDecoration(
+                color: style.bg,
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
-              child: Icon(icon, size: 18, color: AppColors.carrot),
+              child: Icon(style.icon, size: 18, color: style.fg),
             ),
             const SizedBox(width: 12),
             Expanded(

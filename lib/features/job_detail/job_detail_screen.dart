@@ -12,6 +12,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../apply/apply_webview_screen.dart';
 import '../apply/site_lang.dart';
 import 'apply_method_sheet.dart';
+import '../../core/constants/apply_method_style.dart';
+import '../account/widgets/job_memo_sheet.dart';
+import '../account/login_signup_sheet.dart';
+import '../../providers/account_provider.dart';
+import '../../providers/job_note_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -621,9 +626,18 @@ class _DetailBodyState extends State<_DetailBody> {
                   child: _DetailBannerAd(),
                 ),
 
-                // 상세 내용 영역 제거 — 원문은 출처 사이트에서 확인(불안정한 실시간 번역 의존 제거)
+                // 공고 메모 — 광고 영역 바로 아래(사용자 확정 위치). 서버(job_notes)
+                // 저장, 비로그인은 탭 시 로그인 유도(상세에서는 항상 노출).
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+                  child: _JobMemoSection(
+                    strings: s,
+                    jobId: job.id,
+                    jobTitle: job.getTitle(langCode),
+                  ),
+                ),
 
-                const Divider(height: 1, color: Color(0xFFF5F5F5)),
+                // 상세 내용 영역 제거 — 원문은 출처 사이트에서 확인(불안정한 실시간 번역 의존 제거)
 
                 // 면책고지
                 SizedBox(
@@ -869,19 +883,6 @@ class _ApplyMethodsRow extends StatelessWidget {
     required this.strings,
   });
 
-  // 코드 → 아이콘. 라벨은 app_strings(다국어)에서 가져옴.
-  static const Map<String, IconData> _icons = {
-    'online': Icons.computer_outlined,
-    'homepage': Icons.language,
-    'email': Icons.email_outlined,
-    'phone': Icons.phone_outlined,
-    'sms': Icons.sms_outlined,
-    'simple': Icons.flash_on,
-    'chat': Icons.chat_bubble_outline,
-    'visit': Icons.place_outlined,
-    'other': Icons.more_horiz,
-  };
-
   @override
   Widget build(BuildContext context) {
     // 서버가 새 코드를 추가해도 정보 공백이 없도록, 모르는 코드는 "기타" 칩으로 표시.
@@ -934,27 +935,178 @@ class _ApplyMethodsRow extends StatelessWidget {
   }
 
   Widget _chip(String code) {
-    final icon = _icons[code] ?? Icons.more_horiz;
+    // 아이콘·색은 공용 정의(ApplyMethodStyle) — 방법별 색으로 전 화면 통일(2026-09-26).
+    final style = ApplyMethodStyle.of(code);
     // 모르는 코드는 "기타" 라벨로 폴백 (16개 언어)
     final text = strings.applyMethodLabel(code) ?? strings.applyMethodOther;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.carrotLight, // 연한 주황 배경 — 회색 정보 속에서 눈에 띄게
+        color: style.bg,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: AppColors.carrot),
+          Icon(style.icon, size: 13, color: style.fg),
           const SizedBox(width: 4),
           Text(text,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.carrot)),
+                  color: style.fg)),
         ],
       ),
+    );
+  }
+}
+
+/// 공고 메모 섹션 — 서버(job_notes) 연동(2026-09-26).
+/// 상세에서는 로그인 여부와 무관하게 항상 노출, 비로그인 탭 시 로그인 유도.
+/// 저장 시 즐겨찾기 자동 추가(JobNoteActions), 카드 미리보기와 데이터 공유.
+class _JobMemoSection extends ConsumerWidget {
+  final AppStrings strings;
+  final String jobId;
+  final String jobTitle;
+
+  const _JobMemoSection({
+    required this.strings,
+    required this.jobId,
+    required this.jobTitle,
+  });
+
+  Future<void> _edit(
+    BuildContext context,
+    WidgetRef ref, {
+    bool resumedAfterLogin = false,
+  }) async {
+    // 메모는 로그인 전용 — 비로그인이면 로그인/가입 유도 후 이어서 진행.
+    final loggedIn = await ref.read(accountProvider.notifier).ensureLoaded();
+    if (!context.mounted) return;
+    if (!loggedIn) {
+      showLoginSignupSheet(
+        context,
+        onLoggedIn: () => _edit(context, ref, resumedAfterLogin: true),
+      );
+      return;
+    }
+    // 탭 시점이 아니라 로그인 확인 후 서버에서 최신 메모를 읽음.
+    // 조회 실패(오프라인 등) 시 무반응으로 죽지 않게 안내(2026-09-26 검토).
+    final Map<String, String> notes;
+    try {
+      notes = await ref.read(jobNotesProvider.future);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.accountSaveFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    if (!context.mounted) return;
+    final current = notes[jobId];
+    // 로그인 복귀 케이스: 기존 메모가 있으면 팝업 없이 노랑 박스로 보여주기만
+    // (없을 때만 작성 팝업, 2026-09-26 사용자 확정).
+    if (resumedAfterLogin && (current ?? '').isNotEmpty) return;
+    final saved = await showJobMemoSheet(
+      context,
+      strings: strings,
+      jobTitle: jobTitle,
+      initialMemo: current,
+    );
+    if (saved == null) return;
+    try {
+      await ref.read(jobNoteActionsProvider).save(jobId, saved);
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(strings.accountSaveFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final memo = ref.watch(jobNotesProvider).valueOrNull?[jobId];
+    final hasMemo = (memo ?? '').isNotEmpty;
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => _edit(context, ref),
+      child: hasMemo
+          ? Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8E1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(
+                        Icons.edit_note,
+                        size: 16,
+                        color: Color(0xFF9A7B24),
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        strings.jobMemoTitle,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF9A7B24),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    memo!,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      height: 1.5,
+                      color: Color(0xFF6D5B1F),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              decoration: BoxDecoration(
+                border: Border.all(color: const Color(0xFFEADFB8)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.edit_note,
+                    size: 16,
+                    color: Color(0xFFB1953B),
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    strings.jobMemoAdd,
+                    style: const TextStyle(
+                      fontSize: 12.5,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFB1953B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
     );
   }
 }

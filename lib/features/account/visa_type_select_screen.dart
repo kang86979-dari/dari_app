@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/sheet_handle.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
@@ -108,15 +109,8 @@ class _VisaTypeSheetState extends ConsumerState<_VisaTypeSheet> {
               padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
               child: Column(
                 children: [
-                  Container(
-                    width: 36,
-                    height: 4,
-                    margin: const EdgeInsets.only(bottom: 16),
-                    decoration: BoxDecoration(
-                      color: AppColors.gray100,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+                  const SheetHandle(),
+                  const SizedBox(height: 10),
                   Text(
                     s.accountFieldVisaType,
                     style: const TextStyle(

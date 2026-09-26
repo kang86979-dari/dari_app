@@ -86,15 +86,19 @@ class AccountNotifier extends StateNotifier<AccountState> {
     state = const AccountState();
   }
 
-  /// 회원탈퇴: 서버 프로필 삭제 + 세션 정리.
-  /// TODO: auth.users 실제 삭제는 service role이 필요해 Edge Function으로 —
-  /// 지금은 프로필만 지워져 재로그인 시 신규 가입 흐름을 탐.
+  /// 회원탈퇴: delete-account Edge Function이 auth 계정을 실제 삭제
+  /// (applicant_profiles는 FK cascade로 함께 삭제). 실패 시 throw —
+  /// 세션·프로필을 남겨둬야 사용자가 재시도할 수 있으므로 로컬 정리 안 함.
   Future<void> withdraw() async {
-    final user = _db.auth.currentUser;
-    if (user != null) {
+    if (_db.auth.currentUser != null) {
       try {
-        await _db.from('applicant_profiles').delete().eq('user_id', user.id);
-      } catch (_) {}
+        await _db.functions.invoke('delete-account');
+      } on FunctionException catch (e) {
+        // 401 = 토큰의 계정이 서버에 없음 — 이전 시도에서 삭제는 성공했는데
+        // 응답이 유실된 경우. 실패 처리하면 영원히 재시도 루프에 갇히므로
+        // 성공으로 간주하고 세션 정리 진행(2026-09-26 검토 발견).
+        if (e.status != 401) rethrow;
+      }
     }
     await _signOutAuth();
     if (mounted) state = const AccountState();

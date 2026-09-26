@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
+import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
+import '../../data/models/applicant_profile.dart';
 import '../../providers/language_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_settings/app_settings.dart';
@@ -202,12 +204,131 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     );
   }
 
+  String _providerLabel(String provider) {
+    if (provider.isEmpty) return provider;
+    return provider[0].toUpperCase() + provider.substring(1);
+  }
+
+  // 로그아웃·회원탈퇴 — 마이페이지에서 설정 화면 하단으로 이동(2026-09-26).
+  Future<void> _confirmLogout(
+    BuildContext context,
+    AppStrings s,
+    ApplicantProfile profile,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              _providerLabel(profile.snsProvider),
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.w800,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              profile.email,
+              style: const TextStyle(fontSize: 13, color: AppColors.gray500),
+            ),
+          ],
+        ),
+        content: Text(
+          s.myPageLogoutConfirmDesc,
+          style: const TextStyle(fontSize: 13.5, color: AppColors.gray600),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              s.myPageLogout,
+              style: const TextStyle(
+                color: AppColors.carrot,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      ref.read(accountProvider.notifier).logout();
+    }
+  }
+
+  Future<void> _confirmWithdraw(BuildContext context, AppStrings s) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          s.myPageWithdrawConfirmTitle,
+          style: const TextStyle(fontWeight: FontWeight.w800),
+        ),
+        content: Text(
+          s.myPageWithdrawConfirmDesc,
+          style: const TextStyle(fontSize: 13.5, color: AppColors.gray600),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(s.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(
+              s.myPageWithdraw,
+              style: const TextStyle(
+                color: AppColors.urgent,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) {
+      // 서버(auth 계정) 삭제가 성공해야 완료 — 실패 시 로그인 유지, 재시도 가능.
+      try {
+        await ref.read(accountProvider.notifier).withdraw();
+      } catch (_) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(s.accountWithdrawFailed),
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+        return;
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s.accountWithdrawDoneToast),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
     final langCode = ref.watch(languageProvider);
     final testMode = ref.watch(testModeProvider);
-    final isLoggedIn = ref.watch(accountProvider).isLoggedIn;
+    final profile = ref.watch(accountProvider).profile;
+    final isLoggedIn = profile != null;
 
     return Scaffold(
       body: SafeArea(
@@ -358,6 +479,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
                 ],
               ),
             ),
+            // 로그아웃·회원탈퇴 — 스크롤 밖, 화면 가장 하단 왼쪽 고정.
+            // 마이페이지에서 이동해옴(2026-09-26 사용자 지시), 로그인 시에만 노출.
+            if (isLoggedIn)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _confirmLogout(context, s, profile),
+                      child: Text(
+                        s.myPageLogout,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.gray500,
+                        ),
+                      ),
+                    ),
+                    Container(
+                      width: 1,
+                      height: 11,
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
+                      color: AppColors.gray200,
+                    ),
+                    GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => _confirmWithdraw(context, s),
+                      child: Text(
+                        s.myPageWithdraw,
+                        style: const TextStyle(
+                          fontSize: 11.5,
+                          color: AppColors.gray400,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
           ],
         ),
       ),

@@ -1,12 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
+import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
 import '../../providers/favorite_provider.dart';
+import '../../providers/job_note_provider.dart';
+import '../account/widgets/job_memo_sheet.dart';
+import '../account/login_signup_sheet.dart';
+import '../../providers/account_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
@@ -16,6 +22,7 @@ import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
 import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
+import '../../core/widgets/sort_sheet.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
 
@@ -29,6 +36,61 @@ class FavoritesScreen extends ConsumerStatefulWidget {
 }
 
 class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
+  /// 카드에서 메모 작성/수정 — 비로그인도 진입점은 항상 보이고, 탭 시 로그인
+  /// 유도 후 이어서 작성(상세 화면과 동일 패턴, 2026-09-26).
+  Future<void> _editMemo(Job job, {bool resumedAfterLogin = false}) async {
+    final loggedIn = await ref.read(accountProvider.notifier).ensureLoaded();
+    if (!mounted) return;
+    if (!loggedIn) {
+      showLoginSignupSheet(
+        context,
+        onLoggedIn: () => _editMemo(job, resumedAfterLogin: true),
+      );
+      return;
+    }
+    final s = ref.read(stringsProvider);
+    final langCode = ref.read(languageProvider);
+    // 로그인 직후엔 프로바이더가 재로드 중일 수 있어 완료를 기다려 최신값 사용.
+    // 조회 실패 시 무반응 방지(2026-09-26 검토).
+    final Map<String, String> notes;
+    try {
+      notes = await ref.read(jobNotesProvider.future);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s.accountSaveFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    final current = notes[job.id];
+    // 로그인 복귀 시 기존 메모가 있으면 팝업 없이 카드의 노랑 바로 표시만.
+    if (resumedAfterLogin && (current ?? '').isNotEmpty) return;
+    final saved = await showJobMemoSheet(
+      context,
+      strings: s,
+      jobTitle: job.getTitle(langCode),
+      initialMemo: current,
+    );
+    if (saved == null) return;
+    try {
+      await ref.read(jobNoteActionsProvider).save(job.id, saved);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(s.accountSaveFailed),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   FavoriteSortType _sortType = FavoriteSortType.added;
   bool _editMode = false;
   final Set<String> _selectedForDelete = {};
@@ -251,11 +313,14 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               final isChecked =
                                   _selectedForDelete.contains(job.id);
                               return GestureDetector(
-                                onTap: () => setState(() {
-                                  isChecked
-                                      ? _selectedForDelete.remove(job.id)
-                                      : _selectedForDelete.add(job.id);
-                                }),
+                                onTap: () {
+                                  HapticFeedback.selectionClick();
+                                  setState(() {
+                                    isChecked
+                                        ? _selectedForDelete.remove(job.id)
+                                        : _selectedForDelete.add(job.id);
+                                  });
+                                },
                                 child: Container(
                                   color: isChecked
                                       ? AppColors.carrotLight
@@ -284,6 +349,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                             salaryFallback: s.salaryByCompany,
                                             strings: s,
                                             expiredLabel: s.expired,
+                                            memo: ref
+                                                .watch(jobNotesProvider)
+                                                .valueOrNull?[job.id],
                                             onTap: () {},
                                           ),
                                         ),
@@ -301,6 +369,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               strings: s,
                               expiredLabel: s.expired,
                               isFavorite: true,
+                              memo: ref.watch(jobNotesProvider).valueOrNull?[job.id],
+                              memoAddLabel: s.jobMemoAdd,
+                              onMemoTap: () => _editMemo(job),
                               onTap: () => context.push('/job/${job.id}'),
                               onFavoriteToggle: () {
                                 analytics.favoriteRemoved(job.id);
@@ -327,6 +398,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                   width: double.infinity,
                   child: GestureDetector(
                     onTap: () {
+                      HapticFeedback.mediumImpact(); // 삭제 실행
                       analytics.favoritesBulkDelete(_selectedForDelete.length);
                       ref
                           .read(favoriteProvider.notifier)
@@ -339,7 +411,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 15),
                       decoration: BoxDecoration(
-                        color: AppColors.urgent,
+                        // 시그니처 색으로 변경(2026-09-26 사용자 확정).
+                        color: AppColors.carrot,
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Text(
@@ -367,87 +440,23 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
     return 1 + jobCount + adCount;
   }
 
-  void _showSortSheet(BuildContext context, dynamic s) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            decoration: BoxDecoration(
-              color: AppColors.gray100,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: Text(s.sortBy,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black)),
-          ),
-          _SortOption(
-            label: s.sortByDeadline,
-            isSelected: _sortType == FavoriteSortType.deadline,
-            onTap: () {
-              _setSortType(FavoriteSortType.deadline);
-              Navigator.pop(context);
-            },
-          ),
-          _SortOption(
-            label: s.sortByAdded,
-            isSelected: _sortType == FavoriteSortType.added,
-            onTap: () {
-              _setSortType(FavoriteSortType.added);
-              Navigator.pop(context);
-            },
-          ),
-          SizedBox(height: 20 + MediaQuery.of(context).padding.bottom),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortOption extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SortOption({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        color: isSelected ? AppColors.carrotLight : Colors.transparent,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.carrotDark : AppColors.black,
-                )),
-            if (isSelected)
-              const Icon(Icons.check, size: 18, color: AppColors.carrot),
-          ],
+  void _showSortSheet(BuildContext context, AppStrings s) {
+    // 공용 정렬 시트(핸들+X 포함) — 지원 내역·내 메모와 동일(2026-09-26).
+    showSortOptionsSheet(
+      context,
+      title: s.sortBy,
+      options: [
+        SortSheetOption(
+          label: s.sortByDeadline,
+          selected: _sortType == FavoriteSortType.deadline,
+          onSelect: () => _setSortType(FavoriteSortType.deadline),
         ),
-      ),
+        SortSheetOption(
+          label: s.sortByAdded,
+          selected: _sortType == FavoriteSortType.added,
+          onSelect: () => _setSortType(FavoriteSortType.added),
+        ),
+      ],
     );
   }
 }

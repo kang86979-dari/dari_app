@@ -13,7 +13,16 @@ class AccountAppBar extends StatelessWidget {
   final String title;
   final VoidCallback? onBack;
 
-  const AccountAppBar({super.key, required this.title, this.onBack});
+  /// 오른쪽 액션(예: 지원 내역의 편집 버튼). 없으면 뒤로가기와 같은 폭의
+  /// 여백을 둬서 타이틀 중앙 정렬 유지.
+  final Widget? trailing;
+
+  const AccountAppBar({
+    super.key,
+    required this.title,
+    this.onBack,
+    this.trailing,
+  });
 
   static const height = 52.0;
 
@@ -47,7 +56,7 @@ class AccountAppBar extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(width: 44),
+          trailing ?? const SizedBox(width: 44),
         ],
       ),
     );

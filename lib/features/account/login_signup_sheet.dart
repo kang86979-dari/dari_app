@@ -5,6 +5,7 @@ import 'dart:math';
 
 import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -13,6 +14,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/sheet_handle.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../providers/account_provider.dart';
 
@@ -76,24 +78,37 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
   /// 로그인 토스트, 없으면 신규 → 추가정보 입력으로 이동(2026-09-24 서버 저장).
   Future<void> _finishLogin(String provider, String email) async {
     final s = ref.read(stringsProvider);
+    // 시트가 pop된 뒤(then 콜백)에도 계정 상태를 읽을 수 있게 컨테이너 캡처.
+    final container = ProviderScope.containerOf(context, listen: false);
+    final onLoggedIn = widget.onLoggedIn;
     final hasProfile = await ref
         .read(accountProvider.notifier)
         .refreshFromServer();
     if (!mounted) return;
     Navigator.of(context).pop();
     if (hasProfile) {
+      HapticFeedback.mediumImpact(); // 로그인 성공(2026-09-26)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(s.accountLoginDoneToast),
           behavior: SnackBarBehavior.floating,
         ),
       );
-      widget.onLoggedIn?.call();
+      onLoggedIn?.call();
     } else {
-      context.push(
-        '/account/additional-info',
-        extra: {'provider': provider, 'email': email},
-      );
+      // 신규 → 추가정보 입력. 가입을 끝내고 돌아오면 원래 하려던 동작(메모
+      // 작성·지원 진행·마이페이지 이동)을 기존회원 로그인과 동일하게 이어줌
+      // (2026-09-26 사용자 확정). 가입 미완(뒤로가기 이탈)이면 재개 안 함.
+      context
+          .push(
+            '/account/additional-info',
+            extra: {'provider': provider, 'email': email},
+          )
+          .then((_) {
+            if (container.read(accountProvider).isLoggedIn) {
+              onLoggedIn?.call();
+            }
+          });
     }
   }
 
@@ -230,38 +245,7 @@ class _LoginSignupSheetState extends ConsumerState<_LoginSignupSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            SizedBox(
-              height: 26,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  Container(
-                    width: 36,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: AppColors.gray100,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: GestureDetector(
-                      onTap: () => Navigator.of(context).pop(),
-                      child: Container(
-                        width: 26,
-                        height: 26,
-                        alignment: Alignment.center,
-                        child: const Icon(
-                          Icons.close,
-                          size: 18,
-                          color: AppColors.gray300,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            const SheetHandle(),
             const SizedBox(height: 20),
             Text(
               s.accountLoginTitle,

@@ -14,6 +14,18 @@ class JobCard extends StatelessWidget {
   final VoidCallback? onFavoriteToggle;
 
   final String? expiredLabel;
+
+  /// 이 공고에 남긴 내 메모 — 있으면 카드 하단에 한 줄 미리보기(노랑 바) 표시.
+  /// 모든 리스트(홈·검색·즐겨찾기) 공통. job_notes 서버 연동 시 값이 채워짐.
+  final String? memo;
+
+  /// 메모 영역 탭(수정/작성) 콜백 — 즐겨찾기처럼 카드에서 바로 메모를 다루는
+  /// 화면만 전달. null이면 미리보기 전용(홈·검색).
+  final VoidCallback? onMemoTap;
+
+  /// "+ 메모 남기기" 문구 — 전달된 화면에서만 메모 없을 때 작성 버튼 노출.
+  final String? memoAddLabel;
+
   const JobCard({
     super.key,
     required this.job,
@@ -25,6 +37,9 @@ class JobCard extends StatelessWidget {
     required this.onTap,
     this.onFavoriteToggle,
     this.expiredLabel,
+    this.memo,
+    this.onMemoTap,
+    this.memoAddLabel,
   });
 
   // CJK는 제목이 짧아 16 유지, 번역 언어는 텍스트가 길어져 축소 (2줄 내 표시)
@@ -69,11 +84,10 @@ class JobCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final expired = _isExpired;
 
+    // 마감 표현: 반투명 대신 요소별 회색 처리 — 지원 내역과 톤 통일(2026-09-26).
     return GestureDetector(
       onTap: onTap,
-      child: Opacity(
-        opacity: expired ? 0.5 : 1.0,
-        child: Container(
+      child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -95,7 +109,7 @@ class JobCard extends StatelessWidget {
                 style: TextStyle(
                   fontSize: _titleFontSize(langCode),
                   fontWeight: FontWeight.w600,
-                  color: AppColors.black,
+                  color: expired ? AppColors.gray400 : AppColors.black,
                 ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
@@ -103,7 +117,8 @@ class JobCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
 
-            // 회사명 (없으면 '비공개' placeholder — 옅은 회색)
+            // 회사명 — 오른쪽은 추후 회사 평가 점수 자리로 비워둠(2026-09-26).
+            // 없으면 '비공개' placeholder(옅은 회색).
             Text(
               job.getDisplayCompany(langCode).isNotEmpty
                   ? job.getDisplayCompany(langCode)
@@ -111,25 +126,39 @@ class JobCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w500,
-                color: job.getDisplayCompany(langCode).isNotEmpty
+                color: expired
+                    ? AppColors.gray300
+                    : job.getDisplayCompany(langCode).isNotEmpty
                     ? AppColors.gray600
                     : AppColors.gray400,
               ),
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
-            // 주소
+            // 주소 — 위치 핀 포함 별도 행.
             if (job.getShortLocation(langCode).isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 3),
-                child: Text(
-                  job.getShortLocation(langCode),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray300,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.place_outlined,
+                      size: 12,
+                      color: AppColors.gray300,
+                    ),
+                    const SizedBox(width: 2),
+                    Expanded(
+                      child: Text(
+                        job.getShortLocation(langCode),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.gray300,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: 8),
@@ -143,8 +172,11 @@ class JobCard extends StatelessWidget {
                         padding: const EdgeInsets.only(right: 6),
                         child: _Tag(
                           label: v.code == 'ANY' ? (strings?.visaGroupAny ?? 'Any visa') : v.code,
-                          bgColor: AppColors.tagBlue,
-                          textColor: AppColors.tagBlueTxt,
+                          bgColor:
+                              expired ? AppColors.gray50 : AppColors.tagBlue,
+                          textColor: expired
+                              ? AppColors.gray300
+                              : AppColors.tagBlueTxt,
                         ),
                       )),
                   if (job.visas.length > 2)
@@ -161,8 +193,10 @@ class JobCard extends StatelessWidget {
                       padding: const EdgeInsets.only(right: 6),
                       child: _Tag(
                         label: strings?.housingChip ?? 'Housing',
-                        bgColor: AppColors.navyLight,
-                        textColor: AppColors.navy,
+                        bgColor:
+                            expired ? AppColors.gray50 : AppColors.navyLight,
+                        textColor:
+                            expired ? AppColors.gray300 : AppColors.navy,
                       ),
                     ),
                   if (job.getJobType(langCode).isNotEmpty)
@@ -171,14 +205,16 @@ class JobCard extends StatelessWidget {
                       child: _Tag(
                         label: job.getJobType(langCode),
                         bgColor: AppColors.gray50,
-                        textColor: AppColors.gray600,
+                        textColor:
+                            expired ? AppColors.gray300 : AppColors.gray600,
                       ),
                     ),
                   if (job.getEmploymentType(langCode).isNotEmpty)
                     _Tag(
                       label: job.getEmploymentType(langCode),
-                      bgColor: AppColors.tagGreen,
-                      textColor: AppColors.tagGreenTxt,
+                      bgColor: expired ? AppColors.gray50 : AppColors.tagGreen,
+                      textColor:
+                          expired ? AppColors.gray300 : AppColors.tagGreenTxt,
                     ),
                 ],
               ),
@@ -208,16 +244,18 @@ class JobCard extends StatelessWidget {
                     expired ? expiredLabel! : _formatDeadline(job.expiresAt, alwaysOpen),
                     style: TextStyle(
                       fontSize: 13,
-                      color: expired ? const Color(0xFFE53935) : AppColors.gray300,
+                      fontWeight:
+                          expired ? FontWeight.w600 : FontWeight.w400,
+                      color: expired ? AppColors.gray400 : AppColors.gray300,
                     ),
                   ),
                   Expanded(
                     child: Text(
                       _displaySalary(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.carrot,
+                        color: expired ? AppColors.gray300 : AppColors.carrot,
                       ),
                       overflow: TextOverflow.ellipsis,
                       maxLines: 1,
@@ -225,6 +263,70 @@ class JobCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                ),
+              ),
+
+            // 내 메모 미리보기 — 지원 내역 카드와 동일한 노랑 포스트잇 톤(2026-09-26).
+            // onMemoTap이 있으면(즐겨찾기) 탭해서 수정, 없으면 미리보기 전용.
+            if (memo != null && memo!.isNotEmpty)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMemoTap,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: expired
+                        ? AppColors.gray50
+                        : const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.edit_note,
+                        size: 14,
+                        color: expired
+                            ? AppColors.gray300
+                            : const Color(0xFF9A7B24),
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          memo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: expired
+                                ? AppColors.gray300
+                                : const Color(0xFF6D5B1F),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            // 메모 없음 + 작성 진입 허용 화면(즐겨찾기): "+ 메모 남기기".
+            else if (onMemoTap != null && memoAddLabel != null)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMemoTap,
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Text(
+                    memoAddLabel!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFFB1953B),
+                    ),
+                  ),
                 ),
               ),
           ],
@@ -239,7 +341,6 @@ class JobCard extends StatelessWidget {
               ),
           ],
         ),
-      ),
       ),
     );
   }
