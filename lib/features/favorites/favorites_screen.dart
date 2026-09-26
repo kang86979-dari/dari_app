@@ -8,6 +8,7 @@ import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
+import '../../providers/applied_job_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../account/widgets/job_memo_sheet.dart';
@@ -92,8 +93,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   }
 
   FavoriteSortType _sortType = FavoriteSortType.added;
-  bool _editMode = false;
-  final Set<String> _selectedForDelete = {};
   bool _tracked = false;
   final _adController = NativeAdController();
   final _mrecController = MrecAdController();
@@ -172,20 +171,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => setState(() {
-                      _editMode = !_editMode;
-                      _selectedForDelete.clear();
-                    }),
-                    child: Text(
-                      _editMode ? s.done : s.edit,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _editMode ? AppColors.carrot : AppColors.gray600,
-                      ),
-                    ),
-                  ),
+                  // 편집 기능 제거(2026-09-26 사용자 확정) — 하트 해제로 충분.
+                  const SizedBox(width: 40),
                 ],
               ),
             ),
@@ -309,58 +296,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                             final jobIndex = cycle * n + pos;
                             if (jobIndex >= jobs.length) return const SizedBox.shrink();
                             final job = jobs[jobIndex];
-                            if (_editMode) {
-                              final isChecked =
-                                  _selectedForDelete.contains(job.id);
-                              return GestureDetector(
-                                onTap: () {
-                                  HapticFeedback.selectionClick();
-                                  setState(() {
-                                    isChecked
-                                        ? _selectedForDelete.remove(job.id)
-                                        : _selectedForDelete.add(job.id);
-                                  });
-                                },
-                                child: Container(
-                                  color: isChecked
-                                      ? AppColors.carrotLight
-                                      : Colors.transparent,
-                                  child: Row(
-                                    children: [
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(left: 16),
-                                        child: Icon(
-                                          isChecked
-                                              ? Icons.check_circle
-                                              : Icons.circle_outlined,
-                                          color: isChecked
-                                              ? AppColors.carrot
-                                              : AppColors.gray200,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: IgnorePointer(
-                                          child: JobCard(
-                                            job: job,
-                                            langCode: langCode,
-                                            alwaysOpen: s.alwaysOpen,
-                                            salaryFallback: s.salaryByCompany,
-                                            strings: s,
-                                            expiredLabel: s.expired,
-                                            memo: ref
-                                                .watch(jobNotesProvider)
-                                                .valueOrNull?[job.id],
-                                            onTap: () {},
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
                             return JobCard(
                               job: job,
                               langCode: langCode,
@@ -370,6 +305,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               expiredLabel: s.expired,
                               isFavorite: true,
                               memo: ref.watch(jobNotesProvider).valueOrNull?[job.id],
+                              applied: ref
+                                  .watch(appliedJobIdsProvider)
+                                  .contains(job.id),
+                              appliedLabel: s.jobAppliedChip,
                               memoAddLabel: s.jobMemoAdd,
                               onMemoTap: () => _editMemo(job),
                               onTap: () => context.push('/job/${job.id}'),
@@ -386,47 +325,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                     ),
             ),
 
-            // 편집 모드 하단 삭제 버튼
-            if (_editMode && _selectedForDelete.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: GestureDetector(
-                    onTap: () {
-                      HapticFeedback.mediumImpact(); // 삭제 실행
-                      analytics.favoritesBulkDelete(_selectedForDelete.length);
-                      ref
-                          .read(favoriteProvider.notifier)
-                          .removeMultiple(_selectedForDelete);
-                      setState(() {
-                        _selectedForDelete.clear();
-                        _editMode = false;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      decoration: BoxDecoration(
-                        // 시그니처 색으로 변경(2026-09-26 사용자 확정).
-                        color: AppColors.carrot,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        '${s.delete} (${_selectedForDelete.length})',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),

@@ -26,6 +26,12 @@ class JobCard extends StatelessWidget {
   /// "+ 메모 남기기" 문구 — 전달된 화면에서만 메모 없을 때 작성 버튼 노출.
   final String? memoAddLabel;
 
+  /// 이 공고에 지원했는지 — true면 우상단 사이트 뱃지 아래 "✓ 지원함" 초록 칩.
+  final bool applied;
+
+  /// "지원함" 라벨 (다국어).
+  final String? appliedLabel;
+
   const JobCard({
     super.key,
     required this.job,
@@ -40,6 +46,8 @@ class JobCard extends StatelessWidget {
     this.memo,
     this.onMemoTap,
     this.memoAddLabel,
+    this.applied = false,
+    this.appliedLabel,
   });
 
   // CJK는 제목이 짧아 16 유지, 번역 언어는 텍스트가 길어져 축소 (2줄 내 표시)
@@ -331,13 +339,51 @@ class JobCard extends StatelessWidget {
               ),
           ],
         ),
-            // 사이트 뱃지 (카드 기준 오른쪽 상단, 세로 정렬)
+            // 사이트 뱃지 + "✓ 지원함" 칩 (카드 오른쪽 상단, 세로 정렬)
             // 사이트명 없으면(예: RLS로 숨겨진 testing 사이트) 뱃지 생략 — UUID 노출 방지
-            if (job.siteName != null && job.siteName!.isNotEmpty)
+            if ((job.siteName != null && job.siteName!.isNotEmpty) ||
+                (applied && appliedLabel != null))
               Positioned(
                 top: 0,
                 right: 0,
-                child: _SiteBadge(name: job.siteName!),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (job.siteName != null && job.siteName!.isNotEmpty)
+                      _SiteBadge(name: job.siteName!),
+                    if (applied && appliedLabel != null)
+                      Container(
+                        margin: const EdgeInsets.only(top: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 3,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.tagGreen,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.check,
+                              size: 11,
+                              color: AppColors.tagGreenTxt,
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              appliedLabel!,
+                              style: const TextStyle(
+                                fontSize: 10.5,
+                                fontWeight: FontWeight.w700,
+                                color: AppColors.tagGreenTxt,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
               ),
           ],
         ),

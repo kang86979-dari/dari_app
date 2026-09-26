@@ -16,6 +16,7 @@ import '../../core/constants/apply_method_style.dart';
 import '../account/widgets/job_memo_sheet.dart';
 import '../account/login_signup_sheet.dart';
 import '../../providers/account_provider.dart';
+import '../../providers/applied_job_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
@@ -655,7 +656,7 @@ class _DetailBodyState extends State<_DetailBody> {
           ),
         ),
 
-        // 하단 지원하기 버튼
+        // 하단 지원하기 버튼 (+지원한 공고 스트립 — 2026-09-26 스펙)
         Container(
           padding: const EdgeInsets.fromLTRB(24, 14, 24, 20),
           decoration: const BoxDecoration(
@@ -665,7 +666,65 @@ class _DetailBodyState extends State<_DetailBody> {
                 (DateTime.tryParse(job.expiresAt!)?.isBefore(DateUtils.dateOnly(DateTime.now())) ?? false);
             return SizedBox(
               width: double.infinity,
-              child: GestureDetector(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                // stretch — 버튼이 내용 크기로 쪼그라들지 않게(2026-09-26).
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // 이 공고에 지원한 기록(최초 지원일) — 있으면 버튼 위 스트립.
+                  // 이 위젯은 ref가 없어 Consumer로 지원기록만 구독.
+                  Consumer(
+                    builder: (context, ref, _) {
+                      DateTime? appliedAt;
+                      final rows =
+                          ref.watch(appliedJobsProvider).valueOrNull;
+                      if (rows != null) {
+                        for (final r in rows) {
+                          if (r.jobId == job.id &&
+                              (appliedAt == null ||
+                                  r.appliedAt.isBefore(appliedAt))) {
+                            appliedAt = r.appliedAt;
+                          }
+                        }
+                      }
+                      if (appliedAt == null) return const SizedBox.shrink();
+                      return Container(
+                        width: double.infinity,
+                        margin: const EdgeInsets.only(bottom: 10),
+                        padding: const EdgeInsets.symmetric(vertical: 9),
+                        decoration: BoxDecoration(
+                          color: AppColors.tagGreen,
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(
+                              Icons.check_circle,
+                              size: 15,
+                              color: AppColors.tagGreenTxt,
+                            ),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                s.jobAppliedOn(
+                                  '${appliedAt.month}/${appliedAt.day}',
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: AppColors.tagGreenTxt,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                  GestureDetector(
                 onTap: isExpired
                     ? null
                     : () => showApplyMethodSheet(
@@ -687,6 +746,8 @@ class _DetailBodyState extends State<_DetailBody> {
                           fontWeight: FontWeight.w700,
                           color: Colors.white)),
                 ),
+              ),
+                ],
               ),
             );
           }),

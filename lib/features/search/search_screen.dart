@@ -9,6 +9,7 @@ import '../../data/repositories/job_repository.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/search_provider.dart';
+import '../../providers/applied_job_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../home/widgets/job_card.dart';
@@ -556,6 +557,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     strings: s,
                     isFavorite: ref.watch(isFavoriteProvider(job.id)),
                     memo: ref.watch(jobNotesProvider).valueOrNull?[job.id],
+                    applied: ref.watch(appliedJobIdsProvider).contains(job.id),
+                    appliedLabel: s.jobAppliedChip,
                     onTap: () {
                       analytics.searchResultTap(job.id, query, jobIndex);
                       context.push('/job/${job.id}');

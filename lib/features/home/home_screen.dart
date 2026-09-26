@@ -29,6 +29,10 @@ import '../../core/utils/native_ad_controller.dart';
 import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/notice_service.dart';
+import '../../core/navigation.dart';
+import '../../data/services/pending_apply_service.dart';
+import '../account/apply_history_screen.dart';
+import 'package:flutter/services.dart';
 import '../../providers/account_provider.dart';
 import '../account/login_signup_sheet.dart';
 import '../../core/widgets/offline_banner.dart';
@@ -73,6 +77,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // analytics를 지연시켜 DB 동시 요청 줄임
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) analytics.screenView('home');
+    });
+    // 콜드 스타트 시 전화 지원 확인 대기 건 처리(미복귀했다가 재실행한 경우).
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) _checkPendingPhoneApply();
     });
     _scrollController.addListener(_onScroll);
     // 앱 시작 시 푸시 구독 동기화 (기존 사용자 업데이트 대응)
@@ -239,9 +247,137 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     await prefs.setBool('filter_tooltip_dismissed', true);
   }
 
+  /// 전화 지원 "확인 대기" 처리 — 발신 후 복귀(iOS는 통화 종료 시 자동 복귀)
+  /// 또는 다음 실행 때 "전화로 지원하셨나요?" 확인, '네'만 기록(2026-09-26).
+  bool _askingPendingApply = false;
+
+  /// 실제 백그라운드(paused)를 다녀왔는지 — iOS의 tel: 확인 팝업은 앱을
+  /// inactive→resumed로만 스치기 때문에, 그 순간 확인 팝업이 겹쳐 뜨는 문제
+  /// 방지(2026-09-26). 통화로 전환되면 paused를 거치므로 이때만 질문.
+  bool _wasPaused = false;
+
+  Future<void> _checkPendingPhoneApply() async {
+    if (_askingPendingApply) return;
+    final pending = await PendingApplyService.load();
+    if (pending == null || !mounted) return;
+    final ctx = rootNavigatorKey.currentContext;
+    if (ctx == null) return;
+    _askingPendingApply = true;
+    final s = ref.read(stringsProvider);
+    final applied = await showDialog<bool>(
+      context: ctx,
+      barrierDismissible: false,
+      builder: (dctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        // 기본 다이얼로그 폭이 좁다는 피드백 → 화면 좌우 24만 남기고 확장.
+        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
+        // 위계: 회사명(크게) → 공고명(작게) → 질문(굵게) → 안내(작게)
+        // (2026-09-26 사용자 확정).
+        title: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              pending.company.isNotEmpty ? pending.company : pending.siteName,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w800,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 3),
+            Text(
+              pending.title,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.gray400,
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              s.applyPhoneConfirmQuestion,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppColors.black,
+              ),
+            ),
+            const SizedBox(height: 5),
+            Text(
+              s.applyPhoneConfirmDesc,
+              style: const TextStyle(fontSize: 12.5, color: AppColors.gray400),
+            ),
+          ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(false),
+            child: Text(
+              s.no,
+              style: const TextStyle(color: AppColors.gray400),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(dctx).pop(true),
+            child: Text(
+              s.yes,
+              style: const TextStyle(
+                color: AppColors.carrot,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+    _askingPendingApply = false;
+    await PendingApplyService.clear();
+    if (applied != true) return;
+    HapticFeedback.mediumImpact();
+    await ref.read(appliedJobActionsProvider).record(
+          jobId: pending.jobId,
+          method: 'phone',
+          title: pending.title,
+          company: pending.company,
+          siteName: pending.siteName,
+          location: pending.location,
+        );
+    // 저장 안내 + 마이페이지 관리 힌트 스낵바.
+    final ctx2 = rootNavigatorKey.currentContext;
+    if (ctx2 == null || !ctx2.mounted) return;
+    // 일반 토스트처럼 잠깐 떴다 사라짐 — 보기 버튼 없음(2026-09-26 사용자 확정).
+    ScaffoldMessenger.of(ctx2).showSnackBar(
+      SnackBar(
+        content: Text(s.appliedSavedToast),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden) {
+      _wasPaused = true;
+    }
     if (state == AppLifecycleState.resumed) {
+      if (_wasPaused) {
+        _wasPaused = false;
+        _checkPendingPhoneApply();
+      }
       // 광고 클릭 후 복귀: 리스트 위치 유지 (갱신/앱오픈광고 스킵)
       if (AdHelper.consumeAdClicked()) {
         if (kDebugMode) print('🔵 resumed: ad click return, skip refresh');
@@ -486,10 +622,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                   color: AppColors.carrotLight,
                                   shape: BoxShape.circle,
                                 ),
-                                child: Icon(
-                                  ref.watch(favoriteProvider).isNotEmpty
-                                      ? Icons.favorite
-                                      : Icons.favorite_border,
+                                // 채움 하트는 과해서 외곽선 고정, 카운트만 유지
+                                // (2026-09-26 사용자 확정).
+                                child: const Icon(
+                                  Icons.favorite_border,
                                   size: 21,
                                   color: AppColors.carrot,
                                 ),
@@ -544,34 +680,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                             );
                           }
                         },
-                        // 마이페이지 아이콘 — 남색 원으로 강조(2026-09-26 사용자
-                        // 확정): 비로그인=흰 사람, 로그인=이름 이니셜(마이페이지
-                        // 아바타와 동일 톤).
+                        // 마이페이지 아이콘 — 연주황 원(하트 원과 동일 톤·크기,
+                        // 2026-09-26 실기기 확인 후 남색→연주황으로 변경):
+                        // 비로그인=사람, 로그인="My".
                         child: Padding(
                           padding: const EdgeInsets.only(right: 14),
                           child: Stack(
                             clipBehavior: Clip.none,
                             children: [
                               Container(
-                            width: 28,
-                            height: 28,
+                            width: 34,
+                            height: 34,
                             decoration: const BoxDecoration(
-                              color: AppColors.navy,
+                              color: AppColors.carrotLight,
                               shape: BoxShape.circle,
                             ),
                             alignment: Alignment.center,
                             child: ref.watch(accountProvider).profile == null
                                 ? const Icon(
                                     Icons.person,
-                                    size: 17,
-                                    color: Colors.white,
+                                    size: 19,
+                                    color: AppColors.carrot,
                                   )
                                 : const Text(
                                     'My',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: AppColors.carrot,
                                       fontWeight: FontWeight.w800,
-                                      fontSize: 11,
+                                      fontSize: 12,
                                       height: 1,
                                     ),
                                   ),
@@ -579,11 +715,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                               // 미확인 지원 기록 N 뱃지 — 지원내역 확인 시 소멸.
                               if (ref.watch(unseenAppliedCountProvider) > 0)
                                 Positioned(
-                                  top: -3,
-                                  right: -3,
+                                  top: -2,
+                                  right: -2,
                                   child: Container(
-                                    width: 11,
-                                    height: 11,
+                                    width: 12,
+                                    height: 12,
                                     decoration: BoxDecoration(
                                       color: AppColors.carrot,
                                       shape: BoxShape.circle,
@@ -602,8 +738,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                         onTap: () => context.push('/settings'),
                         child: Image.asset(
                           'assets/settings_icon.png',
-                          width: 24,
-                          height: 24,
+                          // 하트·My 원과 시각 크기 맞춤(2026-09-26).
+                          width: 28,
+                          height: 28,
                         ),
                       ),
                     ],
@@ -964,6 +1101,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 strings: ref.read(stringsProvider),
                 isFavorite: ref.watch(isFavoriteProvider(job.id)),
                 memo: ref.watch(jobNotesProvider).valueOrNull?[job.id],
+                applied: ref.watch(appliedJobIdsProvider).contains(job.id),
+                appliedLabel: ref.read(stringsProvider).jobAppliedChip,
                 onTap: () {
                   analytics.jobCardTap(job.id, jobIndex);
                   context.push('/job/${job.id}');

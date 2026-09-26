@@ -11,6 +11,7 @@ import '../../core/widgets/error_retry.dart';
 import '../../core/widgets/sort_sheet.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
+import '../../providers/applied_job_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../providers/language_provider.dart';
@@ -280,6 +281,10 @@ class _MyMemosScreenState extends ConsumerState<MyMemosScreen> {
                               expiredLabel: s.expired,
                               isFavorite:
                                   ref.watch(isFavoriteProvider(job.id)),
+                              applied: ref
+                                  .watch(appliedJobIdsProvider)
+                                  .contains(job.id),
+                              appliedLabel: s.jobAppliedChip,
                               memo: notes[job.id],
                               memoAddLabel: s.jobMemoAdd,
                               onMemoTap: () => _editMemo(job, langCode),

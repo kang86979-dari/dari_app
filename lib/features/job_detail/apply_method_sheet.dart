@@ -7,8 +7,10 @@ import '../../core/widgets/sheet_handle.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../data/models/job.dart';
 import '../../data/services/analytics_service.dart';
+import '../../data/services/pending_apply_service.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/test_mode_provider.dart';
 import '../../providers/applied_job_provider.dart';
 import '../account/login_signup_sheet.dart';
 
@@ -96,20 +98,39 @@ class _ApplyMethodSheet extends ConsumerWidget {
     );
   }
 
-  /// 전화 발신 + 지원 기록 — 전화 앱이 실제로 열렸을 때만 기록
-  /// (다이얼러 없는 기기 오기록 방지). 통화 여부까지는 감지 불가(B안).
+  /// 전화 발신 — 즉시 기록하지 않고 "확인 대기"로 저장(2026-09-26 사용자
+  /// 확정). 앱 복귀/재실행 시 "전화로 지원하셨나요?" 확인 후 '네'만 기록 —
+  /// 다이얼러만 열고 통화 안 한 오기록과 미복귀 누락을 동시에 방지.
   Future<void> _dialAndRecord(WidgetRef ref, String phone) async {
-    final opened = await launchUrl(Uri.parse('tel:$phone'));
+    // [TEST] 테스트 모드에서는 실제 구인처 대신 테스트 번호로 발신 —
+    // 실공고 사장님한테 전화가 가는 사고 방지(2026-09-26).
+    final dialTo = ref.read(testModeProvider) ? '01053372951' : phone;
+    final opened = await launchUrl(Uri.parse('tel:$dialTo'));
     if (!opened) return;
     final langCode = ref.read(languageProvider);
-    ref.read(appliedJobActionsProvider).record(
-      jobId: job.id,
-      method: 'phone',
-      title: job.getTitle(langCode),
-      company: job.getDisplayCompany(langCode),
-      siteName: job.siteName ?? '',
-      location: job.getShortLocation(langCode),
+    await PendingApplyService.save(
+      PendingPhoneApply(
+        jobId: job.id,
+        title: job.getTitle(langCode),
+        company: job.getDisplayCompany(langCode),
+        siteName: job.siteName ?? '',
+        location: job.getShortLocation(langCode),
+        dialedAt: DateTime.now(),
+      ),
     );
+  }
+
+  /// 이 공고를 해당 방법으로 지원한 최근 일자 (없으면 null).
+  DateTime? _appliedAtOf(WidgetRef ref, String code) {
+    final rows = ref.watch(appliedJobsProvider).valueOrNull;
+    if (rows == null) return null;
+    DateTime? latest;
+    for (final r in rows) {
+      if (r.jobId == job.id && r.method == code) {
+        if (latest == null || r.appliedAt.isAfter(latest)) latest = r.appliedAt;
+      }
+    }
+    return latest;
   }
 
   @override
@@ -149,6 +170,8 @@ class _ApplyMethodSheet extends ConsumerWidget {
                 subtitle: code == 'phone'
                     ? phone
                     : strings.applyMethodDesc(code),
+                // 이 방법으로 이미 지원했으면 ✓ 날짜 표시(선택은 안 막음).
+                appliedAt: _appliedAtOf(ref, code),
                 onTap: () => _selectMethod(context, ref, code),
               ),
             const SizedBox(height: 12),
@@ -204,6 +227,7 @@ class _MethodTile extends StatelessWidget {
   final ApplyMethodStyle style;
   final String label;
   final String? subtitle;
+  final DateTime? appliedAt;
   final VoidCallback onTap;
 
   const _MethodTile({
@@ -211,6 +235,7 @@ class _MethodTile extends StatelessWidget {
     required this.label,
     required this.onTap,
     this.subtitle,
+    this.appliedAt,
   });
 
   @override
@@ -259,6 +284,29 @@ class _MethodTile extends StatelessWidget {
                 ],
               ),
             ),
+            if (appliedAt != null)
+              Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.check,
+                      size: 13,
+                      color: AppColors.tagGreenTxt,
+                    ),
+                    const SizedBox(width: 2),
+                    Text(
+                      '${appliedAt!.month}/${appliedAt!.day}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.tagGreenTxt,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
           ],
         ),

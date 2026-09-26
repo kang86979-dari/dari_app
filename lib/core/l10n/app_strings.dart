@@ -5343,6 +5343,30 @@ Until the application is completed
 You may refuse to consent to this third-party sharing. Refusing means applying manually without autofill.''',
   }, '');
   String get myPageTitle => _t({'ko': '마이페이지', 'en': 'My Page'}, 'My Page');
+  String get applyPhoneConfirmQuestion => _t({
+    'ko': '전화로 지원하셨나요?',
+    'en': 'Did you apply by phone?',
+  }, 'Did you apply by phone?');
+  String get applyPhoneConfirmDesc => _t({
+    'ko': '네를 누르면 지원 내역에 기록됩니다',
+    'en': 'Tap Yes to save it to your applications',
+  }, 'Tap Yes to save it to your applications');
+  String get yes => _t({'ko': '네', 'en': 'Yes'}, 'Yes');
+  String get no => _t({'ko': '아니요', 'en': 'No'}, 'No');
+  String get applyManageTooltip => _t({
+    'ko': '지원 내역을 관리하세요',
+    'en': 'Manage your applications here',
+  }, 'Manage your applications here');
+  String get appliedSavedToast => _t({
+    'ko': '지원 내역에 저장됐어요 · 마이페이지에서 관리',
+    'en': 'Saved · Manage in My Page',
+  }, 'Saved · Manage in My Page');
+  String get jobAppliedChip =>
+      _t({'ko': '지원함', 'en': 'Applied'}, 'Applied');
+  String jobAppliedOn(String date) => _t({
+    'ko': '$date에 지원한 공고예요',
+    'en': 'You applied on $date',
+  }, 'You applied on $date');
   String get applyHistoryAppliedDate =>
       _t({'ko': '지원일', 'en': 'Applied'}, 'Applied');
   // 공고 메모 (즐겨찾기·지원 내역 공용, 2026-09-26)
