@@ -769,12 +769,15 @@ class _AppliedJobCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 4),
+                  // 지원일 — 잘 안 보인다는 피드백(2026-10-04)으로 강조:
+                  // ✓지원함 칩과 같은 초록 계열, 굵게.
                   Text(
                     '$appliedDateLabel ${item.appliedAt.month}/${item.appliedAt.day}',
                     style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: expired ? AppColors.gray300 : AppColors.gray400,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color:
+                          expired ? AppColors.gray300 : AppColors.tagGreenTxt,
                     ),
                   ),
                 ],
