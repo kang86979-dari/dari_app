@@ -74,8 +74,18 @@ class _ApplyHistoryScreenState extends ConsumerState<ApplyHistoryScreen> {
   // 편집 모드(다중 선택 삭제) — 즐겨찾기와 동일 패턴(2026-09-26).
   bool _editMode = false;
   final Set<String> _selected = {};
+  // 삭제 진행 중인 그룹 — 휴지통을 로딩으로 표시(동작 피드백).
+  final Set<String> _deletingKeys = {};
 
   String _groupKey(_AppliedGroup g) => g.jobId ?? 'row-${g.latest.id}';
+
+  Future<void> _deleteGroup(_AppliedGroup group) async {
+    final key = _groupKey(group);
+    HapticFeedback.mediumImpact();
+    setState(() => _deletingKeys.add(key));
+    await ref.read(appliedJobActionsProvider).deleteRows(group.ids);
+    if (mounted) setState(() => _deletingKeys.remove(key));
+  }
 
   /// 이 방문에서 "미확인"이던 행 id 스냅샷 — 서버는 목록을 연 순간 즉시 읽음
   /// 처리하고(홈·마이페이지 점 소멸), 화면의 점은 이 스냅샷으로 유지.
@@ -400,13 +410,10 @@ class _ApplyHistoryScreenState extends ConsumerState<ApplyHistoryScreen> {
                                   ? null
                                   : () => _editMemo(group),
                               onDelete: group.expired
-                                  ? () {
-                                      HapticFeedback.mediumImpact();
-                                      ref
-                                          .read(appliedJobActionsProvider)
-                                          .deleteRows(group.ids);
-                                    }
+                                  ? () => _deleteGroup(group)
                                   : null,
+                              isDeleting:
+                                  _deletingKeys.contains(_groupKey(group)),
                             );
                           },
                         ),
@@ -475,6 +482,7 @@ class _AppliedJobCard extends StatelessWidget {
   final VoidCallback onTap;
   final VoidCallback? onMemoTap;
   final VoidCallback? onDelete;
+  final bool isDeleting;
 
   const _AppliedJobCard({
     required this.group,
@@ -488,6 +496,7 @@ class _AppliedJobCard extends StatelessWidget {
     required this.onTap,
     required this.onMemoTap,
     this.onDelete,
+    this.isDeleting = false,
   });
 
   @override
@@ -703,12 +712,21 @@ class _AppliedJobCard extends StatelessWidget {
                         const SizedBox(width: 10),
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: onDelete,
-                          child: const Icon(
-                            Icons.delete_rounded,
-                            size: 20,
-                            color: AppColors.gray500,
-                          ),
+                          onTap: isDeleting ? null : onDelete,
+                          child: isDeleting
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: AppColors.gray500,
+                                  ),
+                                )
+                              : const Icon(
+                                  Icons.delete_rounded,
+                                  size: 20,
+                                  color: AppColors.gray500,
+                                ),
                         ),
                       ],
                     ],

@@ -6,6 +6,7 @@ import '../../providers/account_provider.dart';
 import '../../providers/applied_job_provider.dart';
 import 'additional_info_screen.dart';
 import 'apply_history_screen.dart';
+import '../apply/sms/sms_prepare_screen.dart';
 import 'my_memos_screen.dart';
 import '../home/widgets/mrec_ad_card.dart';
 import '../../core/utils/mrec_ad_controller.dart';
@@ -181,7 +182,11 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
                         _MenuTile(
                           icon: Icons.sms_outlined,
                           label: s.myPageSmsManage,
-                          onTap: () => _comingSoon(context, s.myPageComingSoon),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const SmsPrepareScreen(),
+                            ),
+                          ),
                         ),
                         _MenuTile(
                           icon: Icons.mail_outline,

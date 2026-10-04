@@ -3,10 +3,17 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/constants/colors.dart';
+import '../../core/utils/district_names.dart';
+import '../../core/utils/region_mapper.dart';
+import '../../core/widgets/info_row.dart';
+import '../apply/sms/khire_jit_sheet.dart' show showKhireListPicker;
+import '../../data/services/khire_area_service.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../core/utils/flag_emoji.dart';
 import '../../data/models/applicant_profile.dart';
 import '../../providers/account_provider.dart';
+import '../../providers/job_provider.dart';
+import '../../providers/language_provider.dart';
 import 'legal_document_screen.dart';
 import 'nationality_select_screen.dart';
 import 'visa_type_select_screen.dart';
@@ -49,11 +56,16 @@ class AdditionalInfoScreen extends ConsumerStatefulWidget {
   final String? snsProvider;
   final String? initialEmail;
 
+  /// 요약본에서 "수정하기"로 들어온 경우 true — 요약 없이 바로 편집 폼.
+  /// (별도 라우트로 push돼 스와이프백이 자연스럽게 요약본으로 돌아감)
+  final bool startInEdit;
+
   const AdditionalInfoScreen({
     super.key,
     this.initialProfile,
     this.snsProvider,
     this.initialEmail,
+    this.startInEdit = false,
   });
 
   @override
@@ -99,6 +111,91 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
 
   bool get _isEditMode => widget.initialProfile != null;
 
+  // 수정 모드(마이페이지 진입)는 요약본 먼저. startInEdit면 바로 편집 폼.
+  // 수정은 별도 화면 push라 토글하지 않음(final).
+  late final bool _showSummary =
+      widget.initialProfile != null && !widget.startInEdit;
+
+  // 주소(수정 모드 전용) — 시/구는 리스트 수정, 동은 시/구 변경 시 초기화.
+  String? _addrSido;
+  String? _addrSigungu;
+  String? _addrDong;
+
+  String _localSido(String si) {
+    final lang = ref.read(languageProvider);
+    if (lang == 'ko') return si;
+    final en = RegionMapper.getLocalizedName(si, lang);
+    return en == si ? si : '$en ($si)';
+  }
+
+  String _localGu(String gu) {
+    final lang = ref.read(languageProvider);
+    if (lang == 'ko') return gu;
+    final en = DistrictNames.getLocalizedGuName(gu, _addrSido ?? '', lang);
+    return en == gu ? gu : '$en ($gu)';
+  }
+
+  Future<void> _pickSido() async {
+    final regions =
+        await ref.read(jobRepositoryProvider).getAllRegionsPublic();
+    if (!mounted) return;
+    final seen = <String>{};
+    final items = <String>[
+      for (final r in regions)
+        if (r['si_name'] != null && seen.add(r['si_name'] as String))
+          r['si_name'] as String,
+    ];
+    final picked = await showKhireListPicker(context,
+        title: '시/도', items: items, selected: _addrSido,
+        display: _localSido);
+    if (picked != null && mounted) {
+      setState(() {
+        _addrSido = picked;
+        _addrSigungu = null;
+        _addrDong = null; // 상위 변경 → 동 무효(다음 문자지원 때 재선택)
+      });
+    }
+  }
+
+  Future<void> _pickDong() async {
+    if (_addrSido == null || _addrSigungu == null) return;
+    final items =
+        await KhireAreaService.dongList(_addrSido!, _addrSigungu!);
+    if (!mounted) return;
+    if (items.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(ref.read(stringsProvider).accountSaveFailed),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+    final picked = await showKhireListPicker(context,
+        title: '읍/면/동', items: items, selected: _addrDong);
+    if (picked != null && mounted) setState(() => _addrDong = picked);
+  }
+
+  Future<void> _pickSigungu() async {
+    if (_addrSido == null) return;
+    final regions =
+        await ref.read(jobRepositoryProvider).getAllRegionsPublic();
+    if (!mounted) return;
+    final items = <String>[
+      for (final r in regions)
+        if (r['si_name'] == _addrSido &&
+            (r['gu_name'] as String?)?.isNotEmpty == true)
+          r['gu_name'] as String,
+    ];
+    final picked = await showKhireListPicker(context,
+        title: '시/군/구', items: items, selected: _addrSigungu,
+        display: _localGu);
+    if (picked != null && mounted) {
+      setState(() {
+        _addrSigungu = picked;
+        _addrDong = null; // 구 변경 → 동 무효
+      });
+    }
+  }
+
   // 포커스가 필드 간 이동할 때 키패드 액세서리 바(Done/Next 구성)를 갱신.
   void _onFocusChange() => setState(() {});
 
@@ -121,6 +218,9 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       _nationalityLabel = p.nationalityLabel;
       _visaCode = p.visaCode;
       _visaLabel = p.visaLabel;
+      _addrSido = p.addrSido;
+      _addrSigungu = p.addrSigungu;
+      _addrDong = p.addrDong;
     } else {
       _snsProvider = widget.snsProvider;
       _emailController.text = widget.initialEmail ?? '';
@@ -215,6 +315,29 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
     focus?.requestFocus();
   }
 
+  /// 프로필 비자코드(예: E-9)를 홈 비자 필터에 추가 — 이미 선택돼 있으면 그대로.
+  /// visaOptions의 label이 비자 코드라 코드 매칭으로 id를 찾는다.
+  Future<void> _applyVisaToFilter(String visaCode) async {
+    if (visaCode.isEmpty) return;
+    try {
+      final options = await ref.read(visaOptionsProvider.future);
+      String? visaId;
+      for (final o in options) {
+        if (o.label == visaCode) {
+          visaId = o.id;
+          break;
+        }
+      }
+      if (visaId == null) return;
+      final fs = ref.read(filterStateProvider);
+      if (!fs.visaIds.contains(visaId)) {
+        ref.read(filterStateProvider.notifier).toggleVisa(visaId);
+      }
+    } catch (_) {
+      // 옵션 로드 실패 등 — 자동설정은 부가기능이라 조용히 무시.
+    }
+  }
+
   Future<void> _onComplete() async {
     FocusScope.of(context).unfocus();
     final errors = {
@@ -304,6 +427,27 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       return;
     }
     if (!mounted) return;
+    // 수정 모드: 주소 변경분 저장(completeSignup upsert엔 주소 미포함 — 분리 저장).
+    final oldP = widget.initialProfile;
+    if (_isEditMode &&
+        (oldP?.addrSido != _addrSido ||
+            oldP?.addrSigungu != _addrSigungu ||
+            oldP?.addrDong != _addrDong)) {
+      await ref.read(accountProvider.notifier).saveSmsFields(
+            addrSido: _addrSido,
+            addrSigungu: _addrSigungu,
+            addrDong: _addrDong,
+          );
+    } else if (_isEditMode) {
+      // completeSignup이 로컬 상태를 주소 없는 객체로 교체하므로 서버값으로
+      // 복원 — 주소가 화면에서 사라지던 버그 수정(2026-10-04).
+      await ref.read(accountProvider.notifier).refreshFromServer();
+    }
+    if (!mounted) return;
+    // 신규 가입 1회: 프로필 비자를 홈 필터에 자동 반영(필터에 없을 때만) —
+    // 가입하면 바로 본인 비자 공고가 보이도록(2026-10-04). 수정 모드는 제외.
+    if (!_isEditMode) await _applyVisaToFilter(profile.visaCode);
+    if (!mounted) return;
     if (!_isEditMode) HapticFeedback.mediumImpact(); // 가입 완료(2026-09-26)
     // 완료 토스트 — ScaffoldMessenger는 앱 루트 소속이라 pop 후에도 이전 화면
     // 위에 정상 표시됨. 신규 가입은 항상, 수정 모드는 실제 변경이 있을 때만.
@@ -335,9 +479,92 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
     Navigator.of(context).pop();
   }
 
+  /// 개인정보 요약본 — 설정 리스트형(B안): 라벨 왼쪽 회색 / 값 오른쪽 굵은 검정.
+  Widget _buildSummary(dynamic s) {
+    // 저장 후 돌아와도 최신값 반영되게 provider를 watch(없으면 push 당시 값).
+    final p = ref.watch(accountProvider).profile ?? widget.initialProfile!;
+    final rows = <(String, String)>[
+      // 가입 방법 최상단(2026-10-04 사용자 확정)
+      if (p.snsProvider.isNotEmpty)
+        (
+          s.accountLabelLoginType,
+          p.snsProvider[0].toUpperCase() + p.snsProvider.substring(1)
+        ),
+      (s.accountLabelName, p.name),
+      (s.accountFieldEmail, p.email),
+      (s.accountLabelBirthDate, _fmtBirth(p.birthDate)),
+      (
+        s.accountFieldGender,
+        p.gender == 'female' ? s.accountGenderFemale : s.accountGenderMale
+      ),
+      (s.accountFieldNationality, p.nationalityLabel),
+      (s.accountFieldVisaType, p.visaLabel),
+      (s.accountFieldPhone, p.phone),
+      if ((p.addrSido ?? '').isNotEmpty)
+        (
+          s.smsAddressLabel,
+          [p.addrSido, p.addrSigungu, p.addrDong]
+              .where((e) => e != null && e.isNotEmpty)
+              .join(' ')
+        ),
+    ];
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          children: [
+            AccountAppBar(
+              title: s.accountProfileTitle,
+              // SMS 요약본과 동일한 텍스트 버튼(통일) — 타이틀은 AppBar가
+              // Stack 중앙 배치라 버튼 폭과 무관하게 정중앙.
+              trailing: TextButton(
+                onPressed: () => Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (_) => AdditionalInfoScreen(
+                      initialProfile: p,
+                      startInEdit: true,
+                    ),
+                  ),
+                ),
+                style: TextButton.styleFrom(foregroundColor: AppColors.carrot),
+                child: Text(s.smsEditOnKhire,
+                    style: const TextStyle(
+                        fontSize: 15, fontWeight: FontWeight.w700)),
+              ),
+            ),
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+                children: [
+                  const AdBanner(),
+                  const SizedBox(height: 8),
+                  // 공고 상세 테이블과 동일 스타일(InfoRow 공용 위젯)로 통일.
+                  for (var i = 0; i < rows.length; i++)
+                    InfoRow(
+                      label: rows[i].$1,
+                      value: rows[i].$2,
+                      isLast: i == rows.length - 1,
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// YYYYMMDD → YYYY.MM.DD (8자리 아니면 원본).
+  String _fmtBirth(String b) {
+    if (b.length != 8) return b;
+    return '${b.substring(0, 4)}.${b.substring(4, 6)}.${b.substring(6, 8)}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
+
+    // 수정 모드: 요약본 먼저. 우측 상단 수정하기 → 편집 폼.
+    if (_showSummary) return _buildSummary(s);
 
     // 헬프 문구(경고)와 테두리 색(hasError)을 완전히 동기화 — Done을 누르기
     // 전이라도 실시간으로 값이 유효하지 않으면 테두리도 바로 빨간색이 되고,
@@ -422,12 +649,8 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
                   children: [
-                    // 개인정보 수정 모드 상단 배너 광고(2026-09-26 사용자 확정).
+                    // 광고는 요약본 상단으로 이동(2026-10-04). 수정 폼엔 없음.
                     // 신규 가입 흐름에는 광고를 넣지 않음(온보딩 무광고 정책).
-                    if (_isEditMode) ...[
-                      const AdBanner(),
-                      const SizedBox(height: 20),
-                    ],
                     if (!_isEditMode) ...[
                       Text(
                         s.accountSignupBigTitle,
@@ -553,6 +776,44 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
                           ? s.accountPhoneMustStart010
                           : null,
                     ),
+
+                    // 주소 — 수정 모드에서만(가입 땐 안 받음, just-in-time 정책).
+                    // 시/도·시군구는 리스트 수정, 동은 시/구 변경 시 초기화되고
+                    // 다음 문자지원 때 팝업으로 재선택(동 목록=K-HIRE 페이지에만 존재).
+                    if (_isEditMode) ...[
+                      const SizedBox(height: 16),
+                      _FieldLabel(s.smsAddressLabel),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _AddrSelect(
+                              value: _addrSido == null
+                                  ? null
+                                  : _localSido(_addrSido!),
+                              hint: '시/도',
+                              onTap: _pickSido,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: _AddrSelect(
+                              value: _addrSigungu == null
+                                  ? null
+                                  : _localGu(_addrSigungu!),
+                              hint: '시/군/구',
+                              onTap: _addrSido == null ? null : _pickSigungu,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      _AddrSelect(
+                        value: _addrDong,
+                        hint: '읍/면/동',
+                        onTap: _addrSigungu == null ? null : _pickDong,
+                      ),
+                    ],
 
                     // 약관 동의는 가입 시 1회로 충분 — 수정 모드에서는 숨김(2026-09-24).
                     if (!_isEditMode)
@@ -795,6 +1056,50 @@ class _PhoneNumberFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// 주소 선택 행(수정 모드) — 탭하면 리스트 픽커.
+class _AddrSelect extends StatelessWidget {
+  final String? value;
+  final String hint;
+  final VoidCallback? onTap;
+  const _AddrSelect({required this.value, required this.hint, this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          color: enabled ? AppColors.gray50 : const Color(0xFFFAFAFA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.gray100),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(
+                value ?? hint,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight:
+                      value != null ? FontWeight.w700 : FontWeight.w500,
+                  color: value != null ? AppColors.black : AppColors.gray400,
+                ),
+              ),
+            ),
+            const Icon(Icons.keyboard_arrow_down,
+                size: 20, color: AppColors.gray400),
+          ],
+        ),
+      ),
     );
   }
 }

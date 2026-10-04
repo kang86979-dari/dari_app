@@ -7,6 +7,7 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/apply_confirm_dialog.dart';
 import '../../data/models/job.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/filter_state.dart';
@@ -264,84 +265,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     if (ctx == null) return;
     _askingPendingApply = true;
     final s = ref.read(stringsProvider);
-    final applied = await showDialog<bool>(
-      context: ctx,
-      barrierDismissible: false,
-      builder: (dctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        // 기본 다이얼로그 폭이 좁다는 피드백 → 화면 좌우 24만 남기고 확장.
-        insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-        // 위계: 회사명(크게) → 공고명(작게) → 질문(굵게) → 안내(작게)
-        // (2026-09-26 사용자 확정).
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              pending.company.isNotEmpty ? pending.company : pending.siteName,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
-                color: AppColors.black,
-              ),
-            ),
-            const SizedBox(height: 3),
-            Text(
-              pending.title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: AppColors.gray400,
-              ),
-            ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              s.applyPhoneConfirmQuestion,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
-                color: AppColors.black,
-              ),
-            ),
-            const SizedBox(height: 5),
-            Text(
-              s.applyPhoneConfirmDesc,
-              style: const TextStyle(fontSize: 12.5, color: AppColors.gray400),
-            ),
-          ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dctx).pop(false),
-            child: Text(
-              s.no,
-              style: const TextStyle(color: AppColors.gray400),
-            ),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dctx).pop(true),
-            child: Text(
-              s.yes,
-              style: const TextStyle(
-                color: AppColors.carrot,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final applied = await showApplyConfirmDialog(
+      ctx,
+      company: pending.company.isNotEmpty ? pending.company : pending.siteName,
+      title: pending.title,
+      question: s.applyPhoneConfirmQuestion,
+      desc: s.applyPhoneConfirmDesc,
+      yesLabel: s.yes,
+      noLabel: s.no,
     );
     _askingPendingApply = false;
     await PendingApplyService.clear();

@@ -34,29 +34,42 @@ class AccountAppBar extends StatelessWidget {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
       ),
-      child: Row(
+      // 타이틀을 Stack으로 절대 중앙 배치 — trailing 폭이 달라도(텍스트 버튼 등)
+      // 항상 화면 정중앙 유지(2026-10-04).
+      child: Stack(
+        alignment: Alignment.center,
         children: [
-          SizedBox(
-            width: 44,
-            height: 44,
-            child: IconButton(
-              onPressed: onBack ?? () => Navigator.of(context).pop(),
-              icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-              color: AppColors.black,
-            ),
-          ),
-          Expanded(
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                fontSize: 17,
-                fontWeight: FontWeight.w700,
-                color: AppColors.black,
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 48),
+              child: Text(
+                title,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
               ),
             ),
           ),
-          trailing ?? const SizedBox(width: 44),
+          Row(
+            children: [
+              SizedBox(
+                width: 44,
+                height: 44,
+                child: IconButton(
+                  onPressed: onBack ?? () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+                  color: AppColors.black,
+                ),
+              ),
+              const Spacer(),
+              ?trailing,
+            ],
+          ),
         ],
       ),
     );

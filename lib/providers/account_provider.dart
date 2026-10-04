@@ -14,6 +14,9 @@ class AccountState {
   bool get isLoggedIn => profile != null;
 }
 
+/// saveSmsFields에서 "미전달"과 "null로 지우기"를 구분하는 sentinel.
+const Object _unset = Object();
+
 class AccountNotifier extends StateNotifier<AccountState> {
   AccountNotifier() : super(const AccountState()) {
     _restoreSession();
@@ -68,6 +71,41 @@ class AccountNotifier extends StateNotifier<AccountState> {
       });
     }
     state = AccountState(profile: profile);
+  }
+
+  /// 문자 지원(K-HIRE)에서 수집한 비자기간·주소를 해당 컬럼만 update.
+  /// completeSignup의 upsert와 분리 — 가입/개인정보수정이 이 값을 덮지 않게 하고,
+  /// 반대로 여기서도 나머지 프로필 필드를 건드리지 않는다.
+  /// 인자를 넘긴 것만 반영(null 전달과 "미전달" 구분 위해 sentinel 사용).
+  Future<void> saveSmsFields({
+    Object? visaIssuedAt = _unset,
+    Object? visaExpiresAt = _unset,
+    bool? visaNoExpiry,
+    Object? addrSido = _unset,
+    Object? addrSigungu = _unset,
+    Object? addrDong = _unset,
+  }) async {
+    final user = _db.auth.currentUser;
+    if (user == null || state.profile == null) return;
+
+    final patch = <String, dynamic>{};
+    if (visaIssuedAt != _unset) {
+      patch['visa_issued_at'] =
+          ApplicantProfile.ymdToDate(visaIssuedAt as String?);
+    }
+    if (visaExpiresAt != _unset) {
+      patch['visa_expires_at'] =
+          ApplicantProfile.ymdToDate(visaExpiresAt as String?);
+    }
+    if (visaNoExpiry != null) patch['visa_no_expiry'] = visaNoExpiry;
+    if (addrSido != _unset) patch['addr_sido'] = addrSido as String?;
+    if (addrSigungu != _unset) patch['addr_sigungu'] = addrSigungu as String?;
+    if (addrDong != _unset) patch['addr_dong'] = addrDong as String?;
+    if (patch.isEmpty) return;
+
+    await _db.from('applicant_profiles').update(patch).eq('user_id', user.id);
+    // copyWith는 null로 "지우기"(만료일 없음)를 표현 못 하므로 서버 재조회로 반영.
+    await refreshFromServer();
   }
 
   /// 인증 세션 정리(구글+Supabase) — 실패해도 앱 상태는 로그아웃 처리.

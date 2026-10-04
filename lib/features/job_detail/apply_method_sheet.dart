@@ -13,6 +13,7 @@ import '../../providers/language_provider.dart';
 import '../../providers/test_mode_provider.dart';
 import '../../providers/applied_job_provider.dart';
 import '../account/login_signup_sheet.dart';
+import '../apply/sms/sms_prepare_screen.dart';
 
 /// 지원방법 선택 바텀시트 (2026-09-14 UI A안 + 2026-09-20 다리 로그인 연결).
 /// - 전화: 로그인 필수(2026-09-26 변경, 지원 기록 관리 목적), 광고 없이 발신.
@@ -62,6 +63,9 @@ class _ApplyMethodSheet extends ConsumerWidget {
     String code,
   ) async {
     analytics.log('apply_method_selected', {'job_id': job.id, 'method': code});
+    // 시트 pop 후 콜백(onLoggedIn)에서 쓸 네비게이터를 미리 캡처 —
+    // pop되면 이 위젯 context는 unmount돼 Navigator.of(context)가 터진다.
+    final rootNavigator = Navigator.of(context, rootNavigator: true);
     Navigator.of(context).pop();
 
     if (code == 'phone') {
@@ -79,6 +83,22 @@ class _ApplyMethodSheet extends ConsumerWidget {
         return;
       }
       await _dialAndRecord(ref, phone);
+      return;
+    }
+
+    // 문자 지원 + K-HIRE 공고: 전용 메시지 화면 → K-HIRE 웹뷰(JS 주입).
+    // 로그인 필수(지원 기록·프로필 활용). 타 사이트 문자는 아래 일반 흐름.
+    if (code == 'sms' && _isKhire(job)) {
+      final loggedIn = await ref.read(accountProvider.notifier).ensureLoaded();
+      if (!loggedIn) {
+        if (!context.mounted) return;
+        showLoginSignupSheet(
+          context,
+          onLoggedIn: () => _openSmsPrepare(rootNavigator),
+        );
+        return;
+      }
+      _openSmsPrepare(rootNavigator);
       return;
     }
 
@@ -118,6 +138,15 @@ class _ApplyMethodSheet extends ConsumerWidget {
         dialedAt: DateTime.now(),
       ),
     );
+  }
+
+  bool _isKhire(Job job) =>
+      (job.siteName ?? '').toUpperCase().contains('HIRE');
+
+  void _openSmsPrepare(NavigatorState navigator) {
+    navigator.push(MaterialPageRoute(
+      builder: (_) => SmsPrepareScreen(job: job),
+    ));
   }
 
   /// 이 공고를 해당 방법으로 지원한 최근 일자 (없으면 null).
