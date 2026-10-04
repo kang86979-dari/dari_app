@@ -196,6 +196,46 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
     }
   }
 
+  /// 이름 라벨 ⓘ — 사용할 수 있는 신분증 종류 안내 팝업(X로 닫기).
+  void _showIdTypesPopup(dynamic s) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
+        contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
+        title: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Flexible(
+              child: Text(
+                s.accountIdTypesTitle,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.black,
+                ),
+              ),
+            ),
+            IconButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              icon: const Icon(Icons.close, size: 20, color: AppColors.gray400),
+            ),
+          ],
+        ),
+        content: Text(
+          s.accountIdTypesBody,
+          style: const TextStyle(
+            fontSize: 14,
+            height: 1.7,
+            color: AppColors.gray600,
+          ),
+        ),
+      ),
+    );
+  }
+
   // 포커스가 필드 간 이동할 때 키패드 액세서리 바(Done/Next 구성)를 갱신.
   void _onFocusChange() => setState(() {});
 
@@ -688,6 +728,7 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
                     _TextField(
                       fieldKey: _nameKey,
                       label: s.accountFieldName,
+                      onHelpTap: () => _showIdTypesPopup(s),
                       controller: _nameController,
                       focusNode: _nameFocus,
                       placeholder: s.accountNamePlaceholder,
@@ -1141,6 +1182,9 @@ class _TextField extends StatelessWidget {
   final double helperLeftPadding;
   final Widget? prefixIcon;
 
+  /// 라벨 옆 ⓘ 도움말 아이콘(탭 시 팝업) — 이름 필드 신분증 안내용.
+  final VoidCallback? onHelpTap;
+
   const _TextField({
     required this.fieldKey,
     required this.label,
@@ -1157,6 +1201,7 @@ class _TextField extends StatelessWidget {
     this.helperColor = AppColors.urgent,
     this.helperLeftPadding = 0,
     this.prefixIcon,
+    this.onHelpTap,
   });
 
   @override
@@ -1165,7 +1210,34 @@ class _TextField extends StatelessWidget {
       key: fieldKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _FieldLabel(label),
+        if (onHelpTap == null)
+          _FieldLabel(label)
+        else
+          Padding(
+            padding: const EdgeInsets.only(bottom: 6),
+            child: Row(
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray500,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                GestureDetector(
+                  behavior: HitTestBehavior.opaque,
+                  onTap: onHelpTap,
+                  child: const Padding(
+                    padding: EdgeInsets.all(2),
+                    child: Icon(Icons.help_outline,
+                        size: 15, color: AppColors.gray400),
+                  ),
+                ),
+              ],
+            ),
+          ),
         TextField(
           controller: controller,
           focusNode: focusNode,

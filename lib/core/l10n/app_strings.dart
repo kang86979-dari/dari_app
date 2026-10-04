@@ -5158,6 +5158,15 @@ class AppStrings {
     'ko': '이름 (여권·신분증)',
     'en': 'Name (Passport/ID)',
   }, 'Name (Passport/ID)');
+  String get accountIdTypesTitle => _t({
+    'ko': '사용할 수 있는 신분증',
+    'en': 'Accepted ID types',
+  }, 'Accepted ID types');
+  String get accountIdTypesBody => _t({
+    'ko': '· 여권\n· 주민등록증\n· 운전면허증\n· 영주증\n· 거소증',
+    'en':
+        '· Passport\n· Resident registration card\n· Driver\'s license\n· Permanent resident card\n· Residence card',
+  }, '· Passport\n· Resident registration card\n· Driver\'s license\n· Permanent resident card\n· Residence card');
   String get accountNamePlaceholder => _t({
     'ko': '영어 또는 한글로 입력',
     'en': 'Enter in English or Korean',
