@@ -67,6 +67,29 @@ class SmsMessageInput {
     this.timesMatchPosting = false,
     this.startDate,
   });
+
+  /// 국적·비자만 K-HIRE 계정 값으로 바꿔 복제 — 지원 시점에 K-HIRE를
+  /// source of truth로 삼아 메시지를 재생성할 때 사용(2026-10-05).
+  SmsMessageInput withNationalityVisa({
+    required String nationalityLabel,
+    required String visaCode,
+  }) {
+    return SmsMessageInput(
+      nationalityLabel: nationalityLabel,
+      visaCode: visaCode,
+      koreanLevel: koreanLevel,
+      experience: experience,
+      studentStatus: studentStatus,
+      koreaStay: koreaStay,
+      workDays: workDays,
+      daysNegotiable: daysNegotiable,
+      daysMatchPosting: daysMatchPosting,
+      workTimes: workTimes,
+      timesNegotiable: timesNegotiable,
+      timesMatchPosting: timesMatchPosting,
+      startDate: startDate,
+    );
+  }
 }
 
 /// K-HIRE 메시지란(#comment) 최대 글자수 — 실물 확인 300자

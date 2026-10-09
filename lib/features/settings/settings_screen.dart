@@ -2,8 +2,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/apply_confirm_dialog.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/applicant_profile.dart';
@@ -98,7 +99,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     // 토글 횟수 제한
     if (!await pushService.canToggle()) {
       if (!mounted) return;
-      final s = ref.read(stringsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -215,50 +215,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
     AppStrings s,
     ApplicantProfile profile,
   ) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              _providerLabel(profile.snsProvider),
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w800,
-                color: AppColors.black,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              profile.email,
-              style: const TextStyle(fontSize: 13, color: AppColors.gray500),
-            ),
-          ],
-        ),
-        content: Text(
-          s.myPageLogoutConfirmDesc,
-          style: const TextStyle(fontSize: 13.5, color: AppColors.gray600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(s.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              s.myPageLogout,
-              style: const TextStyle(
-                color: AppColors.carrot,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      question: s.myPageLogoutConfirmTitle,
+      boxTitle: _providerLabel(profile.snsProvider),
+      boxSubtitle: profile.email,
+      desc: s.myPageLogoutConfirmDesc,
+      confirmLabel: s.myPageLogout,
+      cancelLabel: s.cancel,
     );
     if (confirmed == true) {
       ref.read(accountProvider.notifier).logout();
@@ -266,35 +230,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
   }
 
   Future<void> _confirmWithdraw(BuildContext context, AppStrings s) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          s.myPageWithdrawConfirmTitle,
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        content: Text(
-          s.myPageWithdrawConfirmDesc,
-          style: const TextStyle(fontSize: 13.5, color: AppColors.gray600),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(s.cancel),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(
-              s.myPageWithdraw,
-              style: const TextStyle(
-                color: AppColors.urgent,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
+    final confirmed = await showConfirmDialog(
+      context,
+      question: s.myPageWithdrawConfirmTitle,
+      desc: s.myPageWithdrawConfirmDesc,
+      confirmLabel: s.myPageWithdraw,
+      cancelLabel: s.cancel,
+      destructive: true,
     );
     if (confirmed == true) {
       // 서버(auth 계정) 삭제가 성공해야 완료 — 실패 시 로그인 유지, 재시도 가능.
@@ -342,14 +284,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen>
               ),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: const SizedBox(
-                      width: 40,
-                      height: 40,
-                      child: Icon(Icons.arrow_back_ios_new, size: 20),
-                    ),
-                  ),
+                  const AppBackButton(),
                   Expanded(
                     child: GestureDetector(
                       // 숨김: 제목 7탭 → 테스트 모드 잠금해제

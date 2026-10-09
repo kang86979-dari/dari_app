@@ -4,9 +4,14 @@ import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/applied_job_provider.dart';
+import '../../providers/favorite_provider.dart';
+import '../../providers/job_note_provider.dart';
+import '../../providers/resume_provider.dart';
+import '../resume/resume_manage_screen.dart';
 import 'additional_info_screen.dart';
 import 'apply_history_screen.dart';
 import '../apply/sms/sms_prepare_screen.dart';
+import '../favorites/favorites_screen.dart';
 import 'my_memos_screen.dart';
 import '../home/widgets/mrec_ad_card.dart';
 import '../../core/utils/mrec_ad_controller.dart';
@@ -27,12 +32,6 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
   void dispose() {
     _mrecController.disposeAll();
     super.dispose();
-  }
-
-  void _comingSoon(BuildContext context, String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), behavior: SnackBarBehavior.floating),
-    );
   }
 
   @override
@@ -161,23 +160,44 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
                     child: Column(
                       children: [
                         _MenuTile(
+                          icon: Icons.favorite_border,
+                          label: s.favorites,
+                          count: ref.watch(favoriteProvider).length,
+                          // 미확인 즐겨찾기(즐겨찾기 화면 열면 소멸) — 메뉴에도 점.
+                          showNew: ref.watch(favoritesUnseenProvider),
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const FavoritesScreen(),
+                            ),
+                          ),
+                        ),
+                        _MenuTile(
                           icon: Icons.fact_check_outlined,
                           label: s.myPageApplyHistory,
                           showNew: ref.watch(unseenAppliedCountProvider) > 0,
-                          // [DEV/SAMPLE] 화면 구성 검토용 — 실데이터 연동 전.
+                          count: ref.watch(appliedJobsProvider).valueOrNull?.length,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const ApplyHistoryScreen(),
                             ),
                           ),
                         ),
-                        // 이력서 관리는 별도 기능 예정 — 개인정보 수정(추가정보
-                        // 화면 재사용)으로 잘못 연결돼 있던 것을 준비 중 안내로
-                        // 변경(2026-09-26). 개인정보 수정은 상단 프로필 카드에서.
+                        // 내 이력서 관리(사이트별) — Dari가 이력서 원본,
+                        // 여기서 작성/수정 → 온라인 지원 시 K-HIRE에 주입(2026-10-05).
                         _MenuTile(
                           icon: Icons.description_outlined,
                           label: s.myPageResume,
-                          onTap: () => _comingSoon(context, s.myPageComingSoon),
+                          // 0건이면 숫자 숨김 — '없으면 없는 것'(2026-10-09).
+                          count: switch (
+                              ref.watch(resumeCountProvider).valueOrNull) {
+                            null || 0 => null,
+                            final c => c,
+                          },
+                          onTap: () => Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const ResumeManageScreen(),
+                            ),
+                          ),
                         ),
                         _MenuTile(
                           icon: Icons.sms_outlined,
@@ -188,14 +208,11 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
                             ),
                           ),
                         ),
-                        _MenuTile(
-                          icon: Icons.mail_outline,
-                          label: s.myPageEmailManage,
-                          onTap: () => _comingSoon(context, s.myPageComingSoon),
-                        ),
+                        // 지원 이메일 관리 삭제(2026-10-05) — 이력서 제출과 중복.
                         _MenuTile(
                           icon: Icons.edit_note,
                           label: s.myPageMemos,
+                          count: ref.watch(jobNotesProvider).valueOrNull?.length,
                           onTap: () => Navigator.of(context).push(
                             MaterialPageRoute(
                               builder: (_) => const MyMemosScreen(),
@@ -230,12 +247,16 @@ class _MenuTile extends StatelessWidget {
   /// 미확인 항목 존재 표시(빨간 N) — 지원 내역 메뉴 등.
   final bool showNew;
 
+  /// 항목 개수 미리 표시(지원 내역·메모 등). null이면 숨김.
+  final int? count;
+
   const _MenuTile({
     required this.icon,
     required this.label,
     required this.onTap,
     this.showDivider = true,
     this.showNew = false,
+    this.count,
   });
 
   @override
@@ -289,6 +310,16 @@ class _MenuTile extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (count != null)
+                  Text(
+                    '$count',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.carrot,
+                    ),
+                  ),
+                if (count != null) const SizedBox(width: 6),
                 const Icon(
                   Icons.chevron_right,
                   size: 18,

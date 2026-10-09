@@ -1338,8 +1338,9 @@ class _SidoSheet extends StatelessWidget {
               children: [
                 IconButton(
                   onPressed: onClose,
-                  icon: const Icon(Icons.chevron_left,
-                      size: 24, color: _T.muted),
+                  // `<` 글리프 계열로 통일(arrow_back_ios_new).
+                  icon: const Icon(Icons.arrow_back_ios_new,
+                      size: 18, color: _T.muted),
                   splashRadius: 20,
                 ),
                 Expanded(

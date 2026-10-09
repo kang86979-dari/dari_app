@@ -7,6 +7,8 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
+import '../favorites/favorite_actions.dart';
+import '../apply/apply_complete_screen.dart';
 import '../../core/widgets/apply_confirm_dialog.dart';
 import '../../data/models/job.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -32,7 +34,6 @@ import '../../data/services/analytics_service.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/navigation.dart';
 import '../../data/services/pending_apply_service.dart';
-import '../account/apply_history_screen.dart';
 import 'package:flutter/services.dart';
 import '../../providers/account_provider.dart';
 import '../account/login_signup_sheet.dart';
@@ -259,17 +260,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   Future<void> _checkPendingPhoneApply() async {
     if (_askingPendingApply) return;
+    // 홈이 최상단일 때만 확인 — 지원 웹뷰(홈페이지/간편/문자) 등 다른 화면이
+    // 위에 떠 있을 때 백그라운드 복귀로 팝업이 겹쳐 뜨던 문제 방지(2026-10-05).
+    if (ModalRoute.of(context)?.isCurrent != true) return;
     final pending = await PendingApplyService.load();
     if (pending == null || !mounted) return;
     final ctx = rootNavigatorKey.currentContext;
     if (ctx == null) return;
     _askingPendingApply = true;
     final s = ref.read(stringsProvider);
+    // 방법별 질문 — 채팅은 "채팅으로 지원하셨나요?", 그 외(전화) 기본.
+    final question = pending.method == 'chat'
+        ? s.applyChatConfirmQuestion
+        : s.applyPhoneConfirmQuestion;
     final applied = await showApplyConfirmDialog(
       ctx,
       company: pending.company.isNotEmpty ? pending.company : pending.siteName,
       title: pending.title,
-      question: s.applyPhoneConfirmQuestion,
+      question: question,
       desc: s.applyPhoneConfirmDesc,
       yesLabel: s.yes,
       noLabel: s.no,
@@ -280,7 +288,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     HapticFeedback.mediumImpact();
     await ref.read(appliedJobActionsProvider).record(
           jobId: pending.jobId,
-          method: 'phone',
+          method: pending.method,
           title: pending.title,
           company: pending.company,
           siteName: pending.siteName,
@@ -486,7 +494,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     _lastFilter = filter;
     _lastLangCode = langCode;
-    final langNotifier = ref.read(languageProvider.notifier);
     final s = ref.watch(stringsProvider);
 
     // 다른 화면에서 홈으로 돌아왔을 때 대기 중인 앱 오픈 광고 표시
@@ -539,61 +546,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   Row(
                     children: [
-                      GestureDetector(
-                        onTap: () => context.push('/favorites'),
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 14),
-                          child: Stack(
-                            clipBehavior: Clip.none,
-                            children: [
-                              Container(
-                                width: 34,
-                                height: 34,
-                                decoration: const BoxDecoration(
-                                  color: AppColors.carrotLight,
-                                  shape: BoxShape.circle,
-                                ),
-                                // 채움 하트는 과해서 외곽선 고정, 카운트만 유지
-                                // (2026-09-26 사용자 확정).
-                                child: const Icon(
-                                  Icons.favorite_border,
-                                  size: 21,
-                                  color: AppColors.carrot,
-                                ),
-                              ),
-                              if (ref.watch(favoriteProvider).isNotEmpty)
-                                Positioned(
-                                  right: -4,
-                                  top: -4,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      shape: BoxShape.circle,
-                                      border: Border.all(
-                                        color: AppColors.carrot,
-                                        width: 1.5,
-                                      ),
-                                    ),
-                                    constraints: const BoxConstraints(
-                                      minWidth: 16,
-                                      minHeight: 16,
-                                    ),
-                                    child: Text(
-                                      '${ref.watch(favoriteProvider).length}',
-                                      style: const TextStyle(
-                                        fontSize: 9,
-                                        fontWeight: FontWeight.w700,
-                                        color: AppColors.carrot,
-                                      ),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                  ),
-                                ),
-                            ],
-                          ),
-                        ),
-                      ),
+                      // 즐겨찾기는 마이페이지로 이동(2026-10-05) — 홈 하트 제거,
+                      // 대신 My 아이콘에 점으로 알림.
                       GestureDetector(
                         onTap: () async {
                           // 세션 복원이 안 끝났을 수 있어 서버 확인까지 대기.
@@ -643,8 +597,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                     ),
                                   ),
                           ),
-                              // 미확인 지원 기록 N 뱃지 — 지원내역 확인 시 소멸.
-                              if (ref.watch(unseenAppliedCountProvider) > 0)
+                              // 미확인 지원 기록 또는 미확인 즐겨찾기(개수 기반 —
+                              // 추가하면 뜨고, 해지하거나 즐겨찾기 화면 열면 소멸).
+                              if (ref.watch(unseenAppliedCountProvider) > 0 ||
+                                  ref.watch(favoritesUnseenProvider))
                                 Positioned(
                                   top: -2,
                                   right: -2,
@@ -667,6 +623,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                       GestureDetector(
                         onTap: () => context.push('/settings'),
+                        // [TEMP] 설정 길게누르기 → 지원 완료 화면 미리보기(확인용)
+                        onLongPress: () => Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => ApplyCompleteScreen(
+                              langCode: ref.read(languageProvider),
+                              company: '테스트 회사',
+                              title: '지원 완료 화면 미리보기',
+                            ),
+                          ),
+                        ),
                         child: Image.asset(
                           'assets/settings_icon.png',
                           // 하트·My 원과 시각 크기 맞춤(2026-09-26).
@@ -1038,21 +1004,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   analytics.jobCardTap(job.id, jobIndex);
                   context.push('/job/${job.id}');
                 },
-                onFavoriteToggle: () {
-                  final isFav = ref.read(isFavoriteProvider(job.id));
-                  if (isFav) {
-                    analytics.favoriteRemoved(job.id);
-                  } else {
-                    analytics.favoriteAdded(job.id, 'home');
-                  }
-                  ref.read(favoriteProvider.notifier).toggle(job.id);
-                  final s = ref.read(stringsProvider);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ));
-                },
+                onFavoriteToggle: () =>
+                    toggleFavoriteWithAuth(context, ref, job.id, source: 'home'),
               );
             },
             childCount: totalItems,

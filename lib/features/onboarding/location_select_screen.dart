@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../providers/job_provider.dart';
@@ -81,13 +82,11 @@ class _LocationSelectScreenState extends ConsumerState<LocationSelectScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 24, 14),
+                padding: const EdgeInsets.fromLTRB(16, 12, 24, 14),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.black),
-                      onPressed: () => context.pop(),
-                    ),
+                    const AppBackButton(),
+                    const SizedBox(width: 4),
                     Text(
                       s.locationSelectTitle,
                       style: const TextStyle(

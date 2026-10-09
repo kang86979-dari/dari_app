@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../core/constants/colors.dart';
@@ -34,6 +35,7 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
   InAppWebViewController? _controller;
   double _progress = 0;
   bool _failed = false;
+  String _currentUrl = ''; // [TEMP] 간편지원 등 URL 확보용 — 확정 후 제거
   // 언어 사전 세팅(쿠키) 완료 전에 WebView가 로드되지 않도록 게이트
   bool _langReady = false;
 
@@ -144,7 +146,36 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
         body: SafeArea(
           top: false,
           bottom: true,
-          child: _failed ? _errorView() : _webView(),
+          child: Column(
+            children: [
+              // [TEMP] URL 복사 바 — 간편지원 등 URL 확보용. 확정 후 제거.
+              GestureDetector(
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: _currentUrl));
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text('URL 복사됨'),
+                    behavior: SnackBarBehavior.floating,
+                    duration: Duration(seconds: 2),
+                  ));
+                },
+                child: Container(
+                  width: double.infinity,
+                  height: 28,
+                  color: AppColors.gray50,
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _currentUrl.isEmpty ? '—' : _currentUrl,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style:
+                        const TextStyle(fontSize: 11, color: AppColors.gray500),
+                  ),
+                ),
+              ),
+              Expanded(child: _failed ? _errorView() : _webView()),
+            ],
+          ),
         ),
       ),
     );
@@ -186,6 +217,7 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
         if (mounted) setState(() => _progress = p / 100);
       },
       onLoadStop: (c, url) async {
+        if (mounted) setState(() => _currentUrl = url?.toString() ?? '');
         // JobnShop: localStorage 언어 주입 (값 다를 때만 리로드 → 루프 없음)
         final js = SiteLang.postLoadJs(url?.toString() ?? widget.url, widget.langCode);
         if (js != null) await c.evaluateJavascript(source: js);

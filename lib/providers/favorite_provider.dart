@@ -33,6 +33,40 @@ final isFavoriteProvider = Provider.family<bool, String>((ref, jobId) {
   return favorites.any((f) => f.jobId == jobId);
 });
 
+/// 마지막으로 마이페이지에서 "확인"한 시점의 즐겨찾기 개수(영속).
+/// 현재 개수가 이 값보다 크면 "새로 추가된 미확인 즐겨찾기 있음"으로 본다.
+/// 개수 기반이라 추가→해지하면 다시 같아져 점이 자동으로 사라진다(2026-10-05).
+final favoritesSeenCountProvider =
+    StateNotifierProvider<FavoritesSeenCountNotifier, int>((ref) {
+  return FavoritesSeenCountNotifier();
+});
+
+class FavoritesSeenCountNotifier extends StateNotifier<int> {
+  FavoritesSeenCountNotifier() : super(0) {
+    _load();
+  }
+  static const _key = 'favorites_seen_count';
+
+  Future<void> _load() async {
+    final prefs = await SharedPreferences.getInstance();
+    state = prefs.getInt(_key) ?? 0;
+  }
+
+  /// 마이페이지 진입 시 현재 개수로 갱신 → 그 이하로는 점이 안 뜬다.
+  Future<void> markSeen(int count) async {
+    state = count;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_key, count);
+  }
+}
+
+/// 미확인 즐겨찾기 존재 여부 — 현재 개수 > 마지막 확인 개수.
+final favoritesUnseenProvider = Provider<bool>((ref) {
+  final count = ref.watch(favoriteProvider).length;
+  final seen = ref.watch(favoritesSeenCountProvider);
+  return count > seen;
+});
+
 /// 즐겨찾기 — 비로그인은 로컬(SharedPreferences)만, 로그인 시 서버(favorites
 /// 테이블)와 동기화(2026-09-26 서버화):
 /// - 로그인/세션복원 순간: 로컬 하트를 서버에 병합 업로드 → 서버 전체를 내려받아

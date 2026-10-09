@@ -89,6 +89,8 @@ class _AdBannerState extends State<AdBanner> {
 
   @override
   Widget build(BuildContext context) {
+    // 개발(디버그) 빌드에서는 광고 숨김(2026-10-05).
+    if (kDebugMode) return const SizedBox.shrink();
     // 로드 실패 시에만 공간 회수. 로드 전(로딩 중)에도 높이를 예약해
     // 배너가 뒤늦게 뜰 때 리스트가 밀리는 점프(멀미)를 방지.
     if (_failed) return const SizedBox.shrink();

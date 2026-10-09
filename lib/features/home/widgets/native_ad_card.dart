@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../../../core/utils/native_ad_controller.dart';
@@ -39,6 +40,7 @@ class _NativeAdCardState extends State<NativeAdCard> {
 
   @override
   Widget build(BuildContext context) {
+    if (kDebugMode) return const SizedBox.shrink(); // 개발 빌드 광고 숨김
     final ad = widget.controller.adFor(widget.slot);
     if (!widget.controller.isLoaded(widget.slot) || ad == null) {
       // 로드 전/실패 시 공간을 예약하지 않아 리스트가 밀리지 않게 함.

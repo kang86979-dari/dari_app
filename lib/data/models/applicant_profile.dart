@@ -22,6 +22,11 @@ class ApplicantProfile {
   final String? addrSigungu; // 시/군/구
   final String? addrDong; // 읍/면/동
 
+  // 우편번호 기반 주소 (이력서/간편지원 Daum 주입용, nullable, toJson 미포함)
+  final String? addrZipcd; // 우편번호 (#zipcd)
+  final String? addrRoad; // 도로명/지번 주소, 동까지 (#addr1)
+  final String? addrDetail; // 상세주소 (#addr2)
+
   const ApplicantProfile({
     required this.snsProvider,
     required this.email,
@@ -39,6 +44,9 @@ class ApplicantProfile {
     this.addrSido,
     this.addrSigungu,
     this.addrDong,
+    this.addrZipcd,
+    this.addrRoad,
+    this.addrDetail,
   });
 
   /// 서버(applicant_profiles) 행 → 모델. 컬럼은 snake_case.
@@ -60,6 +68,9 @@ class ApplicantProfile {
       addrSido: json['addr_sido'] as String?,
       addrSigungu: json['addr_sigungu'] as String?,
       addrDong: json['addr_dong'] as String?,
+      addrZipcd: json['addr_zipcd'] as String?,
+      addrRoad: json['addr_road'] as String?,
+      addrDetail: json['addr_detail'] as String?,
     );
   }
 
@@ -110,6 +121,9 @@ class ApplicantProfile {
     String? addrSido,
     String? addrSigungu,
     String? addrDong,
+    String? addrZipcd,
+    String? addrRoad,
+    String? addrDetail,
   }) {
     return ApplicantProfile(
       snsProvider: snsProvider ?? this.snsProvider,
@@ -128,6 +142,9 @@ class ApplicantProfile {
       addrSido: addrSido ?? this.addrSido,
       addrSigungu: addrSigungu ?? this.addrSigungu,
       addrDong: addrDong ?? this.addrDong,
+      addrZipcd: addrZipcd ?? this.addrZipcd,
+      addrRoad: addrRoad ?? this.addrRoad,
+      addrDetail: addrDetail ?? this.addrDetail,
     );
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
@@ -14,7 +15,6 @@ import '../../providers/job_note_provider.dart';
 import '../account/widgets/job_memo_sheet.dart';
 import '../account/login_signup_sheet.dart';
 import '../../providers/account_provider.dart';
-import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
 import '../home/widgets/native_ad_card.dart';
@@ -101,6 +101,12 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   void initState() {
     super.initState();
     _loadSortType();
+    // 즐겨찾기 화면 진입 = 확인 → 현재 개수로 seenCount 갱신(홈 My 점·메뉴 점 소멸).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref
+          .read(favoritesSeenCountProvider.notifier)
+          .markSeen(ref.read(favoriteProvider).length);
+    });
   }
 
   @override
@@ -153,13 +159,7 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
               ),
               child: Row(
                 children: [
-                  GestureDetector(
-                    onTap: () => context.pop(),
-                    child: const SizedBox(
-                      width: 40, height: 40,
-                      child: Icon(Icons.arrow_back_ios_new, size: 20),
-                    ),
-                  ),
+                  const AppBackButton(),
                   Expanded(
                     child: Text(
                       '${s.favorites} (${favorites.length})',

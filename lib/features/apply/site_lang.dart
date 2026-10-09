@@ -63,7 +63,11 @@ class SiteLang {
   /// - 쿠키 그룹(K-HIRE 등)은 iOS WKWebView에서 쿠키 사전 세팅이 반영되지 않아
   ///   (실기기 확인) 사파리 유지 — 사용자가 사이트 번역 UI로 한 번 설정하면
   ///   사파리 인앱 저장소(앱 전용·영구)에 남아 다음 방문에도 유지됨.
-  static bool useWebViewOnIOS(String url) => url.contains('jobnshop.com');
+  static bool useWebViewOnIOS(String url) =>
+      url.contains('jobnshop.com') ||
+      // [TEMP] 간편지원 URL 확보용 — K-HIRE를 iOS에서도 인앱 웹뷰로 열어
+      // 상단 URL 복사 바가 뜨게 함. URL 확보 후 이 조건 제거.
+      url.contains('khire.co.kr');
 
   // ── 진입 URL 변환 (URL 그룹 + FindJob 모바일 호스트) ──
   /// iOS 사파리 경로에서도 사용 — 언어와 무관한 호스트 정리(FindJob) 포함.

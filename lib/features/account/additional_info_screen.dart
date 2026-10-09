@@ -6,6 +6,7 @@ import '../../core/constants/colors.dart';
 import '../../core/utils/district_names.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/widgets/info_row.dart';
+import '../../core/widgets/help_balloon.dart';
 import '../apply/sms/khire_jit_sheet.dart' show showKhireListPicker;
 import '../../data/services/khire_area_service.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -121,6 +122,11 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
   String? _addrSigungu;
   String? _addrDong;
 
+  // 비자기간(수정 모드 전용) — K-HIRE 지원 시 자동 수집, 여기서 확인·수정.
+  String? _visaIssuedAt; // YYYYMMDD
+  String? _visaExpiresAt; // YYYYMMDD
+  bool _visaNoExpiry = false;
+
   String _localSido(String si) {
     final lang = ref.read(languageProvider);
     if (lang == 'ko') return si;
@@ -197,45 +203,6 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
   }
 
   /// 이름 라벨 ⓘ — 사용할 수 있는 신분증 종류 안내 팝업(X로 닫기).
-  void _showIdTypesPopup(dynamic s) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        titlePadding: const EdgeInsets.fromLTRB(20, 14, 8, 0),
-        contentPadding: const EdgeInsets.fromLTRB(20, 10, 20, 20),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Text(
-                s.accountIdTypesTitle,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black,
-                ),
-              ),
-            ),
-            IconButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              icon: const Icon(Icons.close, size: 20, color: AppColors.gray400),
-            ),
-          ],
-        ),
-        content: Text(
-          s.accountIdTypesBody,
-          style: const TextStyle(
-            fontSize: 14,
-            height: 1.7,
-            color: AppColors.gray600,
-          ),
-        ),
-      ),
-    );
-  }
-
   // 포커스가 필드 간 이동할 때 키패드 액세서리 바(Done/Next 구성)를 갱신.
   void _onFocusChange() => setState(() {});
 
@@ -261,6 +228,10 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       _addrSido = p.addrSido;
       _addrSigungu = p.addrSigungu;
       _addrDong = p.addrDong;
+      _visaIssuedAt = p.visaIssuedAt;
+      _visaExpiresAt = p.visaExpiresAt;
+      // '만료일 없음'은 영주권(F-5) 전용 — 비자타입과 동기화(2026-10-09).
+      _visaNoExpiry = p.visaNoExpiry && p.visaCode == 'F-5';
     } else {
       _snsProvider = widget.snsProvider;
       _emailController.text = widget.initialEmail ?? '';
@@ -327,6 +298,8 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
         _visaCode = result.code;
         _visaLabel = result.label;
         _errors['visa'] = false;
+        // '만료일 없음'은 영주권(F-5) 전용 — 다른 비자로 바꾸면 해제.
+        if (_visaCode != 'F-5') _visaNoExpiry = false;
       });
     }
   }
@@ -467,20 +440,27 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       return;
     }
     if (!mounted) return;
-    // 수정 모드: 주소 변경분 저장(completeSignup upsert엔 주소 미포함 — 분리 저장).
+    // 수정 모드: 주소·비자기간 변경분 저장(completeSignup upsert엔 미포함 — 분리 저장).
     final oldP = widget.initialProfile;
-    if (_isEditMode &&
-        (oldP?.addrSido != _addrSido ||
-            oldP?.addrSigungu != _addrSigungu ||
-            oldP?.addrDong != _addrDong)) {
+    final addrChanged = oldP?.addrSido != _addrSido ||
+        oldP?.addrSigungu != _addrSigungu ||
+        oldP?.addrDong != _addrDong;
+    final effExpires = _visaNoExpiry ? null : _visaExpiresAt;
+    final visaPeriodChanged = oldP?.visaIssuedAt != _visaIssuedAt ||
+        oldP?.visaExpiresAt != effExpires ||
+        oldP?.visaNoExpiry != _visaNoExpiry;
+    if (_isEditMode && (addrChanged || visaPeriodChanged)) {
       await ref.read(accountProvider.notifier).saveSmsFields(
             addrSido: _addrSido,
             addrSigungu: _addrSigungu,
             addrDong: _addrDong,
+            visaIssuedAt: _visaIssuedAt,
+            visaExpiresAt: effExpires,
+            visaNoExpiry: _visaNoExpiry,
           );
     } else if (_isEditMode) {
       // completeSignup이 로컬 상태를 주소 없는 객체로 교체하므로 서버값으로
-      // 복원 — 주소가 화면에서 사라지던 버그 수정(2026-10-04).
+      // 복원 — 주소·비자기간이 화면에서 사라지던 버그 수정(2026-10-04).
       await ref.read(accountProvider.notifier).refreshFromServer();
     }
     if (!mounted) return;
@@ -502,7 +482,8 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
             profile.gender != old.gender ||
             profile.nationalityCode != old.nationalityCode ||
             profile.visaCode != old.visaCode ||
-            profile.phone != old.phone);
+            profile.phone != old.phone) ||
+        visaPeriodChanged;
     if (!_isEditMode || edited) {
       final s = ref.read(stringsProvider);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -539,6 +520,13 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
       ),
       (s.accountFieldNationality, p.nationalityLabel),
       (s.accountFieldVisaType, p.visaLabel),
+      if ((p.visaIssuedAt ?? '').isNotEmpty)
+        (s.smsVisaIssuedLabel, _fmtBirth(p.visaIssuedAt!)),
+      // '만료일 없음'은 F-5 전용 — 과거 저장값이 어긋나 있으면 무시.
+      if (p.visaNoExpiry && p.visaCode == 'F-5')
+        (s.smsVisaExpiryLabel, s.smsVisaNoExpiryShort)
+      else if ((p.visaExpiresAt ?? '').isNotEmpty)
+        (s.smsVisaExpiryLabel, _fmtBirth(p.visaExpiresAt!)),
       (s.accountFieldPhone, p.phone),
       if ((p.addrSido ?? '').isNotEmpty)
         (
@@ -597,6 +585,39 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
   String _fmtBirth(String b) {
     if (b.length != 8) return b;
     return '${b.substring(0, 4)}.${b.substring(4, 6)}.${b.substring(6, 8)}';
+  }
+
+  /// YYYYMMDD(8자리) → YYYY.MM.DD, 없거나 형식 안 맞으면 null(힌트 표시용).
+  String? _fmtDateOrNull(String? ymd) =>
+      (ymd != null && ymd.length == 8) ? _fmtBirth(ymd) : null;
+
+  /// 비자 발급일/만료일 날짜 선택 → YYYYMMDD로 상태 반영.
+  Future<void> _pickVisaDate({required bool isIssue}) async {
+    final current = isIssue ? _visaIssuedAt : _visaExpiresAt;
+    var init = DateTime.now();
+    if (current != null && current.length == 8) {
+      final y = int.tryParse(current.substring(0, 4));
+      final m = int.tryParse(current.substring(4, 6));
+      final d = int.tryParse(current.substring(6, 8));
+      if (y != null && m != null && d != null) init = DateTime(y, m, d);
+    }
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: init,
+      firstDate: DateTime(1970),
+      lastDate: DateTime(2100),
+    );
+    if (picked == null || !mounted) return;
+    final ymd = '${picked.year.toString().padLeft(4, '0')}'
+        '${picked.month.toString().padLeft(2, '0')}'
+        '${picked.day.toString().padLeft(2, '0')}';
+    setState(() {
+      if (isIssue) {
+        _visaIssuedAt = ymd;
+      } else {
+        _visaExpiresAt = ymd;
+      }
+    });
   }
 
   @override
@@ -728,7 +749,8 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
                     _TextField(
                       fieldKey: _nameKey,
                       label: s.accountFieldName,
-                      onHelpTap: () => _showIdTypesPopup(s),
+                      helpTitle: s.accountIdTypesTitle,
+                      helpBody: s.accountIdTypesBody,
                       controller: _nameController,
                       focusNode: _nameFocus,
                       placeholder: s.accountNamePlaceholder,
@@ -799,6 +821,71 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
                       onTap: _pickVisaType,
                     ),
                     const SizedBox(height: 16),
+
+                    // 비자기간 — 수정 모드에서만. K-HIRE 지원 시 자동 수집되지만
+                    // 여기서 확인·수정 가능(2026-10-05).
+                    if (_isEditMode) ...[
+                      _FieldLabel(s.smsVisaPeriodLabel),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _AddrSelect(
+                              value: _fmtDateOrNull(_visaIssuedAt),
+                              hint: s.smsVisaIssuedLabel,
+                              onTap: () => _pickVisaDate(isIssue: true),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: _AddrSelect(
+                              value: _visaNoExpiry
+                                  ? s.smsVisaNoExpiryShort
+                                  : _fmtDateOrNull(_visaExpiresAt),
+                              hint: s.smsVisaExpiryLabel,
+                              onTap: _visaNoExpiry
+                                  ? null
+                                  : () => _pickVisaDate(isIssue: false),
+                            ),
+                          ),
+                        ],
+                      ),
+                      // '만료일 없음' 체크는 영주권(F-5)일 때만 노출 —
+                      // 비자타입과 동기화(2026-10-09).
+                      if (_visaCode == 'F-5') ...[
+                        const SizedBox(height: 10),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () => setState(() {
+                            _visaNoExpiry = !_visaNoExpiry;
+                            if (_visaNoExpiry) _visaExpiresAt = null;
+                          }),
+                          child: Row(
+                            children: [
+                              Icon(
+                                _visaNoExpiry
+                                    ? Icons.check_box
+                                    : Icons.check_box_outline_blank,
+                                size: 20,
+                                color: _visaNoExpiry
+                                    ? AppColors.carrot
+                                    : AppColors.gray300,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  s.smsVisaNoExpiry,
+                                  style: const TextStyle(
+                                      fontSize: 13.5,
+                                      color: AppColors.gray600),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                    ],
 
                     _TextField(
                       fieldKey: _phoneKey,
@@ -1128,11 +1215,11 @@ class _AddrSelect extends StatelessWidget {
                 value ?? hint,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
+                // 다른 입력 필드(_TextField/_SelectField)와 동일한 보통 두께로 통일
+                // — 주소만 볼드로 떠서 어색하던 문제 수정(2026-10-05).
                 style: TextStyle(
-                  fontSize: 14,
-                  fontWeight:
-                      value != null ? FontWeight.w700 : FontWeight.w500,
-                  color: value != null ? AppColors.black : AppColors.gray400,
+                  fontSize: 14.5,
+                  color: value != null ? AppColors.black : AppColors.gray300,
                 ),
               ),
             ),
@@ -1182,8 +1269,10 @@ class _TextField extends StatelessWidget {
   final double helperLeftPadding;
   final Widget? prefixIcon;
 
-  /// 라벨 옆 ⓘ 도움말 아이콘(탭 시 팝업) — 이름 필드 신분증 안내용.
-  final VoidCallback? onHelpTap;
+  /// 라벨 옆 ⓘ 도움말 — 탭 시 아이콘 아래 말풍선(HelpBalloon)으로 안내.
+  /// helpBody가 있으면 ⓘ 노출. 이름 필드 신분증 안내용.
+  final String? helpTitle;
+  final String? helpBody;
 
   const _TextField({
     required this.fieldKey,
@@ -1201,7 +1290,8 @@ class _TextField extends StatelessWidget {
     this.helperColor = AppColors.urgent,
     this.helperLeftPadding = 0,
     this.prefixIcon,
-    this.onHelpTap,
+    this.helpTitle,
+    this.helpBody,
   });
 
   @override
@@ -1210,7 +1300,7 @@ class _TextField extends StatelessWidget {
       key: fieldKey,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (onHelpTap == null)
+        if (helpBody == null)
           _FieldLabel(label)
         else
           Padding(
@@ -1226,15 +1316,7 @@ class _TextField extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: onHelpTap,
-                  child: const Padding(
-                    padding: EdgeInsets.all(2),
-                    child: Icon(Icons.help_outline,
-                        size: 15, color: AppColors.gray400),
-                  ),
-                ),
+                HelpBalloon(title: helpTitle, body: helpBody!),
               ],
             ),
           ),
@@ -1405,18 +1487,22 @@ class _GenderField extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _FieldLabel(label),
+        // 알약형 세그먼트 — 바깥 트랙(gray50) 안에서 선택 칸만 둥근 배경이 뜸.
+        // 선택 배경이 사각이라 테두리와 안 맞던 문제 해결(2026-10-05).
         Container(
+          padding: const EdgeInsets.all(4),
           decoration: BoxDecoration(
+            color: AppColors.gray50,
             border: Border.all(
               color: hasError ? AppColors.urgent : AppColors.gray100,
               width: 1.4,
             ),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Expanded(child: _segment(maleLabel, 'male')),
-              Container(width: 1, height: 20, color: AppColors.gray100),
+              const SizedBox(width: 4),
               Expanded(child: _segment(femaleLabel, 'female')),
             ],
           ),
@@ -1429,15 +1515,20 @@ class _GenderField extends StatelessWidget {
     final selected = value == code;
     return GestureDetector(
       onTap: () => onChanged(code),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12),
-        color: selected ? AppColors.carrotLight : Colors.transparent,
+      behavior: HitTestBehavior.opaque,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 120),
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.carrotLight : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+        ),
         alignment: Alignment.center,
         child: Text(
           label,
           style: TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.w600,
+            fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
             color: selected ? AppColors.carrot : AppColors.gray400,
           ),
         ),

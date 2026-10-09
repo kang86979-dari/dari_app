@@ -14,6 +14,10 @@ class PendingPhoneApply {
   final String location;
   final DateTime dialedAt;
 
+  /// 지원 방법 — 'phone'(전화) 또는 'chat'(K-HIRE 앱 채팅). 구버전 저장분은
+  /// method 키가 없으니 'phone'으로 간주(하위호환).
+  final String method;
+
   const PendingPhoneApply({
     required this.jobId,
     required this.title,
@@ -21,6 +25,7 @@ class PendingPhoneApply {
     required this.siteName,
     required this.location,
     required this.dialedAt,
+    this.method = 'phone',
   });
 
   Map<String, dynamic> toJson() => {
@@ -30,6 +35,7 @@ class PendingPhoneApply {
         'siteName': siteName,
         'location': location,
         'dialedAt': dialedAt.toIso8601String(),
+        'method': method,
       };
 
   factory PendingPhoneApply.fromJson(Map<String, dynamic> json) =>
@@ -40,6 +46,7 @@ class PendingPhoneApply {
         siteName: json['siteName'] as String? ?? '',
         location: json['location'] as String? ?? '',
         dialedAt: DateTime.parse(json['dialedAt'] as String),
+        method: json['method'] as String? ?? 'phone',
       );
 }
 

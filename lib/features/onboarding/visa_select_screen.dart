@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
@@ -38,13 +39,11 @@ class _VisaSelectScreenState extends ConsumerState<VisaSelectScreen> {
             children: [
               // 헤더
               Padding(
-                padding: const EdgeInsets.fromLTRB(8, 12, 24, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 24, 8),
                 child: Row(
                   children: [
-                    IconButton(
-                      icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.black),
-                      onPressed: () => context.pop(),
-                    ),
+                    const AppBackButton(),
+                    const SizedBox(width: 4),
                     Text(
                       s.selectVisa,
                       style: const TextStyle(

@@ -1,11 +1,9 @@
-import 'dart:convert';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'sms_message_builder.dart';
 
-/// 문자 지원 메시지 칩 설정 저장소(문자 관리).
-/// "지원 계속하기" 시 저장 → 다음에 메시지 화면/문자 관리에서 그대로 불러와 재사용.
+/// 문자 지원 메시지 칩 설정 저장소(문자 관리) — 서버(applicant_profiles.sms_compose).
+/// "저장" 시 서버 저장 → 다음에 메시지 화면/문자 관리에서 불러와 재사용(기기 간 유지).
 class SmsComposePrefs {
-  static const _key = 'sms_compose_prefs_v1';
 
   final KoreanLevel? koreanLevel;
   final ExperienceLevel? experience;
@@ -87,17 +85,37 @@ class SmsComposePrefs {
     );
   }
 
+  /// 서버 저장 — applicant_profiles.sms_compose(jsonb) 본인 행 update.
+  /// 문자 지원은 로그인 필수라 세션 전제. 비로그인/실패 시 조용히 무시.
   static Future<void> save(SmsComposePrefs prefs) async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.setString(_key, jsonEncode(prefs.toJson()));
+    final db = Supabase.instance.client;
+    final user = db.auth.currentUser;
+    if (user == null) return;
+    try {
+      await db
+          .from('applicant_profiles')
+          .update({'sms_compose': prefs.toJson()}).eq('user_id', user.id);
+    } catch (_) {
+      // 저장 실패가 흐름을 막지 않도록 무시(기존 기록 실패 정책과 동일).
+    }
   }
 
+  /// 서버 로드 — 없거나 실패 시 null(= "저장본 없음" 기존 동작 유지).
   static Future<SmsComposePrefs?> load() async {
-    final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(_key);
-    if (raw == null) return null;
+    final db = Supabase.instance.client;
+    final user = db.auth.currentUser;
+    if (user == null) return null;
     try {
-      return SmsComposePrefs.fromJson(jsonDecode(raw) as Map<String, dynamic>);
+      final row = await db
+          .from('applicant_profiles')
+          .select('sms_compose')
+          .eq('user_id', user.id)
+          .maybeSingle();
+      final json = row?['sms_compose'];
+      if (json is Map) {
+        return SmsComposePrefs.fromJson(Map<String, dynamic>.from(json));
+      }
+      return null;
     } catch (_) {
       return null;
     }

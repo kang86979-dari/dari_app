@@ -84,6 +84,9 @@ class AccountNotifier extends StateNotifier<AccountState> {
     Object? addrSido = _unset,
     Object? addrSigungu = _unset,
     Object? addrDong = _unset,
+    Object? addrZipcd = _unset,
+    Object? addrRoad = _unset,
+    Object? addrDetail = _unset,
   }) async {
     final user = _db.auth.currentUser;
     if (user == null || state.profile == null) return;
@@ -101,6 +104,9 @@ class AccountNotifier extends StateNotifier<AccountState> {
     if (addrSido != _unset) patch['addr_sido'] = addrSido as String?;
     if (addrSigungu != _unset) patch['addr_sigungu'] = addrSigungu as String?;
     if (addrDong != _unset) patch['addr_dong'] = addrDong as String?;
+    if (addrZipcd != _unset) patch['addr_zipcd'] = addrZipcd as String?;
+    if (addrRoad != _unset) patch['addr_road'] = addrRoad as String?;
+    if (addrDetail != _unset) patch['addr_detail'] = addrDetail as String?;
     if (patch.isEmpty) return;
 
     await _db.from('applicant_profiles').update(patch).eq('user_id', user.id);

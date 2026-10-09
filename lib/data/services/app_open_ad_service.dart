@@ -22,6 +22,7 @@ class AppOpenAdService {
 
   /// 광고 로드
   void loadAd() {
+    if (kDebugMode) return; // 개발 빌드에서는 앱 오픈 광고 숨김
     AppOpenAd.load(
       adUnitId: _adUnitId,
       request: const AdRequest(),
@@ -40,6 +41,7 @@ class AppOpenAdService {
   /// [maxWait] > 0 이면, 노출 대상인데 광고가 아직 로드 안 됐을 때 그 시간만큼만 로드를 기다림.
   /// (스플래시에서만 사용 — 스킵 대상이면 절대 기다리지 않아 모든 스플래시가 느려지지 않음)
   Future<void> showIfAvailable({Duration maxWait = Duration.zero}) async {
+    if (kDebugMode) return; // 개발 빌드에서는 앱 오픈 광고 숨김
     if (_isShowingAd) return;
 
     // 스킵 판정 먼저 — 스킵이면 대기 없이 즉시 종료(모든 스플래시 지연 방지)

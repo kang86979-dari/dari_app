@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import '../../core/constants/colors.dart';
+import '../favorites/favorite_actions.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
@@ -225,16 +227,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
               child: Row(
                 children: [
-                  GestureDetector(
+                  AppBackButton(
                     onTap: () {
                       ref.read(searchQueryProvider.notifier).state = '';
                       context.pop();
                     },
-                    child: const SizedBox(
-                      width: 40, height: 40,
-                      child: Icon(Icons.arrow_back_ios_new,
-                          size: 20, color: AppColors.black),
-                    ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -439,7 +436,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             if (hasFilterMatches)
               SegmentedTabs(
                 tabs: [
-                  SegmentedTabItem(key: 'results', label: s.searchResultsTab, count: _searchJobs.length),
+                  // 로드된 페이지 수(20)라 전체 건수와 달라 혼동 — 숫자 미표시(2026-10-09).
+                  SegmentedTabItem(key: 'results', label: s.searchResultsTab),
                   SegmentedTabItem(key: 'filter', label: s.filterMatchTab, count: totalMatchCount),
                 ],
                 active: _activeTab == 0 ? 'results' : 'filter',
@@ -563,21 +561,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       analytics.searchResultTap(job.id, query, jobIndex);
                       context.push('/job/${job.id}');
                     },
-                    onFavoriteToggle: () {
-                      final isFav = ref.read(isFavoriteProvider(job.id));
-                      if (isFav) {
-                        analytics.favoriteRemoved(job.id);
-                      } else {
-                        analytics.favoriteAdded(job.id, 'search');
-                      }
-                      ref.read(favoriteProvider.notifier).toggle(job.id);
-                      final s = ref.read(stringsProvider);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-                        duration: const Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                      ));
-                    },
+                    onFavoriteToggle: () => toggleFavoriteWithAuth(
+                        context, ref, job.id,
+                        source: 'search'),
                   );
                 },
               ),

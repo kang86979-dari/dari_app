@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/widgets/info_row.dart';
+import '../../../core/widgets/app_back_button.dart';
 import '../../../data/models/job.dart';
 import '../../../providers/account_provider.dart';
 import '../../../providers/language_provider.dart';
@@ -18,6 +19,14 @@ import 'khire_apply_webview_screen.dart';
 /// - 관리 모드([job] null, 마이페이지 "문자 관리"): 문구를 미리 만들어 저장만.
 /// 저장된 문구는 다음에 자동으로 불러와 재사용된다.
 /// 5개 항목(한국어/경력/요일/시간/시작일)을 모두 선택해야 저장·진행할 수 있다.
+/// 계정 화면들과 동일한 iOS 스타일 뒤로가기(<) — 타이틀 중앙 정렬과 함께 사용.
+/// 좌측 16 패딩 + 40 폭(AppBackButton) = AppBar leadingWidth 기본값(56)과 맞아
+/// 커스텀 헤더(패딩 16)와 `<` 위치가 동일해짐.
+Widget _smsBackButton(BuildContext context) => Padding(
+      padding: const EdgeInsets.only(left: 16),
+      child: AppBackButton(onTap: () => Navigator.of(context).maybePop()),
+    );
+
 class SmsPrepareScreen extends ConsumerStatefulWidget {
   final Job? job; // null = 문자 관리 모드
 
@@ -25,7 +34,11 @@ class SmsPrepareScreen extends ConsumerStatefulWidget {
   /// (별도 라우트로 push돼 스와이프백이 자연스럽게 요약본으로 돌아감)
   final bool startInEdit;
 
-  const SmsPrepareScreen({super.key, this.job, this.startInEdit = false});
+  /// 지원 유형 — 'talk'(문자) 또는 'simple'(간편). 웹뷰로 그대로 전달.
+  final String applyType;
+
+  const SmsPrepareScreen(
+      {super.key, this.job, this.startInEdit = false, this.applyType = 'talk'});
 
   @override
   ConsumerState<SmsPrepareScreen> createState() => _SmsPrepareScreenState();
@@ -107,6 +120,8 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
               wantsImmediateStart:
                   SmsMessageBuilder.wantsImmediateStart(_input),
               langCode: ref.read(languageProvider),
+              applyType: widget.applyType,
+              messageInput: _customMessage != null ? null : _input,
             ),
           ));
         });
@@ -164,6 +179,15 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
       _timesChosen &&
       _start != null;
 
+  /// 화면 타이틀 — 관리 모드 / 간편지원 / 문자지원 구분.
+  String _screenTitle(AppStrings s) {
+    if (_isManage) return s.myPageSmsManage;
+    if (widget.applyType == 'simple') {
+      return s.applyMethodLabel('simple') ?? s.smsApplyTitle;
+    }
+    return s.smsApplyTitle;
+  }
+
   /// 메인 화면에 보이는 메시지 — 저장된 수정본이 있으면 그것, 없으면 칩 조립본.
   String get _message => _customMessage ?? SmsMessageBuilder.build(_input);
 
@@ -201,7 +225,7 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
     final s = AppStrings.of(ref.read(languageProvider));
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(s.smsSavedToast),
-      behavior: SnackBarBehavior.floating,
+      behavior: SnackBarBehavior.floating, duration: Duration(seconds: 2),
     ));
     if (widget.startInEdit) {
       Navigator.of(context).pop(true); // 요약본으로 복귀(갱신 신호)
@@ -218,12 +242,17 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
       Navigator.of(context).pop();
       return;
     }
-    Navigator.of(context).push(MaterialPageRoute(
+    // pushReplacement — 요약본을 웹뷰로 교체. 웹뷰에서 X(미완료) 시 요약본이
+    // 아니라 공고 상세로 바로 돌아가게 함(2026-10-05 사용자 확정).
+    Navigator.of(context).pushReplacement(MaterialPageRoute(
       builder: (_) => KhireApplyWebViewScreen(
         job: widget.job!,
         message: msg,
         wantsImmediateStart: SmsMessageBuilder.wantsImmediateStart(_input),
         langCode: ref.read(languageProvider),
+        applyType: widget.applyType,
+        // 직접 입력 수정본이면 재생성하지 않음(사용자 작성 그대로).
+        messageInput: _customMessage != null ? null : _input,
       ),
     ));
   }
@@ -258,7 +287,9 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: AppColors.black,
-        title: Text(_isManage ? s.myPageSmsManage : s.smsApplyTitle,
+        centerTitle: true,
+        leading: _smsBackButton(context),
+        title: Text(_screenTitle(s),
             style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -498,7 +529,9 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: AppColors.black,
-        title: Text(_isManage ? s.myPageSmsManage : s.smsApplyTitle,
+        centerTitle: true,
+        leading: _smsBackButton(context),
+        title: Text(_screenTitle(s),
             style: const TextStyle(
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
@@ -806,6 +839,8 @@ class _SmsTextEditScreenState extends State<_SmsTextEditScreen> {
         backgroundColor: AppColors.background,
         elevation: 0,
         foregroundColor: AppColors.black,
+        centerTitle: true,
+        leading: _smsBackButton(context),
         title: Text(widget.title,
             style: const TextStyle(
                 fontSize: 17,
@@ -1123,8 +1158,10 @@ class _BottomBar extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14)),
             ),
             child: Text(label,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+                maxLines: 1,
+                // 한글 받침 세로 잘림 방지(2026-10-05 캡처).
+                style: const TextStyle(
+                    fontSize: 16, fontWeight: FontWeight.w700, height: 1.2)),
           ),
         ),
       ),

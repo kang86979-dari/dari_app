@@ -10,13 +10,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/widgets/apply_confirm_dialog.dart';
-import '../../../data/models/applicant_profile.dart';
+import '../../../data/constants/world_countries.dart';
 import '../../../data/models/job.dart';
+import '../../../data/models/resume.dart';
+import '../../../data/services/khire_resume_codes.dart';
 import '../../../data/services/site_login_prefs.dart';
 import '../../../providers/account_provider.dart';
 import '../../../providers/applied_job_provider.dart';
 import '../../../providers/job_provider.dart';
+import '../../../providers/resume_provider.dart';
+import '../apply_complete_screen.dart';
+import '../online/khire_resume_injector.dart';
 import 'khire_jit_sheet.dart';
+import 'sms_message_builder.dart';
 
 /// K-HIRE 전용 지원 웹뷰. 메시지 화면에서 조립한 문구를 TalkApply 폼에 주입하고,
 /// 부족한 비자기간·주소는 폼 도착 시 just-in-time으로 받아 주입+프로필 저장한다.
@@ -35,13 +41,32 @@ class KhireApplyWebViewScreen extends ConsumerStatefulWidget {
   final bool wantsImmediateStart;
   final String langCode;
 
+  /// 지원 유형 — 'talk'(문자지원/TalkApply) 또는 'simple'(간편지원/SimpleApply).
+  /// 간편지원은 이력서 기반이라 메시지·주소 주입을 하지 않는다(2026-10-05).
+  final String applyType;
+
+  /// 칩 조립본 입력값(직접 입력 수정본이면 null). null이 아니면 지원 시점에
+  /// K-HIRE 계정의 국적·비자로 메시지를 재생성한다(2026-10-05). 간편지원은 null.
+  final SmsMessageInput? messageInput;
+
+  /// 온라인(이력서) 지원 시 Dari 이력서(canonical). Regist.asp 도달 시
+  /// localStorage로 주입(2026-10-05, 설계서 §6). online 외에는 null.
+  final Resume? resume;
+
   const KhireApplyWebViewScreen({
     super.key,
     required this.job,
     required this.message,
     required this.wantsImmediateStart,
     required this.langCode,
+    this.applyType = 'talk',
+    this.messageInput,
+    this.resume,
   });
+
+  bool get isSimple => applyType == 'simple';
+  bool get isHomepage => applyType == 'homepage';
+  bool get isOnline => applyType == 'online';
 
   @override
   ConsumerState<KhireApplyWebViewScreen> createState() =>
@@ -52,8 +77,9 @@ class _KhireApplyWebViewScreenState
     extends ConsumerState<KhireApplyWebViewScreen> {
   bool _injectedThisLoad = false;
   bool _jitHandled = false; // JIT 시트 중복 방지
+  // 지원 시점 K-HIRE 국적·비자로 재생성한 메시지(없으면 widget.message 그대로).
+  String? _effectiveMessage;
   bool _recorded = false;
-  bool _reachedTalkApply = false; // TalkApply 폼 도달 여부 — 닫기 팝업 조건
   int _autoClickCount = 0; // 상세에서 문자지원 자동 클릭 횟수(루프 방지)
 
   // 로그인 타입 감지 — OAuth 도메인 경유로 판별, 사이트별 저장(2026-10-04).
@@ -69,9 +95,24 @@ class _KhireApplyWebViewScreenState
   /// (상세 도착하면 자동클릭이 처리).
   String get _startUrl {
     final jobUrl = widget.job.url ?? '';
+    // 홈페이지 지원 — 외부 URL 미수집이라 K-HIRE 공고 상세로 보내고, 거기서
+    // 사용자가 "홈페이지 지원" 버튼을 직접 탭 → 업체 사이트로(2026-10-05).
+    if (widget.isHomepage) {
+      return jobUrl.isNotEmpty ? jobUrl : 'https://m.khire.co.kr/';
+    }
+    // 온라인(이력서) 지원 — 라우터 직행 URL은 비로그인 시 NotFound로 떨어져
+    // (2026-10-05 curl 확인) 경로 확정 불가 → 공고 상세에서 K-HIRE 자체
+    // 온라인지원 동작을 자동 클릭(문자지원과 동일한 검증된 패턴).
+    if (widget.isOnline) {
+      return jobUrl.isNotEmpty ? jobUrl : 'https://m.khire.co.kr/';
+    }
     final adid =
         RegExp(r'[?&]adid=(\d+)').firstMatch(jobUrl)?.group(1);
     if (adid != null) {
+      if (widget.isSimple) {
+        // 간편지원 — SimpleApply 직행(사용자 제공 URL 패턴, 2026-10-05).
+        return 'https://m.khire.co.kr/person/SimpleApply.asp?adid=$adid&recomyn=&listmenucd=';
+      }
       return 'https://m.khire.co.kr/person/TalkApply.asp?adid=$adid&inflowtype=TALK';
     }
     return jobUrl.isNotEmpty ? jobUrl : 'https://m.khire.co.kr/';
@@ -117,7 +158,15 @@ class _KhireApplyWebViewScreenState
           backgroundColor: AppColors.background,
           elevation: 0,
           foregroundColor: AppColors.black,
-          title: Text(s.smsApplyTitle,
+          centerTitle: true,
+          title: Text(
+              widget.isSimple
+                  ? (s.applyMethodLabel('simple') ?? s.smsApplyTitle)
+                  : widget.isHomepage
+                      ? (s.applyMethodLabel('homepage') ?? s.smsApplyTitle)
+                      : widget.isOnline
+                          ? (s.applyMethodLabel('online') ?? s.smsApplyTitle)
+                          : s.smsApplyTitle,
               style: const TextStyle(
                   fontSize: 17,
                   fontWeight: FontWeight.w700,
@@ -134,7 +183,7 @@ class _KhireApplyWebViewScreenState
                 Clipboard.setData(ClipboardData(text: _currentUrl));
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                   content: Text('URL 복사됨'),
-                  behavior: SnackBarBehavior.floating,
+                  behavior: SnackBarBehavior.floating, duration: Duration(seconds: 2),
                 ));
               },
             ),
@@ -172,10 +221,16 @@ class _KhireApplyWebViewScreenState
             javaScriptCanOpenWindowsAutomatically: true,
           ),
           onWebViewCreated: (controller) {
-            // 제출 버튼 클릭 감지 → 자동 지원 기록(2026-10-04).
+            // 제출 기록은 ApplyComplete.asp 완료 페이지 도달로 감지(onLoadStop).
+            // 회원가입 '가입하기' 시점의 최종 입력값 → 우리 프로필 역동기화
+            // (고객이 가입폼에서 우리가 넣은 값을 고쳐도 DB 반영, 2026-10-05).
             controller.addJavaScriptHandler(
-              handlerName: 'dariSubmitted',
-              callback: (_) => _onSubmitted(),
+              handlerName: 'dariSignupValues',
+              callback: (args) {
+                if (args.isNotEmpty && args.first is Map) {
+                  _onSignupValues(Map<String, dynamic>.from(args.first as Map));
+                }
+              },
             );
           },
           onCreateWindow: (controller, action) async {
@@ -221,7 +276,9 @@ class _KhireApplyWebViewScreenState
                             ),
                             const SizedBox(height: 16),
                             Text(
-                              s.smsLoadingSite,
+                              widget.isHomepage
+                                  ? s.smsLoadingHomepage
+                                  : s.smsLoadingSite,
                               style: const TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w600,
@@ -245,6 +302,33 @@ class _KhireApplyWebViewScreenState
     if (_injectedThisLoad) return;
     final lower = url.toLowerCase();
 
+    // 지원 완료 — ApplyComplete.asp 도달 = 실제 제출 성공(문자=TALK/간편=SIMPLE).
+    // 클릭 시점이 아니라 이 완료 페이지에서만 기록 → 오기록 방지(2026-10-05).
+    // K-HIRE 완료 페이지에 머물지 않고 우리 자체 완료 화면으로 교체.
+    if (lower.contains('applycomplete')) {
+      _injectedThisLoad = true;
+      await _record();
+      // 동기화 A안: 온라인 지원 완료 = Dari 이력서가 K-HIRE에 반영된 상태.
+      // 최초 등록 플래그를 세우고 '반영 대기'를 해제(2026-10-09).
+      if (widget.isOnline && widget.resume != null) {
+        try {
+          await ref.read(resumeActionsProvider).save(widget.resume!
+              .copyWith(khireRegistered: true, khireDirty: false));
+        } catch (_) {
+          // 플래그 저장 실패는 치명적이지 않음 — 다음 저장 때 재시도됨.
+        }
+      }
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(MaterialPageRoute(
+        builder: (_) => ApplyCompleteScreen(
+          langCode: widget.langCode,
+          company: widget.job.getDisplayCompany(widget.langCode),
+          title: widget.job.getTitle(widget.langCode),
+        ),
+      ));
+      return;
+    }
+
     if (lower.contains('login.asp')) {
       if (_overlayVisible) setState(() => _overlayVisible = false);
       return; // 사용자 로그인 대기
@@ -265,9 +349,9 @@ class _KhireApplyWebViewScreenState
       await _prefillSignup(controller);
       return;
     }
-    if (lower.contains('talkapply')) {
+    // TalkApply(문자) / SimpleApply(간편) 폼 도착 — 공통 처리.
+    if (lower.contains('talkapply') || lower.contains('simpleapply')) {
       _injectedThisLoad = true;
-      _reachedTalkApply = true;
       // 폼 도착 — 오버레이 해제(유의사항 레이어는 사용자가 봐야 함).
       if (_overlayVisible) setState(() => _overlayVisible = false);
       // 로그인을 거쳐 도달 = 로그인 성공 — 타입 저장(OAuth 미경유면 자체 계정)
@@ -280,10 +364,105 @@ class _KhireApplyWebViewScreenState
       await _injectTalkApply(controller);
       return;
     }
+    // 온라인(이력서) 지원 ①: 이력서 작성 폼(Regist.asp) 도달 — Dari 이력서를
+    // localStorage RESUME_*_JSON으로 주입(hashdata는 라이브 값 보존, §6 레시피).
+    // 주입 후 리로드 1회 → 폼이 채워진 상태로 사용자가 확인·저장/지원.
+    if (widget.isOnline &&
+        lower.contains('/person/resume/regist.asp') &&
+        widget.resume != null) {
+      _injectedThisLoad = true;
+      if (_overlayVisible) setState(() => _overlayVisible = false);
+      if (_sawLoginPage) {
+        final type = _detectedOauth ?? 'K-HIRE';
+        SiteLoginPrefs.save('khire', type);
+        _lastLoginType = type;
+        _sawLoginPage = false;
+      }
+      final already = await controller.evaluateJavascript(
+          source: KhireResumeInjector.checkInjectedJs);
+      if (already == true) {
+        debugPrint('🟣 [ONLINE] 이미 주입됨 — 사용자 확인 대기');
+        return;
+      }
+      // 근무조건 이름(workperiodnm 등) 조회에 코드표 필요 — 로드 보장.
+      await KhireResumeCodes.instance.ensureLoaded();
+      final birth = ref.read(accountProvider).profile?.birthDate ?? '';
+      final r = await controller.evaluateJavascript(
+          source: KhireResumeInjector.buildInjectionJs(
+        widget.resume!,
+        birthYm: birth.length >= 6 ? birth.substring(0, 6) : '',
+      ));
+      debugPrint('🟣 [ONLINE] 이력서 주입: $r');
+      return;
+    }
+    // 온라인(이력서) 지원 ②: 공고 상세 — K-HIRE 자체 온라인지원 동작을 자동
+    // 클릭(문자지원과 동일 패턴). 미로그인이면 K-HIRE가 로그인 유도.
+    // CLS 함수명 미확정이라 selector·텍스트 스캔 폴백 포함(2026-10-05).
+    if (lower.contains('jobdetail') &&
+        widget.isOnline &&
+        _autoClickCount < 3) {
+      _injectedThisLoad = true;
+      _autoClickCount++;
+      final r = await controller.evaluateJavascript(source: '''
+(function(){
+  try {
+    if (window.JobDetailCLS && typeof JobDetailCLS.ApplicationOnlineResume === 'function') {
+      JobDetailCLS.ApplicationOnlineResume(); return 'cls';
+    }
+    var el = document.querySelector('.applyLayer__link--online');
+    if (el){ el.click(); return 'selector'; }
+    var links = document.querySelectorAll('a[href], button');
+    for (var i=0;i<links.length;i++){
+      var t=(links[i].innerText||links[i].textContent||'').trim();
+      if (t.indexOf('온라인')>=0 && t.indexOf('지원')>=0){ links[i].click(); return 'scan'; }
+    }
+  } catch(e){ console.log('dari online auto-click error', e); }
+  return 'none';
+})();
+''');
+      debugPrint('🟣 [ONLINE] auto-click: $r');
+      // 진입 실패 시 상세 노출(사용자가 직접 탭 가능하도록 오버레이 해제).
+      if (r == 'none' && _overlayVisible) {
+        setState(() => _overlayVisible = false);
+      }
+      return;
+    }
+    // 홈페이지 지원: 공고 상세의 "홈페이지 지원" 앵커(외부 업체 채용 URL)를
+    // 자동 클릭해 업체 사이트로 바로 이동시킨다(2026-10-05 사용자 지시).
+    // selector(.applyLayer__link--homepage) 우선, 실패 시 "홈페이지" 텍스트 +
+    // 외부(khire 아님) http href 앵커를 스캔(번역 위젯 대비 homepage도 매칭).
+    if (lower.contains('jobdetail') && widget.isHomepage) {
+      _injectedThisLoad = true;
+      final r = await controller.evaluateJavascript(source: '''
+(function(){
+  try {
+    var el = document.querySelector('.applyLayer__link--homepage');
+    if (el){ var h=el.href||el.getAttribute('href')||''; if(h){ location.href=h; return 'cls'; } }
+    var links = document.querySelectorAll('a[href]');
+    for (var i=0;i<links.length;i++){
+      var a=links[i];
+      var t=(a.innerText||a.textContent||'').trim();
+      var href=a.href||a.getAttribute('href')||'';
+      if ((t.indexOf('홈페이지')>=0 || /homepage/i.test(t)) && /^https?:/i.test(href) && href.indexOf('khire.co.kr')<0){
+        location.href=href; return 'scan';
+      }
+    }
+  } catch(e){ console.log('dari homepage auto error', e); }
+  return 'none';
+})();
+''');
+      debugPrint('🟣 [HOMEPAGE] auto-nav: $r');
+      // 외부로 이동 중이면 오버레이 유지(깜빡임 가림), 못 찾았으면 상세 노출(폴백).
+      if (r == 'none' && _overlayVisible) {
+        setState(() => _overlayVisible = false);
+      }
+      return;
+    }
     // 공고 상세: K-HIRE 자체 문자지원 동작을 호출해 TalkApply로 진입 —
     // 사용자가 버튼을 직접 찾지 않아도 됨. 미로그인이면 K-HIRE가 로그인 유도.
     // (TalkApply 직접 URL은 로그인 세션에서만 렌더링돼 알 수 없음, 2026-10-04)
-    if (lower.contains('jobdetail') && _autoClickCount < 3) {
+    // 간편지원은 자동클릭 대상 함수가 달라 제외 — 로그인 상태면 직행 URL로 동작.
+    if (lower.contains('jobdetail') && _autoClickCount < 3 && !widget.isSimple) {
       _injectedThisLoad = true;
       _autoClickCount++;
       await controller.evaluateJavascript(source: '''
@@ -304,6 +483,13 @@ class _KhireApplyWebViewScreenState
     if (_isHome(lower)) {
       _injectedThisLoad = true;
       await controller.loadUrl(urlRequest: URLRequest(url: WebUri(_startUrl)));
+      return;
+    }
+    // 온라인 지원: K-HIRE에 이력서가 이미 있으면(resumecount>0) Regist를
+    // 건너뛰고 지원확인 등 미지의 화면으로 감 — 어떤 분기도 안 잡히면
+    // 오버레이를 풀어 사용자가 화면을 볼 수 있게 한다(15초 블라인드 방지).
+    if (widget.isOnline && _overlayVisible) {
+      setState(() => _overlayVisible = false);
     }
   }
 
@@ -346,8 +532,8 @@ class _KhireApplyWebViewScreenState
     await _waitGuideDismissed(controller);
     if (!mounted) return;
     debugPrint('🟣 [SMS] 유의사항 통과 — 폼 상태 읽기');
-    // [TEMP] 주소 selector 검증용 자동 덤프 — 확인 후 제거(2026-10-04).
-    await _dumpPage(controller, 'talkapply');
+    // [TEMP] selector 검증용 자동 덤프 — 확인 후 제거. 간편지원은 'simpleapply'로.
+    await _dumpPage(controller, widget.isSimple ? 'simpleapply' : 'talkapply');
 
     // 폼 상태 읽기
     final raw = await controller.evaluateJavascript(source: '''
@@ -356,8 +542,6 @@ class _KhireApplyWebViewScreenState
   var si=document.querySelector('#selSi');
   return JSON.stringify({
     comment: filled('#comment'),
-    visa: filled('#visasdt'),
-    visaEnd: filled('#visaedt'),
     si: !!(si && si.selectedIndex>0)
   });
 })();
@@ -368,18 +552,27 @@ class _KhireApplyWebViewScreenState
     } catch (_) {}
     debugPrint('🟣 [SMS] 폼 상태: $raw');
     final commentFilled = form['comment'] == true;
-    final visaFilled = form['visa'] == true;
     final siSelected = form['si'] == true;
 
-    final profile = ref.read(accountProvider).profile;
+    // K-HIRE 값을 source of truth로 우리 DB 동기화(로드 시점 값만 — 사용자가
+    // 폼에서 수정한 건 반영 안 함). TalkApply=히든/표시 기반,
+    // SimpleApply=편집 입력필드 기반이라 selector가 다름(2026-10-05).
+    if (widget.isSimple) {
+      await _syncFromSimpleApply(controller);
+    } else {
+      await _syncFromKhireAccount(controller);
+    }
+    if (!mounted) return;
 
-    // 메시지·비자일자 주입 (폼이 비어 있을 때만)
+    // 메시지(#comment) 주입 — 문자·간편 공통(둘 다 메시지 기반, 2026-10-05
+    // 덤프 확인). 간편지원은 '각오 한마디'(#comment, 2000자)로 동일 selector.
     await controller.evaluateJavascript(
-        source: _buildInjectJs(profile,
-            injectComment: !commentFilled, injectVisa: !visaFilled));
+        source: _buildInjectJs(injectComment: !commentFilled));
 
-    // 주소 — 폼에 이미 있으면 안 건드림. 프로필에 **시/구/동 전부** 있으면
-    // 바로 주입(시트 없음). 하나라도 없으면 시트로 받아 완성(동 필수).
+    // 주소 — **문자지원(TalkApply)에만** 있음. 간편지원(SimpleApply)엔 주소란이
+    // 없어 건너뜀(덤프 확인: selSi 없음, 2026-10-05).
+    if (!widget.isSimple) {
+    final profile = ref.read(accountProvider).profile;
     final hasProfileAddr = (profile?.addrSido ?? '').isNotEmpty &&
         (profile?.addrSigungu ?? '').isNotEmpty &&
         (profile?.addrDong ?? '').isNotEmpty;
@@ -424,32 +617,12 @@ class _KhireApplyWebViewScreenState
               addrDong: saved.dong,
             );
         if (saved.dong != null) await _selectDong(controller, saved.dong!);
+        _addRegionToFilterIfMissing(regions, saved.sido, saved.sigungu);
       }
     }
-
-    // 제출 감지 리스너 — ResumeCLS.SubmitTalkApplication 래핑.
-    await controller.evaluateJavascript(source: '''
-(function(){
-  try {
-    if (window.ResumeCLS && typeof ResumeCLS.SubmitTalkApplication === 'function' && !ResumeCLS._dariWrapped) {
-      var orig = ResumeCLS.SubmitTalkApplication.bind(ResumeCLS);
-      ResumeCLS.SubmitTalkApplication = function(){
-        try { window.flutter_inappwebview.callHandler('dariSubmitted'); } catch(e){}
-        return orig.apply(this, arguments);
-      };
-      ResumeCLS._dariWrapped = true;
-    }
-    // 폴백 — 실물 제출 버튼(.apply-action-button, 2026-10-04 덤프 확인)
-    var btn = document.querySelector('.apply-action-button');
-    if (btn && !btn._dariHooked) {
-      btn.addEventListener('click', function(){
-        try { window.flutter_inappwebview.callHandler('dariSubmitted'); } catch(e){}
-      });
-      btn._dariHooked = true;
-    }
-  } catch(e){ console.log('dari submit hook error', e); }
-})();
-''');
+    } // !widget.isSimple — 메시지·주소 주입 블록 끝
+    // 제출 감지는 클릭 훅이 아니라 **ApplyComplete.asp 완료 페이지 도달**로 처리
+    // — "지원하기" 클릭(확인 팝업 전)에 오기록되던 문제 제거(2026-10-05).
   }
 
   /// [TEMP] 현재 페이지 HTML을 Documents에 저장 — selector 실물 검증용.
@@ -541,6 +714,37 @@ class _KhireApplyWebViewScreenState
     return [];
   }
 
+  /// 추가정보로 받은 주소가 필터에 없으면 자동 추가(2026-10-05 사용자 확정).
+  /// 같은 시/도가 이미 선택돼 있으면(시 레벨이든 다른 구든) 건드리지 않음.
+  void _addRegionToFilterIfMissing(
+      List<Map<String, dynamic>> regions, String sido, String? sigungu) {
+    final selected = ref.read(filterStateProvider).regionIds;
+    // 선택된 지역 중 같은 시/도가 하나라도 있으면 이미 커버된 것으로 봄.
+    for (final r in regions) {
+      if (selected.contains(r['id']) && r['si_name'] == sido) return;
+    }
+    // 구 단위 우선, 없으면 시/도 레벨 행.
+    int? rid;
+    for (final r in regions) {
+      if (r['si_name'] == sido && r['gu_name'] == sigungu) {
+        rid = r['id'] as int?;
+        break;
+      }
+    }
+    if (rid == null) {
+      for (final r in regions) {
+        if (r['si_name'] == sido && r['gu_name'] == null) {
+          rid = r['id'] as int?;
+          break;
+        }
+      }
+    }
+    if (rid != null) {
+      ref.read(filterStateProvider.notifier).toggleRegionId(rid);
+      debugPrint('🟣 [SMS] 필터에 지역 자동 추가: $sido ${sigungu ?? ''} ($rid)');
+    }
+  }
+
   /// 필터에 설정된 지역 → (시/도, 시군구) 기본값. 없으면 null.
   (String, String?)? _filterRegionDefault(
       List<Map<String, dynamic>> regions) {
@@ -558,34 +762,183 @@ class _KhireApplyWebViewScreenState
   }
 
   /// 사용자가 제출 버튼을 눌렀을 때 — 자동 기록 + 토스트(1회).
-  Future<void> _onSubmitted() async {
-    if (_recorded) return;
-    await _record();
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(AppStrings.of(widget.langCode).appliedSavedToast),
-        behavior: SnackBarBehavior.floating,
-      ));
+  /// 메시지 주입 스크립트 — **폼이 비어 있을 때만**(덮어쓰기 금지).
+  /// 비자기간은 수집·주입 안 함(사용자가 K-HIRE에서 직접, 2026-10-05).
+  /// K-HIRE 계정 값(TalkApply 폼 표시·히든)을 읽어 우리 DB 동기화 + 메시지
+  /// 재생성. K-HIRE가 source of truth(인증 거침·담당자가 봄). 값이 비거나 파싱
+  /// 실패한 필드는 건드리지 않음(잘못된 덮어쓰기 방지). 비자기간은 덤으로 저장.
+  Future<void> _syncFromKhireAccount(InAppWebViewController controller) async {
+    final raw = await controller.evaluateJavascript(source: '''
+(function(){
+  function txt(sel){var el=document.querySelector(sel);return el?(el.textContent||'').trim():'';}
+  function val(sel){var el=document.querySelector(sel);return el?(el.value||'').trim():'';}
+  return JSON.stringify({
+    name: txt('li.name .value'),
+    genderText: txt('li.gender .value'),
+    birthText: txt('li.birth .value'),
+    phone: txt('li.mobile .value'),
+    nationcd: val('#hidnationcd'),
+    nationKo: val('#hidnation'),
+    visacd: val('#hidvisacd'),
+    visaText: txt('li.visa .value'),
+    visasdt: val('#visasdt'),
+    visaedt: val('#visaedt')
+  });
+})();
+''');
+    Map<String, dynamic> kh;
+    try {
+      kh = jsonDecode(raw as String) as Map<String, dynamic>;
+    } catch (_) {
+      return;
+    }
+    if (!mounted) return;
+    final profile = ref.read(accountProvider).profile;
+    if (profile == null) return;
+    String g(String k) => (kh[k] as String? ?? '').trim();
+
+    // --- 개인정보 역동기화 ---
+    var updated = profile;
+    var changed = false;
+    final name = g('name');
+    if (name.isNotEmpty && name != profile.name) {
+      updated = updated.copyWith(name: name);
+      changed = true;
+    }
+    final gender = _genderFromKo(g('genderText'));
+    if (gender != null && gender != profile.gender) {
+      updated = updated.copyWith(gender: gender);
+      changed = true;
+    }
+    final birth = _digitsOnly(g('birthText'));
+    if (birth.length == 8 && birth != profile.birthDate) {
+      updated = updated.copyWith(birthDate: birth);
+      changed = true;
+    }
+    final phone = g('phone');
+    if (phone.isNotEmpty && phone != profile.phone) {
+      updated = updated.copyWith(phone: phone);
+      changed = true;
+    }
+    final nationcd = g('nationcd').toUpperCase();
+    if (nationcd.isNotEmpty && nationcd != profile.nationalityCode) {
+      updated = updated.copyWith(
+        nationalityCode: nationcd,
+        nationalityLabel: _nationalityLabel(nationcd) ?? g('nationKo'),
+      );
+      changed = true;
+    }
+    final visacd = g('visacd');
+    if (visacd.isNotEmpty && visacd != profile.visaCode) {
+      updated = updated.copyWith(visaCode: visacd, visaLabel: visacd);
+      changed = true;
+    }
+    if (changed) {
+      try {
+        await ref.read(accountProvider.notifier).completeSignup(updated);
+      } catch (_) {}
+    }
+
+    // --- 비자기간(덤) 저장 ---
+    final period = _parseVisaPeriod(g('visaText'), g('visasdt'), g('visaedt'));
+    if (period != null) {
+      final issued = period.$1;
+      final expires = period.$2;
+      if (issued != profile.visaIssuedAt ||
+          (expires != null && expires != profile.visaExpiresAt)) {
+        try {
+          final notifier = ref.read(accountProvider.notifier);
+          if (expires != null) {
+            await notifier.saveSmsFields(
+                visaIssuedAt: issued, visaExpiresAt: expires);
+          } else {
+            await notifier.saveSmsFields(visaIssuedAt: issued);
+          }
+        } catch (_) {}
+      }
+    }
+
+    // --- 메시지 재생성(칩 조립본일 때만) — K-HIRE 국적(한글)·비자로 ---
+    final input = widget.messageInput;
+    if (input != null) {
+      final natKo = g('nationKo');
+      final visa = g('visacd');
+      if (natKo.isNotEmpty && visa.isNotEmpty) {
+        _effectiveMessage = SmsMessageBuilder.build(
+          input.withNationalityVisa(nationalityLabel: natKo, visaCode: visa),
+        );
+      }
     }
   }
 
-  /// 메시지·비자일자 주입 스크립트 — **폼이 비어 있을 때만**([injectComment]/
-  /// [injectVisa] 플래그는 호출 전 폼 상태 읽기로 결정, 덮어쓰기 금지).
-  String _buildInjectJs(ApplicantProfile? p,
-      {required bool injectComment, required bool injectVisa}) {
-    final msg = jsonEncode(widget.message);
-    final issued = jsonEncode(p?.visaIssuedAt ?? '');
-    final expires = jsonEncode(
-        (p?.visaNoExpiry == true) ? '' : (p?.visaExpiresAt ?? ''));
+  /// 간편지원(SimpleApply) 편집 입력필드에서 K-HIRE가 채워둔 개인정보를 읽어
+  /// 우리 DB 동기화(로드 시점 1회). 필드: #username, gender 라디오, #htel1~3,
+  /// #birthyear/month/day, #email1/#email2. 국적·비자 필드는 폼에 없음.
+  /// _onSignupValues(맵)로 위임 — 이름·성별·생년·휴대폰·이메일만 갱신.
+  Future<void> _syncFromSimpleApply(InAppWebViewController controller) async {
+    final raw = await controller.evaluateJavascript(source: '''
+(function(){
+  function v(sel){var el=document.querySelector(sel);return el?((el.value||'')+'').trim():'';}
+  function pad(x){x=(x||'').replace(/\\D/g,'');return x.length===1?('0'+x):x;}
+  var g=document.querySelector('input[name=gender]:checked');
+  var y=v('#birthyear'), m=v('#birthmonth'), d=v('#birthday');
+  var e1=v('#email1'), e2=v('#email2');
+  return JSON.stringify({
+    name: v('#username'),
+    gender: g?(g.value||''):'',
+    birth: (y&&m&&d)?(y+pad(m)+pad(d)):'',
+    phone: v('#htel1')+v('#htel2')+v('#htel3'),
+    email: (e1&&e2)?(e1+'@'+e2):'',
+    nationcd:'', visacd:'', nationKo:'', visaText:'', visasdt:'', visaedt:''
+  });
+})();
+''');
+    if (!mounted) return;
+    try {
+      final m = jsonDecode(raw as String) as Map<String, dynamic>;
+      await _onSignupValues(Map<String, dynamic>.from(m));
+    } catch (_) {}
+  }
+
+  static String _digitsOnly(String s) => s.replaceAll(RegExp(r'\D'), '');
+
+  // Google Translate 위젯이 표시 텍스트를 번역하므로 한/영 모두 인식.
+  // (female/woman은 male/man을 포함하니 여성 판정을 먼저.)
+  static String? _genderFromKo(String t) {
+    final s = t.toLowerCase();
+    if (t.contains('여') || s.contains('female') || s.contains('woman')) {
+      return 'female';
+    }
+    if (t.contains('남') || s.contains('male') || s.contains('man')) {
+      return 'male';
+    }
+    return null;
+  }
+
+  /// 비자기간 파싱 — 발급일 입력(#visasdt) 우선, 없으면 비자 표시텍스트의
+  /// "(2026.02.01~2027.02.01)" 범위에서 추출. 반환: (발급YYYYMMDD, 만료YYYYMMDD?).
+  (String, String?)? _parseVisaPeriod(String visaText, String sdt, String edt) {
+    final a = _digitsOnly(sdt);
+    final b = _digitsOnly(edt);
+    if (a.length == 8) return (a, b.length == 8 ? b : null);
+    final m = RegExp(r'(\d{4})\.(\d{2})\.(\d{2})\s*~\s*(\d{4})\.(\d{2})\.(\d{2})')
+        .firstMatch(visaText);
+    if (m != null) {
+      return ('${m[1]}${m[2]}${m[3]}', '${m[4]}${m[5]}${m[6]}');
+    }
+    return null;
+  }
+
+  String _buildInjectJs({required bool injectComment}) {
+    final msg = jsonEncode(_effectiveMessage ?? widget.message);
     final doComment = injectComment ? 'true' : 'false';
-    final doVisa = injectVisa ? 'true' : 'false';
     final immediate = widget.wantsImmediateStart ? 'true' : 'false';
 
     return '''
 (function(){
   try {
-    var MSG = $msg, ISSUED = $issued, EXPIRES = $expires;
-    var DO_COMMENT = $doComment, DO_VISA = $doVisa, IMMEDIATE = $immediate;
+    var MSG = $msg;
+    var DO_COMMENT = $doComment, IMMEDIATE = $immediate;
 
     function setIfEmpty(sel, val){
       var el = document.querySelector(sel);
@@ -606,13 +959,7 @@ class _KhireApplyWebViewScreenState
       }
     }
 
-    // 2. 비자 발급/만료일 — 폼이 비어 있고 프로필 값 있을 때만
-    if (DO_VISA){
-      setIfEmpty('#visasdt', ISSUED);
-      setIfEmpty('#visaedt', EXPIRES);
-    }
-
-    // 3. 바로출근 체크
+    // 2. 바로출근 체크
     if (IMMEDIATE){
       var go = document.querySelector('#gotoworkyn');
       if (go && !go.checked) go.click();
@@ -699,9 +1046,7 @@ class _KhireApplyWebViewScreenState
     final name = jsonEncode(p.name);
     final nation = jsonEncode(p.nationalityCode);
     final visa = jsonEncode(p.visaCode);
-    final issued = jsonEncode(p.visaIssuedAt ?? '');
-    final expires =
-        jsonEncode(p.visaNoExpiry ? '' : (p.visaExpiresAt ?? ''));
+    // 비자 발급/만료일은 프리필 안 함 — 사용자가 직접 입력(2026-10-05 확정).
     final birth = jsonEncode(p.birthDate); // YYYYMMDD
     final phone = jsonEncode(p.phone.replaceAll('-', ''));
     final email = jsonEncode(p.email);
@@ -714,40 +1059,174 @@ class _KhireApplyWebViewScreenState
     setVal('#usernm', $name);
     setVal('#nationcd', $nation);
     setVal('#visacd', $visa);
-    setVal('#visasdt', $issued);
-    setVal('#visaedt', $expires);
     setVal('#email', $email);
+    // 생년월일: 실제 폼은 단일 필드 #birthdate(8자리). 구 분리필드는 폴백.
     var b = $birth;
     if (b && b.length===8){
-      setVal('#birthyear', b.substring(0,4));
-      setVal('#birthmonth', b.substring(4,6));
-      setVal('#birthday', b.substring(6,8));
+      if (document.querySelector('#birthdate')) { setVal('#birthdate', b); }
+      else {
+        setVal('#birthyear', b.substring(0,4));
+        setVal('#birthmonth', b.substring(4,6));
+        setVal('#birthday', b.substring(6,8));
+      }
     }
+    // 휴대폰: 실제 폼은 단일 필드 #htel. 구 분리필드는 폴백.
     var ph = $phone;
     if (ph && ph.length>=10){
-      setVal('#htel1', ph.substring(0,3));
-      setVal('#htel2', ph.substring(3, ph.length-4));
-      setVal('#htel3', ph.substring(ph.length-4));
+      if (document.querySelector('#htel')) { setVal('#htel', ph); }
+      else {
+        setVal('#htel1', ph.substring(0,3));
+        setVal('#htel2', ph.substring(3, ph.length-4));
+        setVal('#htel3', ph.substring(ph.length-4));
+      }
     }
-    var g = document.querySelector('#${gender == 'female' ? 'female' : 'male'}');
-    if (g && !g.checked) g.click();
+    // 성별: 실제 폼은 input[name=gender]. 여러 value 인코딩(male/female, M/F) 대응.
+    var gv = '${gender == 'female' ? 'female' : 'male'}';
+    var gshort = gv === 'female' ? 'F' : 'M';
+    var gcands = ['#'+gv,
+      'input[name=gender][value="'+gv+'"]',
+      'input[name=gender][value="'+gshort+'"]'];
+    for (var gi=0; gi<gcands.length; gi++){
+      var gel = document.querySelector(gcands[gi]);
+      if (gel){ if(!gel.checked) gel.click(); break; }
+    }
   } catch(e){ console.log('dari signup prefill error', e); }
 })();
 ''');
+    // 프리필 안내 스낵바 제거(2026-10-05 사용자 확정) — 조용히 채우기만.
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(AppStrings.of(widget.langCode).smsSignupPrefilled),
-        behavior: SnackBarBehavior.floating,
-      ));
+    // '가입하기' 제출 직전 최종 입력값을 읽어 Flutter로 전달(역동기화).
+    // JoinRegFormPCLS.doSubmit 래핑 + 가입 버튼 클릭 폴백.
+    await controller.evaluateJavascript(source: '''
+(function(){
+  try {
+    function gv(sel){var el=document.querySelector(sel);return el?(el.value||''):'';}
+    function gender(){
+      var el=document.querySelector('input[name=gender]:checked');
+      return el?(el.value||''):'';
+    }
+    function collect(){
+      try {
+        window.flutter_inappwebview.callHandler('dariSignupValues', {
+          name: gv('#usernm'),
+          birth: gv('#birthdate'),
+          phone: gv('#htel'),
+          email: gv('#email'),
+          gender: gender(),
+          nationcd: gv('#nationcd'),
+          visacd: gv('#visacd')
+        });
+      } catch(e){}
+    }
+    if (window.JoinRegFormPCLS && typeof JoinRegFormPCLS.doSubmit === 'function' && !JoinRegFormPCLS._dariWrapped) {
+      var orig = JoinRegFormPCLS.doSubmit.bind(JoinRegFormPCLS);
+      JoinRegFormPCLS.doSubmit = function(){ collect(); return orig.apply(this, arguments); };
+      JoinRegFormPCLS._dariWrapped = true;
+    }
+    // 폴백 — '가입하기' 버튼 클릭
+    var sbtns = document.querySelectorAll('button, a, input[type=button], input[type=submit]');
+    for (var i=0;i<sbtns.length;i++){
+      var t=(sbtns[i].innerText||sbtns[i].value||'');
+      if (t.indexOf('가입하기')>=0 && !sbtns[i]._dariHooked){
+        sbtns[i].addEventListener('click', collect);
+        sbtns[i]._dariHooked = true;
+      }
+    }
+  } catch(e){ console.log('dari signup capture hook error', e); }
+})();
+''');
+  }
+
+  /// 회원가입 폼의 최종 입력값을 우리 프로필에 역동기화(A안 — 우리가 세팅하는
+  /// 필드 전부). 고객이 가입폼에서 값을 고쳐도 DB가 K-HIRE와 일치하게 유지.
+  /// 국적: nationcd(alpha-2)→라벨(worldCountries, ko/그외=en). 비자: code==label.
+  Future<void> _onSignupValues(Map<String, dynamic> v) async {
+    final p = ref.read(accountProvider).profile;
+    if (p == null) return;
+    String g(String k) => (v[k] as String? ?? '').trim();
+
+    var updated = p;
+    var changed = false;
+
+    final name = g('name');
+    if (name.isNotEmpty && name != p.name) {
+      updated = updated.copyWith(name: name);
+      changed = true;
+    }
+    final birth = g('birth').replaceAll(RegExp(r'\D'), '');
+    if (birth.length == 8 && birth != p.birthDate) {
+      updated = updated.copyWith(birthDate: birth);
+      changed = true;
+    }
+    final phoneDigits = g('phone').replaceAll(RegExp(r'\D'), '');
+    if (phoneDigits.length >= 10) {
+      final formatted = _formatPhone(phoneDigits);
+      if (formatted != p.phone) {
+        updated = updated.copyWith(phone: formatted);
+        changed = true;
+      }
+    }
+    final email = g('email');
+    if (email.isNotEmpty && email != p.email) {
+      updated = updated.copyWith(email: email);
+      changed = true;
+    }
+    final gender = _normalizeGender(g('gender'));
+    if (gender != null && gender != p.gender) {
+      updated = updated.copyWith(gender: gender);
+      changed = true;
+    }
+    final nationcd = g('nationcd').toUpperCase();
+    if (nationcd.isNotEmpty && nationcd != p.nationalityCode) {
+      updated = updated.copyWith(
+        nationalityCode: nationcd,
+        nationalityLabel: _nationalityLabel(nationcd) ?? p.nationalityLabel,
+      );
+      changed = true;
+    }
+    final visacd = g('visacd');
+    if (visacd.isNotEmpty && visacd != p.visaCode) {
+      // 비자는 code==label 구조(visa_type_select)라 동일 문자열 저장.
+      updated = updated.copyWith(visaCode: visacd, visaLabel: visacd);
+      changed = true;
+    }
+
+    if (!changed) return;
+    try {
+      await ref.read(accountProvider.notifier).completeSignup(updated);
+    } catch (_) {
+      // 역동기화 실패는 조용히 무시 — 가입 흐름에 영향 주지 않음.
     }
   }
 
-  /// 닫기 — 제출 감지(지원하기 클릭 훅)가 있으므로 원칙상 팝업 불필요하나,
-  /// **감지 신뢰도 검증 전까지 백업 팝업 유지**(2026-10-04 사용자 지시).
-  /// 검증 완료 후 팝업 제거 예정(감지 없이 닫음 = 지원 안 함).
+  /// 숫자 11자리(010...)는 3-4-4, 10자리는 3-3-4로 하이픈 포맷. 그 외 원본.
+  static String _formatPhone(String d) {
+    if (d.length == 11) return '${d.substring(0, 3)}-${d.substring(3, 7)}-${d.substring(7)}';
+    if (d.length == 10) return '${d.substring(0, 3)}-${d.substring(3, 6)}-${d.substring(6)}';
+    return d;
+  }
+
+  /// K-HIRE 성별 라디오 value를 'male'/'female'로 정규화. 판별 불가 시 null.
+  static String? _normalizeGender(String raw) {
+    final r = raw.toLowerCase();
+    if (r == 'female' || r == 'f' || r == 'w' || r == '2') return 'female';
+    if (r == 'male' || r == 'm' || r == '1') return 'male';
+    return null;
+  }
+
+  /// alpha-2 국가코드 → 현재 언어 라벨(worldCountries는 en/ko만 보유).
+  String? _nationalityLabel(String code) {
+    for (final c in worldCountries) {
+      if (c.$1 == code) return widget.langCode == 'ko' ? c.$3 : c.$2;
+    }
+    return null;
+  }
+
+  /// 닫기. 문자/간편은 제출 자동감지로 기록하므로 바로 닫음. **홈페이지는
+  /// 외부 사이트라 자동감지 불가** → 닫을 때 "홈페이지로 지원하셨나요?" 확인 후
+  /// '네'면 기록(2026-10-05 사용자 확정).
   Future<void> _onClose(AppStrings s) async {
-    if (_recorded || !_reachedTalkApply) {
+    if (!widget.isHomepage || _recorded) {
       if (mounted) Navigator.of(context).pop();
       return;
     }
@@ -755,7 +1234,7 @@ class _KhireApplyWebViewScreenState
       context,
       company: widget.job.getDisplayCompany(widget.langCode),
       title: widget.job.getTitle(widget.langCode),
-      question: s.smsConfirmApplied,
+      question: s.applyHomepageConfirmQuestion,
       desc: s.applyPhoneConfirmDesc,
       yesLabel: s.yes,
       noLabel: s.no,
@@ -766,18 +1245,28 @@ class _KhireApplyWebViewScreenState
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(s.appliedSavedToast),
           behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
         ));
       }
     }
     if (mounted) Navigator.of(context).pop();
   }
 
+  /// applied_jobs 기록용 방법 코드.
+  String get _applyMethodCode => widget.isSimple
+      ? 'simple'
+      : widget.isHomepage
+          ? 'homepage'
+          : widget.isOnline
+              ? 'online'
+              : 'sms';
+
   Future<void> _record() async {
     if (_recorded) return;
     _recorded = true;
     await ref.read(appliedJobActionsProvider).record(
           jobId: widget.job.id,
-          method: 'sms',
+          method: _applyMethodCode,
           title: widget.job.getTitle(widget.langCode),
           company: widget.job.getDisplayCompany(widget.langCode),
           siteName: widget.job.siteName ?? '',

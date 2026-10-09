@@ -292,47 +292,44 @@ class JobCard extends StatelessWidget {
                         : const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(7),
                   ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.edit_note,
-                        size: 14,
-                        color: expired
-                            ? AppColors.gray300
-                            : const Color(0xFF9A7B24),
-                      ),
-                      const SizedBox(width: 4),
-                      Expanded(
-                        child: Text(
-                          memo!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: expired
-                                ? AppColors.gray300
-                                : const Color(0xFF6D5B1F),
-                          ),
-                        ),
-                      ),
-                    ],
+                  // 메모 있을 때 — 아이콘 없이 내용만(2026-10-05).
+                  child: Text(
+                    memo!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: expired
+                          ? AppColors.gray300
+                          : const Color(0xFF6D5B1F),
+                    ),
                   ),
                 ),
               )
-            // 메모 없음 + 작성 진입 허용 화면(즐겨찾기): "+ 메모 남기기".
+            // 메모 없음 + 작성 진입 허용 화면(즐겨찾기 등): "+ 메모 남기기".
+            // 작성된 메모와 동일한 노란 배경 바 + 글자색으로 통일(2026-10-05).
             else if (onMemoTap != null && memoAddLabel != null)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onMemoTap,
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 8),
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 5,
+                  ),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  // 메모 없음 — "+ 메모 남기기"(문자열에 + 포함, 아이콘 없음).
                   child: Text(
                     memoAddLabel!,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFFB1953B),
+                      color: Color(0xFF9A7B24),
                     ),
                   ),
                 ),

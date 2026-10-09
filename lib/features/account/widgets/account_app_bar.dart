@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/constants/colors.dart';
+import '../../../core/widgets/app_back_button.dart';
 
 /// 계정 관련 전체화면 공통 앱바 규칙.
 /// 뒤로가기는 아이콘만(라벨 없음), 타이틀은 항상 중앙 정렬 —
@@ -30,7 +31,7 @@ class AccountAppBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: height,
-      padding: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: Color(0xFFF0F0F0))),
       ),
@@ -57,14 +58,8 @@ class AccountAppBar extends StatelessWidget {
           ),
           Row(
             children: [
-              SizedBox(
-                width: 44,
-                height: 44,
-                child: IconButton(
-                  onPressed: onBack ?? () => Navigator.of(context).pop(),
-                  icon: const Icon(Icons.arrow_back_ios_new, size: 18),
-                  color: AppColors.black,
-                ),
+              AppBackButton(
+                onTap: onBack ?? () => Navigator.of(context).pop(),
               ),
               const Spacer(),
               ?trailing,

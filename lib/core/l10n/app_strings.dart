@@ -3088,29 +3088,61 @@ class AppStrings {
 
   // 지원방법 바텀시트용 한줄 설명 (2026-09-20, 우선 placeholder — 추후 다듬을 것).
   String get applyMethodOnlineDesc => _t({
-    'ko': 'PC·모바일로 온라인 지원서를 작성해 제출해요',
-    'en': 'Fill out and submit an application online',
-  }, 'Fill out and submit an application online');
+    'ko': '온라인 이력서를 작성해 제출해요',
+    'en': 'Write and submit an online resume',
+  }, 'Write and submit an online resume');
   String get applyMethodHomepageDesc => _t({
     'ko': '회사 홈페이지에서 직접 지원해요',
     'en': 'Apply directly on the company website',
   }, 'Apply directly on the company website');
+  String get applyMethodPhoneDesc => _t({
+    'ko': '전화로 담당자에게 직접 지원해요',
+    'en': 'Apply by calling the recruiter',
+    'zh': '通过电话向招聘者申请',
+    'ja': '電話で担当者に応募します',
+    'vi': 'Ứng tuyển bằng cách gọi nhà tuyển dụng',
+    'th': 'สมัครโดยโทรหาผู้จ้าง',
+    'id': 'Lamar dengan menelepon perekrut',
+    'bn': 'নিয়োগকর্তাকে ফোন করে আবেদন করুন',
+    'ru': 'Отклик по телефону рекрутеру',
+    'ne': 'रोजगारदातालाई फोन गरेर आवेदन',
+    'km': 'ដាក់ពាក្យដោយទូរស័ព្ទទៅអ្នកជ្រើសរើស',
+    'my': 'အလုပ်ရှင်ကို ဖုန်းခေါ်၍ လျှောက်ပါ',
+    'si': 'බඳවා ගන්නාට ඇමතීමෙන් අයදුම් කරන්න',
+    'uz': 'Ish beruvchiga qo\'ng\'iroq qilib ariza bering',
+    'mn': 'Ажил олгогч руу залгаж өргөдөл гаргах',
+    'hi': 'भर्तीकर्ता को कॉल करके आवेदन करें',
+  }, 'Apply by calling the recruiter');
   String get applyMethodEmailDesc => _t({
-    'ko': '이력서를 이메일로 보내서 지원해요',
-    'en': 'Apply by sending your resume via email',
-  }, 'Apply by sending your resume via email');
+    'ko': '온라인 이력서를 작성하면 담당자 이메일로 전달돼요',
+    'en': "Your online resume is sent to the recruiter's email",
+  }, "Your online resume is sent to the recruiter's email");
   String get applyMethodSmsDesc => _t({
     'ko': '문자 메시지로 지원 의사를 남겨요',
     'en': 'Apply by sending a text message',
   }, 'Apply by sending a text message');
   String get applyMethodSimpleDesc => _t({
-    'ko': '몇 번의 터치로 빠르게 지원해요',
-    'en': 'Apply quickly in just a few taps',
-  }, 'Apply quickly in just a few taps');
+    'ko': '간단한 정보로 지원해요',
+    'en': 'Apply with simple information',
+  }, 'Apply with simple information');
   String get applyMethodChatDesc => _t({
-    'ko': '채팅으로 담당자와 상담 후 지원해요',
-    'en': 'Chat with the recruiter, then apply',
-  }, 'Chat with the recruiter, then apply');
+    'ko': 'K-HIRE 앱에서만 가능 — 앱에서 담당자와 채팅 후 지원',
+    'en': 'K-HIRE app only — chat with the recruiter in the app',
+    'zh': '仅限 K-HIRE 应用 — 在应用内与招聘者聊天后申请',
+    'ja': 'K-HIRE アプリ専用 — アプリで担当者とチャット後に応募',
+    'vi': 'Chỉ trên ứng dụng K-HIRE — trò chuyện với nhà tuyển dụng trong ứng dụng',
+    'th': 'เฉพาะแอป K-HIRE — แชทกับผู้จ้างในแอปแล้วสมัคร',
+    'id': 'Hanya aplikasi K-HIRE — chat dengan perekrut di aplikasi',
+    'uz': 'Faqat K-HIRE ilovasida — ilovada ish beruvchi bilan suhbat',
+    'ne': 'K-HIRE एप मा मात्र — एपमा रोजगारदातासँग कुराकानी गरी आवेदन',
+    'bn': 'শুধু K-HIRE অ্যাপে — অ্যাপে নিয়োগকর্তার সাথে চ্যাট করে আবেদন',
+    'hi': 'केवल K-HIRE ऐप — ऐप में भर्तीकर्ता से चैट करके आवेदन',
+    'ru': 'Только в приложении K-HIRE — чат с работодателем в приложении',
+    'km': 'តែក្នុងកម្មវិធី K-HIRE — ជជែកជាមួយអ្នកជ្រើសរើសក្នុងកម្មវិធី',
+    'my': 'K-HIRE အက်ပ်တွင်သာ — အက်ပ်တွင် အလုပ်ရှင်နှင့် စကားပြောပြီး လျှောက်ပါ',
+    'si': 'K-HIRE යෙදුමේ පමණයි — යෙදුමේ බඳවා ගන්නා සමඟ කතාබහ කර අයදුම් කරන්න',
+    'mn': 'Зөвхөн K-HIRE апп — аппд ажил олгогчтой чатлаад өргөдөл гаргах',
+  }, 'K-HIRE app only — chat with the recruiter in the app');
   String get applyMethodVisitDesc => _t({
     'ko': '회사에 직접 방문해서 접수해요',
     'en': 'Apply in person by visiting the company',
@@ -3129,6 +3161,8 @@ class AppStrings {
         return applyMethodHomepageDesc;
       case 'email':
         return applyMethodEmailDesc;
+      case 'phone':
+        return applyMethodPhoneDesc;
       case 'sms':
         return applyMethodSmsDesc;
       case 'simple':
@@ -5368,6 +5402,45 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'ko': '네를 누르면 지원 내역에 기록됩니다',
     'en': 'Tap Yes to save it to your applications',
   }, 'Tap Yes to save it to your applications');
+  // 채팅 지원: 앱 복귀 시 확인 → 기록.
+  String get applyChatConfirmQuestion => _t({
+    'ko': '채팅으로 지원하셨나요?',
+    'en': 'Did you apply by chat?',
+    'zh': '您通过聊天申请了吗？',
+    'ja': 'チャットで応募しましたか？',
+    'vi': 'Bạn đã ứng tuyển qua trò chuyện chưa?',
+    'th': 'คุณสมัครผ่านแชทแล้วหรือยัง?',
+    'id': 'Apakah Anda melamar lewat chat?',
+  }, 'Did you apply by chat?');
+  // 홈페이지 지원: 웹뷰 닫을 때 확인 → 기록.
+  String get applyHomepageConfirmQuestion => _t({
+    'ko': '홈페이지로 지원하셨나요?',
+    'en': 'Did you apply on the website?',
+    'zh': '您通过公司网站申请了吗？',
+    'ja': 'ホームページで応募しましたか？',
+    'vi': 'Bạn đã ứng tuyển trên trang web chưa?',
+    'th': 'คุณสมัครผ่านเว็บไซต์แล้วหรือยัง?',
+    'id': 'Apakah Anda melamar di situs web?',
+  }, 'Did you apply on the website?');
+  // 채팅 지원: 스토어 이동 확인. [store]=App Store / Google Play.
+  String applyChatStoreMoveQuestion(String store) => _t({
+    'ko': '$store(으)로 이동할까요?',
+    'en': 'Go to the $store?',
+    'zh': '前往 $store 吗？',
+    'ja': '$store に移動しますか？',
+    'vi': 'Chuyển đến $store?',
+    'th': 'ไปที่ $store ไหม?',
+    'id': 'Buka $store?',
+  }, 'Go to the $store?');
+  String get applyChatStoreMoveDesc => _t({
+    'ko': '채팅 지원은 K-HIRE 앱에서만 가능해요. 앱을 설치한 뒤 지원하세요.',
+    'en': 'Chat apply works only in the K-HIRE app. Install it, then apply.',
+    'zh': '聊天申请仅在 K-HIRE 应用中可用。请安装后再申请。',
+    'ja': 'チャット応募は K-HIRE アプリでのみ可能です。インストール後に応募してください。',
+    'vi': 'Ứng tuyển qua trò chuyện chỉ hoạt động trên ứng dụng K-HIRE. Hãy cài đặt rồi ứng tuyển.',
+    'th': 'การสมัครผ่านแชทใช้ได้เฉพาะในแอป K-HIRE ติดตั้งแล้วค่อยสมัคร',
+    'id': 'Lamaran chat hanya di aplikasi K-HIRE. Pasang dulu, lalu lamar.',
+  }, 'Chat apply works only in the K-HIRE app. Install it, then apply.');
   String get yes => _t({'ko': '네', 'en': 'Yes'}, 'Yes');
   String get no => _t({'ko': '아니요', 'en': 'No'}, 'No');
   String get applyManageTooltip => _t({
@@ -5380,6 +5453,62 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
   }, 'Saved · Manage in My Page');
   String get jobAppliedChip =>
       _t({'ko': '지원함', 'en': 'Applied'}, 'Applied');
+
+  // 지원 완료 화면(2026-10-05).
+  String get applyCompleteTitle => _t({
+    'ko': '지원 완료!',
+    'en': 'Application sent!',
+    'zh': '申请完成！',
+    'ja': '応募完了！',
+    'vi': 'Đã nộp đơn!',
+    'th': 'สมัครเสร็จแล้ว!',
+    'id': 'Lamaran terkirim!',
+    'bn': 'আবেদন সম্পন্ন!',
+    'ru': 'Заявка отправлена!',
+    'ne': 'आवेदन पठाइयो!',
+    'km': 'ដាក់ពាក្យរួចរាល់!',
+    'my': 'လျှောက်ပြီးပါပြီ!',
+    'si': 'අයදුම්පත යවා ඇත!',
+    'uz': 'Ariza yuborildi!',
+    'mn': 'Өргөдөл илгээгдлээ!',
+    'hi': 'आवेदन भेजा गया!',
+  }, 'Application sent!');
+  String get applyCompleteDesc => _t({
+    'ko': '지원이 정상적으로 접수되었어요.',
+    'en': 'Your application has been submitted.',
+    'zh': '您的申请已成功提交。',
+    'ja': '応募が正常に受け付けられました。',
+    'vi': 'Đơn ứng tuyển của bạn đã được gửi.',
+    'th': 'ส่งใบสมัครของคุณเรียบร้อยแล้ว',
+    'id': 'Lamaran Anda telah dikirim.',
+    'bn': 'আপনার আবেদন জমা হয়েছে।',
+    'ru': 'Ваша заявка отправлена.',
+    'ne': 'तपाईंको आवेदन पेश भयो।',
+    'km': 'ពាក្យសុំរបស់អ្នកត្រូវបានដាក់ស្នើ។',
+    'my': 'သင့်လျှောက်လွှာ တင်သွင်းပြီးပါပြီ။',
+    'si': 'ඔබගේ අයදුම්පත ඉදිරිපත් කර ඇත.',
+    'uz': 'Arizangiz yuborildi.',
+    'mn': 'Таны өргөдөл илгээгдлээ.',
+    'hi': 'आपका आवेदन जमा हो गया है।',
+  }, 'Your application has been submitted.');
+  String get applyCompleteHome => _t({
+    'ko': '홈으로',
+    'en': 'Go home',
+    'zh': '返回首页',
+    'ja': 'ホームへ',
+    'vi': 'Về trang chủ',
+    'th': 'ไปหน้าแรก',
+    'id': 'Ke beranda',
+    'bn': 'হোমে যান',
+    'ru': 'На главную',
+    'ne': 'गृहपृष्ठमा',
+    'km': 'ទៅទំព័រដើម',
+    'my': 'ပင်မသို့',
+    'si': 'මුල් පිටුවට',
+    'uz': 'Bosh sahifaga',
+    'mn': 'Нүүр хуудас',
+    'hi': 'होम पर जाएं',
+  }, 'Go home');
   String jobAppliedOn(String date) => _t({
     'ko': '$date에 지원한 공고예요',
     'en': 'You applied on $date',
@@ -5438,6 +5567,15 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
       _t({'ko': '회원탈퇴', 'en': 'Delete account'}, 'Delete account');
   String get myPageComingSoon =>
       _t({'ko': '준비 중이에요', 'en': 'Coming soon'}, 'Coming soon');
+  String get myPageLogoutConfirmTitle => _t({
+    'ko': '로그아웃 할까요?',
+    'en': 'Log out?',
+    'zh': '要退出登录吗？',
+    'ja': 'ログアウトしますか？',
+    'vi': 'Đăng xuất?',
+    'th': 'ออกจากระบบไหม?',
+    'id': 'Keluar?',
+  }, 'Log out?');
   String get myPageLogoutConfirmDesc => _t({
     'ko': '위 계정으로 로그인되어 있습니다.\n로그아웃 하시겠습니까?',
     'en': 'You are currently logged in with the account above.\nLog out?',
@@ -6738,6 +6876,46 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'mn': 'Би байнгын оршин суух эрхтэй, дуусах хугацаагүй',
   }, 'I have permanent residency, no expiry');
 
+  /// 요약본 만료일 값(영주권) — 짧은 표기.
+  String get smsVisaNoExpiryShort => _t({
+    'ko': '없음(영주권)',
+    'en': 'None (PR)',
+    'zh': '无（永居）',
+    'hi': 'कोई नहीं (PR)',
+    'ja': 'なし（永住）',
+    'th': 'ไม่มี (PR)',
+    'vi': 'Không (PR)',
+    'bn': 'নেই (PR)',
+    'ru': 'Нет (ПМЖ)',
+    'id': 'Tidak ada (PR)',
+    'ne': 'छैन (PR)',
+    'km': 'គ្មាន (PR)',
+    'my': 'မရှိ (PR)',
+    'si': 'නැත (PR)',
+    'uz': 'Yo\'q (PR)',
+    'mn': 'Байхгүй (PR)',
+  }, 'None (PR)');
+
+  /// 비자기간 섹션 라벨 — 편집 폼 제목용.
+  String get smsVisaPeriodLabel => _t({
+    'ko': '비자기간',
+    'en': 'Visa period',
+    'zh': '签证有效期',
+    'hi': 'वीज़ा अवधि',
+    'ja': 'ビザ期間',
+    'th': 'ระยะเวลาวีซ่า',
+    'vi': 'Thời hạn visa',
+    'bn': 'ভিসার মেয়াদ',
+    'ru': 'Срок визы',
+    'id': 'Masa visa',
+    'ne': 'भिसा अवधि',
+    'km': 'រយៈពេលទិដ្ឋាការ',
+    'my': 'ဗီဇာကာလ',
+    'si': 'වීසා කාලය',
+    'uz': 'Viza muddati',
+    'mn': 'Визний хугацаа',
+  }, 'Visa period');
+
   String get smsAddressLabel => _t({
     'ko': '주소',
     'en': 'Address',
@@ -6851,6 +7029,26 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'uz': 'K-HIRE\'ga o\'tilmoqda…',
     'mn': 'K-HIRE руу шилжиж байна…',
   }, 'Taking you to K-HIRE…');
+
+  // 홈페이지 지원 — 업체 자체 사이트로 이동하는 중.
+  String get smsLoadingHomepage => _t({
+    'ko': '회사 홈페이지로 이동하고 있어요…',
+    'en': 'Taking you to the company website…',
+    'zh': '正在前往公司网站…',
+    'hi': 'कंपनी की वेबसाइट पर ले जा रहे हैं…',
+    'ja': '会社のホームページへ移動中…',
+    'th': 'กำลังพาไปที่เว็บไซต์บริษัท…',
+    'vi': 'Đang chuyển đến trang web công ty…',
+    'bn': 'কোম্পানির ওয়েবসাইটে নিয়ে যাচ্ছি…',
+    'ru': 'Переходим на сайт компании…',
+    'id': 'Menuju situs web perusahaan…',
+    'ne': 'कम्पनीको वेबसाइटमा लैजाँदै…',
+    'km': 'កំពុងទៅគេហទំព័ររបស់ក្រុមហុន…',
+    'my': 'ကုမ္ပဏီဝဘ်ဆိုက်သို့ သွားနေသည်…',
+    'si': 'සමාගම් වෙබ් අඩවියට ගෙන යමින්…',
+    'uz': 'Kompaniya veb-saytiga o\'tilmoqda…',
+    'mn': 'Компанийн вэбсайт руу шилжиж байна…',
+  }, 'Taking you to the company website…');
 
   String smsLastLoginHint(String provider) => _t({
     'ko': '지난번엔 $provider 계정으로 로그인하셨어요',
@@ -7155,6 +7353,850 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'uz': 'E\'lon',
     'mn': 'Зар',
   }, 'Posting');
+
+  // ── Resume (이력서 작성) ──
+  String get resumeScreenTitle => _t({
+    'ko': '이력서 작성', 'en': 'Resume', 'zh': '简历', 'hi': 'रिज़्यूमे',
+    'ja': '履歴書作成', 'th': 'เรซูเม่', 'vi': 'Hồ sơ xin việc', 'bn': 'জীবনবৃত্তান্ত',
+    'ru': 'Резюме', 'id': 'Resume', 'ne': 'बायोडाटा', 'km': 'ប្រវត្តិរូប',
+    'my': 'ကိုယ်ရေးရာဇဝင်', 'si': 'ජීව දත්ත පත්‍රය', 'uz': 'Rezyume', 'mn': 'Анкет',
+  }, 'Resume');
+  String get resumeTitleLabel => _t({
+    'ko': '제목', 'en': 'Title', 'zh': '标题', 'hi': 'शीर्षक', 'ja': 'タイトル',
+    'th': 'หัวข้อ', 'vi': 'Tiêu đề', 'bn': 'শিরোনাম', 'ru': 'Заголовок',
+    'id': 'Judul', 'ne': 'शीर्षक', 'km': 'ចំណងជើង', 'my': 'ခေါင်းစဉ်',
+    'si': 'මාතෘකාව', 'uz': 'Sarlavha', 'mn': 'Гарчиг',
+  }, 'Title');
+  String get resumeTitleHint => _t({
+    'ko': '이력서 제목을 입력하세요', 'en': 'Enter a resume title',
+    'zh': '请输入简历标题', 'hi': 'रिज़्यूमे का शीर्षक लिखें',
+    'ja': '履歴書のタイトルを入力', 'th': 'กรอกหัวข้อเรซูเม่',
+    'vi': 'Nhập tiêu đề hồ sơ', 'bn': 'জীবনবৃত্তান্তের শিরোনাম লিখুন',
+    'ru': 'Введите заголовок резюме', 'id': 'Masukkan judul resume',
+    'ne': 'बायोडाटाको शीर्षक लेख्नुहोस्', 'km': 'បញ្ចូលចំណងជើងប្រវត្តិរូប',
+    'my': 'ခေါင်းစဉ်ထည့်ပါ', 'si': 'මාතෘකාව ඇතුළත් කරන්න',
+    'uz': 'Rezyume sarlavhasini kiriting', 'mn': 'Анкетын гарчиг оруулна уу',
+  }, 'Enter a resume title');
+  String get resumeSelfLabel => _t({
+    'ko': '자기소개서', 'en': 'Cover letter', 'zh': '自我介绍', 'hi': 'आत्म-परिचय',
+    'ja': '自己紹介書', 'th': 'แนะนำตัวเอง', 'vi': 'Giới thiệu bản thân',
+    'bn': 'আত্মপরিচয়', 'ru': 'О себе', 'id': 'Perkenalan diri',
+    'ne': 'आत्म परिचय', 'km': 'ការណែនាំខ្លួន', 'my': 'ကိုယ်တိုင်မိတ်ဆက်',
+    'si': 'ස්වයං හැඳින්වීම', 'uz': 'O\'zi haqida', 'mn': 'Өөрийн танилцуулга',
+  }, 'Cover letter');
+  String get resumeSelfHint => _t({
+    'ko': '자기소개를 작성해주세요',
+    'en': 'Write a short introduction about yourself',
+    'zh': '请写一段自我介绍', 'hi': 'अपने बारे में संक्षेप में लिखें',
+    'ja': '自己紹介を書いてください', 'th': 'เขียนแนะนำตัวสั้น ๆ',
+    'vi': 'Viết giới thiệu ngắn về bản thân',
+    'bn': 'নিজের সম্পর্কে সংক্ষেপে লিখুন', 'ru': 'Кратко расскажите о себе',
+    'id': 'Tulis perkenalan singkat tentang diri Anda',
+    'ne': 'आफ्नो बारेमा छोटकरीमा लेख्नुहोस्',
+    'km': 'សរសេរណែនាំខ្លួនខ្លីៗ', 'my': 'မိမိအကြောင်းအတိုချုံးရေးပါ',
+    'si': 'ඔබ ගැන කෙටියෙන් ලියන්න', 'uz': 'O\'zingiz haqingizda qisqacha yozing',
+    'mn': 'Өөрийнхөө тухай товч бичнэ үү',
+  }, 'Write a short introduction about yourself');
+  String get resumeEducationLabel => _t({
+    'ko': '최종학력', 'en': 'Education', 'zh': '最高学历', 'hi': 'शिक्षा',
+    'ja': '最終学歴', 'th': 'การศึกษา', 'vi': 'Học vấn', 'bn': 'শিক্ষাগত যোগ্যতা',
+    'ru': 'Образование', 'id': 'Pendidikan', 'ne': 'शिक्षा', 'km': 'កម្រិតសិក្សា',
+    'my': 'ပညာအရည်အချင်း', 'si': 'අධ්‍යාපනය', 'uz': 'Ma\'lumoti', 'mn': 'Боловсрол',
+  }, 'Education');
+  String get resumeEduStateLabel => _t({
+    'ko': '졸업 상태', 'en': 'Graduation status', 'zh': '毕业状态',
+    'hi': 'स्नातक स्थिति', 'ja': '卒業状況', 'th': 'สถานะการจบ',
+    'vi': 'Tình trạng tốt nghiệp', 'bn': 'গ্র্যাজুয়েশন অবস্থা',
+    'ru': 'Статус окончания', 'id': 'Status kelulusan',
+    'ne': 'स्नातक स्थिति', 'km': 'ស្ថានភាពបញ្ចប់ការសិក្សា',
+    'my': 'ဘွဲ့ရအခြေအနေ', 'si': 'උපාධි තත්ත්වය',
+    'uz': 'Bitiruv holati', 'mn': 'Төгссөн байдал',
+  }, 'Graduation status');
+  String get resumeSelectHint => _t({
+    'ko': '선택해주세요', 'en': 'Please select', 'zh': '请选择', 'hi': 'चुनें',
+    'ja': '選択してください', 'th': 'กรุณาเลือก', 'vi': 'Vui lòng chọn',
+    'bn': 'নির্বাচন করুন', 'ru': 'Выберите', 'id': 'Silakan pilih',
+    'ne': 'छान्नुहोस्', 'km': 'សូមជ្រើសរើស', 'my': 'ရွေးချယ်ပါ',
+    'si': 'තෝරන්න', 'uz': 'Tanlang', 'mn': 'Сонгоно уу',
+  }, 'Please select');
+  String get resumeAreaLabel => _t({
+    'ko': '희망 근무지', 'en': 'Preferred location', 'zh': '期望工作地点',
+    'hi': 'पसंदीदा स्थान', 'ja': '希望勤務地', 'th': 'สถานที่ทำงานที่ต้องการ',
+    'vi': 'Nơi làm việc mong muốn', 'bn': 'পছন্দের কর্মস্থল',
+    'ru': 'Желаемое место работы', 'id': 'Lokasi kerja pilihan',
+    'ne': 'रुचाइएको कार्यस्थल', 'km': 'ទីកន្លែងធ្វើការដែលចង់បាន',
+    'my': 'လိုချင်သောအလုပ်နေရာ', 'si': 'කැමති සේවා ස්ථානය',
+    'uz': 'Istalgan ish joyi', 'mn': 'Хүссэн ажлын байршил',
+  }, 'Preferred location');
+  String get resumeAddHint => _t({
+    'ko': '+ 버튼으로 추가해주세요', 'en': 'Add using the + button',
+    'zh': '请用 + 按钮添加', 'hi': '+ बटन से जोड़ें', 'ja': '＋ボタンで追加',
+    'th': 'เพิ่มด้วยปุ่ม +', 'vi': 'Thêm bằng nút +', 'bn': '+ বোতাম দিয়ে যোগ করুন',
+    'ru': 'Добавьте кнопкой +', 'id': 'Tambahkan dengan tombol +',
+    'ne': '+ बटनले थप्नुहोस्', 'km': 'បន្ថែមដោយប៊ូតុង +',
+    'my': '+ ခလုတ်ဖြင့်ထည့်ပါ', 'si': '+ බොත්තමෙන් එක් කරන්න',
+    'uz': '+ tugmasi bilan qo\'shing', 'mn': '+ товчоор нэмнэ үү',
+  }, 'Add using the + button');
+  String get resumeJobKindLabel => _t({
+    'ko': '희망 업직종', 'en': 'Preferred job', 'zh': '期望职种',
+    'hi': 'पसंदीदा नौकरी', 'ja': '希望職種', 'th': 'งานที่ต้องการ',
+    'vi': 'Ngành nghề mong muốn', 'bn': 'পছন্দের কাজ',
+    'ru': 'Желаемая работа', 'id': 'Pekerjaan pilihan',
+    'ne': 'रुचाइएको काम', 'km': 'ការងារដែលចង់បាន',
+    'my': 'လိုချင်သောအလုပ်', 'si': 'කැමති රැකියාව',
+    'uz': 'Istalgan ish turi', 'mn': 'Хүссэн ажил',
+  }, 'Preferred job');
+  String get resumeWorkConditionLabel => _t({
+    'ko': '희망 근무조건', 'en': 'Preferred conditions', 'zh': '期望工作条件',
+    'hi': 'पसंदीदा शर्तें', 'ja': '希望勤務条件', 'th': 'เงื่อนไขที่ต้องการ',
+    'vi': 'Điều kiện mong muốn', 'bn': 'পছন্দের শর্ত',
+    'ru': 'Желаемые условия', 'id': 'Kondisi kerja pilihan',
+    'ne': 'रुचाइएको सर्त', 'km': 'លក្ខខណ្ឌដែលចង់បាន',
+    'my': 'လိုချင်သောအခြေအနေ', 'si': 'කැමති කොන්දේසි',
+    'uz': 'Istalgan shartlar', 'mn': 'Хүссэн нөхцөл',
+  }, 'Preferred conditions');
+  String get resumeWorkPeriodLabel => _t({
+    'ko': '근무 기간', 'en': 'Work period', 'zh': '工作期间', 'hi': 'कार्य अवधि',
+    'ja': '勤務期間', 'th': 'ระยะเวลาทำงาน', 'vi': 'Thời gian làm việc',
+    'bn': 'কাজের মেয়াদ', 'ru': 'Период работы', 'id': 'Periode kerja',
+    'ne': 'कामको अवधि', 'km': 'រយៈពេលធ្វើការ', 'my': 'အလုပ်ကာလ',
+    'si': 'සේවා කාලය', 'uz': 'Ish muddati', 'mn': 'Ажлын хугацаа',
+  }, 'Work period');
+  String get resumeWorkWeekLabel => _t({
+    'ko': '근무 요일', 'en': 'Work days', 'zh': '工作日', 'hi': 'कार्य दिवस',
+    'ja': '勤務曜日', 'th': 'วันทำงาน', 'vi': 'Ngày làm việc', 'bn': 'কাজের দিন',
+    'ru': 'Рабочие дни', 'id': 'Hari kerja', 'ne': 'कामका दिन',
+    'km': 'ថ្ងៃធ្វើការ', 'my': 'အလုပ်ရက်', 'si': 'වැඩ දින',
+    'uz': 'Ish kunlari', 'mn': 'Ажлын өдрүүд',
+  }, 'Work days');
+  String get resumeEmploymentLabel => _t({
+    'ko': '고용 형태', 'en': 'Employment type', 'zh': '雇佣形式',
+    'hi': 'रोज़गार प्रकार', 'ja': '雇用形態', 'th': 'ประเภทการจ้าง',
+    'vi': 'Loại hình việc làm', 'bn': 'চাকরির ধরন', 'ru': 'Тип занятости',
+    'id': 'Jenis pekerjaan', 'ne': 'रोजगार प्रकार', 'km': 'ប្រភេទការងារ',
+    'my': 'အလုပ်ပုံစံ', 'si': 'රැකියා වර්ගය', 'uz': 'Bandlik turi',
+    'mn': 'Ажлын хэлбэр',
+  }, 'Employment type');
+  String get resumeKoreanLabel => _t({
+    'ko': '한국어 능력', 'en': 'Korean level', 'zh': '韩语水平',
+    'hi': 'कोरियाई स्तर', 'ja': '韓国語能力', 'th': 'ระดับภาษาเกาหลี',
+    'vi': 'Trình độ tiếng Hàn', 'bn': 'কোরিয়ান দক্ষতা',
+    'ru': 'Уровень корейского', 'id': 'Kemampuan bahasa Korea',
+    'ne': 'कोरियन स्तर', 'km': 'កម្រិតភាសាកូរ៉េ', 'my': 'ကိုရီးယားစာအဆင့်',
+    'si': 'කොරියානු මට්ටම', 'uz': 'Koreys tili darajasi', 'mn': 'Солонгос хэлний түвшин',
+  }, 'Korean level');
+  String get resumeOptionalHeader => _t({
+    'ko': '선택 입력', 'en': 'Optional', 'zh': '选填', 'hi': 'वैकल्पिक',
+    'ja': '任意入力', 'th': 'ไม่บังคับ', 'vi': 'Không bắt buộc', 'bn': 'ঐচ্ছিক',
+    'ru': 'Необязательно', 'id': 'Opsional', 'ne': 'वैकल्पिक', 'km': 'ជាជម្រើស',
+    'my': 'ရွေးချယ်နိုင်', 'si': 'අත්‍යවශ්‍ය නොවේ', 'uz': 'Ixtiyoriy', 'mn': 'Заавал биш',
+  }, 'Optional');
+  String get resumeLicenseLabel => _t({
+    'ko': '자격증', 'en': 'Certificate', 'zh': '资格证', 'hi': 'प्रमाणपत्र',
+    'ja': '資格', 'th': 'ใบรับรอง', 'vi': 'Chứng chỉ', 'bn': 'সার্টিফিকেট',
+    'ru': 'Сертификат', 'id': 'Sertifikat', 'ne': 'प्रमाणपत्र',
+    'km': 'វិញ្ញាបនបត្រ', 'my': 'လက်မှတ်', 'si': 'සහතිකය',
+    'uz': 'Sertifikat', 'mn': 'Гэрчилгээ',
+  }, 'Certificate');
+  String get resumeForeignLangLabel => _t({
+    'ko': '외국어', 'en': 'Foreign language', 'zh': '外语', 'hi': 'विदेशी भाषा',
+    'ja': '外国語', 'th': 'ภาษาต่างประเทศ', 'vi': 'Ngoại ngữ', 'bn': 'বিদেশি ভাষা',
+    'ru': 'Иностранный язык', 'id': 'Bahasa asing', 'ne': 'विदेशी भाषा',
+    'km': 'ភាសាបរទេស', 'my': 'နိုင်ငံခြားဘာသာ', 'si': 'විදේශ භාෂාව',
+    'uz': 'Chet tili', 'mn': 'Гадаад хэл',
+  }, 'Foreign language');
+  String get resumeSave => _t({
+    'ko': '저장', 'en': 'Save', 'zh': '保存', 'hi': 'सहेजें', 'ja': '保存',
+    'th': 'บันทึก', 'vi': 'Lưu', 'bn': 'সংরক্ষণ', 'ru': 'Сохранить',
+    'id': 'Simpan', 'ne': 'सुरक्षित गर्नुहोस्', 'km': 'រក្សាទុក',
+    'my': 'သိမ်းရန်', 'si': 'සුරකින්න', 'uz': 'Saqlash', 'mn': 'Хадгалах',
+  }, 'Save');
+  String get resumeAdd => _t({
+    'ko': '추가', 'en': 'Add', 'zh': '添加', 'hi': 'जोड़ें', 'ja': '追加',
+    'th': 'เพิ่ม', 'vi': 'Thêm', 'bn': 'যোগ করুন', 'ru': 'Добавить',
+    'id': 'Tambah', 'ne': 'थप्नुहोस्', 'km': 'បន្ថែម', 'my': 'ထည့်ရန်',
+    'si': 'එක් කරන්න', 'uz': 'Qo\'shish', 'mn': 'Нэмэх',
+  }, 'Add');
+  String get resumeLicenseName => _t({
+    'ko': '자격증명', 'en': 'Certificate name', 'zh': '资格证名称',
+    'hi': 'प्रमाणपत्र का नाम', 'ja': '資格名', 'th': 'ชื่อใบรับรอง',
+    'vi': 'Tên chứng chỉ', 'bn': 'সার্টিফিকেটের নাম',
+    'ru': 'Название сертификата', 'id': 'Nama sertifikat',
+    'ne': 'प्रमाणपत्रको नाम', 'km': 'ឈ្មោះវិញ្ញាបនបត្រ',
+    'my': 'လက်မှတ်အမည်', 'si': 'සහතිකයේ නම',
+    'uz': 'Sertifikat nomi', 'mn': 'Гэрчилгээний нэр',
+  }, 'Certificate name');
+  String get resumeLicenseOrgan => _t({
+    'ko': '발급 기관', 'en': 'Issuing organization', 'zh': '发证机构',
+    'hi': 'जारीकर्ता संस्था', 'ja': '発行機関', 'th': 'หน่วยงานที่ออก',
+    'vi': 'Cơ quan cấp', 'bn': 'প্রদানকারী সংস্থা',
+    'ru': 'Выдавшая организация', 'id': 'Lembaga penerbit',
+    'ne': 'जारी गर्ने निकाय', 'km': 'ស្ថាប័នចេញ', 'my': 'ထုတ်ပေးသည့်အဖွဲ့',
+    'si': 'නිකුත් කළ ආයතනය', 'uz': 'Bergan tashkilot', 'mn': 'Олгосон байгууллага',
+  }, 'Issuing organization');
+  String get resumeLicenseYear => _t({
+    'ko': '취득 연도', 'en': 'Year obtained', 'zh': '取得年份',
+    'hi': 'प्राप्ति वर्ष', 'ja': '取得年', 'th': 'ปีที่ได้รับ',
+    'vi': 'Năm đạt được', 'bn': 'অর্জনের বছর', 'ru': 'Год получения',
+    'id': 'Tahun perolehan', 'ne': 'प्राप्त वर्ष', 'km': 'ឆ្នាំទទួលបាន',
+    'my': 'ရရှိသည့်နှစ်', 'si': 'ලැබූ වර්ෂය', 'uz': 'Olingan yil',
+    'mn': 'Авсан он',
+  }, 'Year obtained');
+  // ── 경력사항 (K-HIRE 필수 섹션, 2026-10-09) ──
+  String get resumeCareerLabel => _t({
+    'ko': '경력사항', 'en': 'Work experience', 'zh': '工作经历',
+    'hi': 'कार्य अनुभव', 'ja': '職歴', 'th': 'ประสบการณ์ทำงาน',
+    'vi': 'Kinh nghiệm làm việc', 'bn': 'কাজের অভিজ্ঞতা',
+    'ru': 'Опыт работы', 'id': 'Pengalaman kerja', 'ne': 'कामको अनुभव',
+    'km': 'បទពិសោធន៍ការងារ', 'my': 'အလုပ်အတွေ့အကြုံ',
+    'si': 'රැකියා පළපුරුද්ද', 'uz': 'Ish tajribasi', 'mn': 'Ажлын туршлага',
+  }, 'Work experience');
+  String get resumeCareerNew => _t({
+    'ko': '신입', 'en': 'No experience', 'zh': '无经验', 'hi': 'नया',
+    'ja': '新人', 'th': 'ไม่มีประสบการณ์', 'vi': 'Chưa có kinh nghiệm',
+    'bn': 'নতুন', 'ru': 'Без опыта', 'id': 'Belum berpengalaman',
+    'ne': 'नयाँ', 'km': 'គ្មានបទពិសោធន៍', 'my': 'အတွေ့အကြုံမရှိ',
+    'si': 'පළපුරුද්ද නැත', 'uz': 'Tajribasiz', 'mn': 'Туршлагагүй',
+  }, 'No experience');
+  String get resumeCareerExp => _t({
+    'ko': '경력', 'en': 'Experienced', 'zh': '有经验', 'hi': 'अनुभवी',
+    'ja': '経験あり', 'th': 'มีประสบการณ์', 'vi': 'Có kinh nghiệm',
+    'bn': 'অভিজ্ঞ', 'ru': 'С опытом', 'id': 'Berpengalaman',
+    'ne': 'अनुभवी', 'km': 'មានបទពិសោធន៍', 'my': 'အတွေ့အကြုံရှိ',
+    'si': 'පළපුරුදු', 'uz': 'Tajribali', 'mn': 'Туршлагатай',
+  }, 'Experienced');
+  String get resumeCareerCompany => _t({
+    'ko': '회사명', 'en': 'Company name', 'zh': '公司名称', 'hi': 'कंपनी का नाम',
+    'ja': '会社名', 'th': 'ชื่อบริษัท', 'vi': 'Tên công ty',
+    'bn': 'কোম্পানির নাম', 'ru': 'Название компании', 'id': 'Nama perusahaan',
+    'ne': 'कम्पनीको नाम', 'km': 'ឈ្មោះក្រុមហ៊ុន', 'my': 'ကုမ္ပဏီအမည်',
+    'si': 'සමාගමේ නම', 'uz': 'Kompaniya nomi', 'mn': 'Компанийн нэр',
+  }, 'Company name');
+  String get resumeCareerStart => _t({
+    'ko': '시작', 'en': 'Start', 'zh': '开始', 'hi': 'शुरुआत', 'ja': '開始',
+    'th': 'เริ่ม', 'vi': 'Bắt đầu', 'bn': 'শুরু', 'ru': 'Начало',
+    'id': 'Mulai', 'ne': 'सुरु', 'km': 'ចាប់ផ្តើម', 'my': 'စတင်',
+    'si': 'ආරම්භය', 'uz': 'Boshlanish', 'mn': 'Эхлэл',
+  }, 'Start');
+  String get resumeCareerEnd => _t({
+    'ko': '종료', 'en': 'End', 'zh': '结束', 'hi': 'समाप्ति', 'ja': '終了',
+    'th': 'สิ้นสุด', 'vi': 'Kết thúc', 'bn': 'শেষ', 'ru': 'Окончание',
+    'id': 'Selesai', 'ne': 'अन्त्य', 'km': 'បញ្ចប់', 'my': 'ပြီးဆုံး',
+    'si': 'අවසානය', 'uz': 'Tugash', 'mn': 'Төгсгөл',
+  }, 'End');
+  String get resumeCareerInWork => _t({
+    'ko': '재직중', 'en': 'Currently working', 'zh': '在职中',
+    'hi': 'वर्तमान में कार्यरत', 'ja': '在職中', 'th': 'ทำงานอยู่',
+    'vi': 'Đang làm việc', 'bn': 'বর্তমানে কর্মরত', 'ru': 'Работаю сейчас',
+    'id': 'Masih bekerja', 'ne': 'हाल काम गर्दै', 'km': 'កំពុងធ្វើការ',
+    'my': 'လက်ရှိအလုပ်လုပ်နေ', 'si': 'දැනට සේවයේ', 'uz': 'Hozir ishlayapman',
+    'mn': 'Одоо ажиллаж байна',
+  }, 'Currently working');
+  String get resumeCareerSimilar => _t({
+    'ko': '지원하려는 분야와 비슷한 일이었어요',
+    'en': 'It was similar to the field I\'m applying for',
+    'zh': '与想申请的领域相似的工作',
+    'hi': 'यह उस क्षेत्र जैसा काम था जिसमें मैं आवेदन कर रहा हूँ',
+    'ja': '応募したい分野と似た仕事でした',
+    'th': 'เป็นงานคล้ายกับสาขาที่จะสมัคร',
+    'vi': 'Công việc tương tự lĩnh vực muốn ứng tuyển',
+    'bn': 'যে ক্ষেত্রে আবেদন করছি তার মতো কাজ ছিল',
+    'ru': 'Работа похожа на ту, куда откликаюсь',
+    'id': 'Pekerjaan mirip bidang yang dilamar',
+    'ne': 'आवेदन गर्ने क्षेत्रसँग मिल्दो काम थियो',
+    'km': 'ជាការងារស្រដៀងនឹងផ្នែកដែលចង់ដាក់ពាក្យ',
+    'my': 'လျှောက်မည့်နယ်ပယ်နှင့် ဆင်တူသောအလုပ်ဖြစ်သည်',
+    'si': 'අයදුම් කරන ක්ෂේත්‍රයට සමාන රැකියාවක් විය',
+    'uz': 'Ariza beradigan sohaga o\'xshash ish edi',
+    'mn': 'Өргөдөл гаргах салбартай төстэй ажил байсан',
+  }, 'It was similar to the field I\'m applying for');
+  // ── 자기소개서 만들기 (칩 조립, 2026-10-09) ──
+  String get resumeSelfCompose => _t({
+    'ko': '자기소개서 만들기', 'en': 'Create cover letter', 'zh': '生成自我介绍',
+    'hi': 'आत्म-परिचय बनाएं', 'ja': '自己紹介書を作成',
+    'th': 'สร้างแนะนำตัว', 'vi': 'Tạo giới thiệu bản thân',
+    'bn': 'আত্ম-পরিচয় তৈরি করুন', 'ru': 'Создать о себе',
+    'id': 'Buat perkenalan diri', 'ne': 'आत्म-परिचय बनाउनुहोस्',
+    'km': 'បង្កើតការណែនាំខ្លួន', 'my': 'ကိုယ်ရေးအကျဉ်းဖန်တီးရန်',
+    'si': 'ස්වයං හැඳින්වීම සාදන්න', 'uz': 'O\'zim haqimda yaratish',
+    'mn': 'Өөрийн танилцуулга үүсгэх',
+  }, 'Create cover letter');
+  String get selfQExp => _t({
+    'ko': '한국에서 일해본 경험이 있나요?',
+    'en': 'Have you worked in Korea before?',
+    'zh': '在韩国工作过吗？', 'hi': 'क्या कोरिया में काम किया है?',
+    'ja': '韓国で働いた経験はありますか？', 'th': 'เคยทำงานในเกาหลีไหม?',
+    'vi': 'Bạn đã từng làm việc ở Hàn Quốc chưa?',
+    'bn': 'কোরিয়ায় কাজ করেছেন কি?', 'ru': 'Работали ли вы в Корее?',
+    'id': 'Pernah bekerja di Korea?', 'ne': 'कोरियामा काम गर्नुभएको छ?',
+    'km': 'ធ្លាប់ធ្វើការនៅកូរ៉េទេ?', 'my': 'ကိုရီးယားတွင် အလုပ်လုပ်ဖူးပါသလား?',
+    'si': 'කොරියාවේ වැඩ කර තිබේද?', 'uz': 'Koreyada ishlaganmisiz?',
+    'mn': 'Солонгост ажиллаж байсан уу?',
+  }, 'Have you worked in Korea before?');
+  String get selfExpFirst => _t({
+    'ko': '처음이에요', 'en': 'First time', 'zh': '第一次', 'hi': 'पहली बार',
+    'ja': '初めてです', 'th': 'ครั้งแรก', 'vi': 'Lần đầu', 'bn': 'প্রথমবার',
+    'ru': 'Впервые', 'id': 'Pertama kali', 'ne': 'पहिलो पटक',
+    'km': 'លើកដំបូង', 'my': 'ပထမဆုံး', 'si': 'පළමු වතාව',
+    'uz': 'Birinchi marta', 'mn': 'Анх удаа',
+  }, 'First time');
+  String get selfExpRestaurant => _t({
+    'ko': '식당·주방', 'en': 'Restaurant/kitchen', 'zh': '餐厅·厨房',
+    'hi': 'रेस्तरां/रसोई', 'ja': '飲食店・厨房', 'th': 'ร้านอาหาร/ครัว',
+    'vi': 'Nhà hàng/bếp', 'bn': 'রেস্তোরাঁ/রান্নাঘর', 'ru': 'Ресторан/кухня',
+    'id': 'Restoran/dapur', 'ne': 'रेस्टुरेन्ट/भान्सा',
+    'km': 'ភោជនីយដ្ឋាន/ផ្ទះបាយ', 'my': 'စားသောက်ဆိုင်/မီးဖိုချောင်',
+    'si': 'අවන්හල/කුස්සිය', 'uz': 'Restoran/oshxona', 'mn': 'Ресторан/гал тогоо',
+  }, 'Restaurant/kitchen');
+  String get selfExpFactory => _t({
+    'ko': '공장·제조', 'en': 'Factory/manufacturing', 'zh': '工厂·制造',
+    'hi': 'फैक्टरी/निर्माण', 'ja': '工場・製造', 'th': 'โรงงาน/การผลิต',
+    'vi': 'Nhà máy/sản xuất', 'bn': 'কারখানা/উৎপাদন',
+    'ru': 'Завод/производство', 'id': 'Pabrik/manufaktur',
+    'ne': 'कारखाना/उत्पादन', 'km': 'រោងចក្រ/ផលិតកម្ម',
+    'my': 'စက်ရုံ/ထုတ်လုပ်မှု', 'si': 'කර්මාන්තශාලා/නිෂ්පාදන',
+    'uz': 'Zavod/ishlab chiqarish', 'mn': 'Үйлдвэр',
+  }, 'Factory/manufacturing');
+  String get selfExpConstruction => _t({
+    'ko': '건설', 'en': 'Construction', 'zh': '建筑', 'hi': 'निर्माण',
+    'ja': '建設', 'th': 'ก่อสร้าง', 'vi': 'Xây dựng', 'bn': 'নির্মাণ',
+    'ru': 'Стройка', 'id': 'Konstruksi', 'ne': 'निर्माण', 'km': 'សំណង់',
+    'my': 'ဆောက်လုပ်ရေး', 'si': 'ඉදිකිරීම්', 'uz': 'Qurilish',
+    'mn': 'Барилга',
+  }, 'Construction');
+  String get selfExpFarm => _t({
+    'ko': '농장', 'en': 'Farm', 'zh': '农场', 'hi': 'खेत', 'ja': '農場',
+    'th': 'ฟาร์ม', 'vi': 'Nông trại', 'bn': 'খামার', 'ru': 'Ферма',
+    'id': 'Pertanian', 'ne': 'खेत', 'km': 'កសិដ្ឋាន', 'my': 'ခြံ/လယ်ယာ',
+    'si': 'ගොවිපළ', 'uz': 'Ferma', 'mn': 'Ферм',
+  }, 'Farm');
+  String get selfExpLogistics => _t({
+    'ko': '물류·배송', 'en': 'Logistics/delivery', 'zh': '物流·配送',
+    'hi': 'लॉजिस्टिक्स/डिलीवरी', 'ja': '物流・配送', 'th': 'โลจิสติกส์/ส่งของ',
+    'vi': 'Kho vận/giao hàng', 'bn': 'লজিস্টিকস/ডেলিভারি',
+    'ru': 'Логистика/доставка', 'id': 'Logistik/pengiriman',
+    'ne': 'ढुवानी/डेलिभरी', 'km': 'ដឹកជញ្ជូន', 'my': 'ကုန်ပို့/ပို့ဆောင်ရေး',
+    'si': 'ප්‍රවාහන/බෙදාහැරීම', 'uz': 'Logistika/yetkazish',
+    'mn': 'Логистик/хүргэлт',
+  }, 'Logistics/delivery');
+  String get selfExpCleaning => _t({
+    'ko': '청소', 'en': 'Cleaning', 'zh': '清洁', 'hi': 'सफाई', 'ja': '清掃',
+    'th': 'ทำความสะอาด', 'vi': 'Dọn dẹp', 'bn': 'পরিচ্ছন্নতা',
+    'ru': 'Уборка', 'id': 'Kebersihan', 'ne': 'सरसफाइ', 'km': 'សម្អាត',
+    'my': 'သန့်ရှင်းရေး', 'si': 'පිරිසිදු කිරීම', 'uz': 'Tozalash',
+    'mn': 'Цэвэрлэгээ',
+  }, 'Cleaning');
+  String get selfExpOther => _t({
+    'ko': '기타', 'en': 'Other', 'zh': '其他', 'hi': 'अन्य', 'ja': 'その他',
+    'th': 'อื่นๆ', 'vi': 'Khác', 'bn': 'অন্যান্য', 'ru': 'Другое',
+    'id': 'Lainnya', 'ne': 'अन्य', 'km': 'ផ្សេងៗ', 'my': 'အခြား',
+    'si': 'වෙනත්', 'uz': 'Boshqa', 'mn': 'Бусад',
+  }, 'Other');
+  String get selfQStrength => _t({
+    'ko': '본인의 강점을 골라주세요 (최대 2개)',
+    'en': 'Pick your strengths (up to 2)',
+    'zh': '选择您的优势（最多2个）', 'hi': 'अपनी खूबियां चुनें (अधिकतम 2)',
+    'ja': '自分の強みを選んでください（最大2つ）',
+    'th': 'เลือกจุดแข็งของคุณ (สูงสุด 2)',
+    'vi': 'Chọn điểm mạnh của bạn (tối đa 2)',
+    'bn': 'আপনার শক্তি বাছুন (সর্বোচ্চ ২টি)',
+    'ru': 'Выберите сильные стороны (до 2)',
+    'id': 'Pilih kelebihanmu (maks. 2)',
+    'ne': 'आफ्नो बल छान्नुहोस् (बढीमा २)',
+    'km': 'ជ្រើសរើសចំណុចខ្លាំង (ច្រើនបំផុត 2)',
+    'my': 'သင့်အားသာချက်ရွေးပါ (အများဆုံး ၂ ခု)',
+    'si': 'ඔබේ ශක්තීන් තෝරන්න (උපරිම 2)',
+    'uz': 'Kuchli tomonlaringiz (ko\'pi bilan 2)',
+    'mn': 'Давуu талаа сонго (дээд тал нь 2)',
+  }, 'Pick your strengths (up to 2)');
+  String get selfStrDiligent => _t({
+    'ko': '성실함', 'en': 'Diligent', 'zh': '勤奋踏实', 'hi': 'मेहनती',
+    'ja': '誠実さ', 'th': 'ขยัน', 'vi': 'Chăm chỉ', 'bn': 'পরিশ্রমী',
+    'ru': 'Добросовестность', 'id': 'Rajin', 'ne': 'मिहिनेती',
+    'km': 'ឧស្សាហ៍ព្យាយាម', 'my': 'ကြိုးစားမှု', 'si': 'කඩිසර බව',
+    'uz': 'Mehnatkashlik', 'mn': 'Хичээнгүй зан',
+  }, 'Diligent');
+  String get selfStrStamina => _t({
+    'ko': '체력', 'en': 'Physical strength', 'zh': '体力好', 'hi': 'मजबूत शरीर',
+    'ja': '体力', 'th': 'ร่างกายแข็งแรง', 'vi': 'Thể lực tốt',
+    'bn': 'শারীরিক শক্তি', 'ru': 'Выносливость', 'id': 'Fisik kuat',
+    'ne': 'शारीरिक बल', 'km': 'កម្លាំងកាយ', 'my': 'ခွန်အား',
+    'si': 'ශාරීරික ශක්තිය', 'uz': 'Jismoniy kuch', 'mn': 'Биеийн хүч',
+  }, 'Physical strength');
+  String get selfStrCareful => _t({
+    'ko': '꼼꼼함', 'en': 'Attention to detail', 'zh': '细心', 'hi': 'सावधानी',
+    'ja': '丁寧さ', 'th': 'ละเอียดรอบคอบ', 'vi': 'Cẩn thận', 'bn': 'যত্নশীল',
+    'ru': 'Внимательность', 'id': 'Teliti', 'ne': 'होसियारी',
+    'km': 'ប្រុងប្រយ័ត្ន', 'my': 'သေချာမှု', 'si': 'සැලකිලිමත් බව',
+    'uz': 'Sinchkovlik', 'mn': 'Нямбай зан',
+  }, 'Attention to detail');
+  String get selfStrFastLearner => _t({
+    'ko': '빨리 배워요', 'en': 'Fast learner', 'zh': '学得快',
+    'hi': 'जल्दी सीखता हूँ', 'ja': '覚えが早い', 'th': 'เรียนรู้เร็ว',
+    'vi': 'Học nhanh', 'bn': 'দ্রুত শিখি', 'ru': 'Быстро учусь',
+    'id': 'Cepat belajar', 'ne': 'छिटो सिक्छु', 'km': 'រៀនលឿន',
+    'my': 'မြန်မြန်သင်ယူ', 'si': 'ඉක්මනින් ඉගෙන ගනිමි',
+    'uz': 'Tez o\'rganaman', 'mn': 'Хурдан сурдаг',
+  }, 'Fast learner');
+  String get selfStrBright => _t({
+    'ko': '밝은 성격', 'en': 'Positive attitude', 'zh': '性格开朗',
+    'hi': 'खुशमिजाज', 'ja': '明るい性格', 'th': 'ร่าเริง',
+    'vi': 'Tính cách vui vẻ', 'bn': 'প্রাণবন্ত', 'ru': 'Позитивность',
+    'id': 'Ceria', 'ne': 'हँसिलो स्वभाव', 'km': 'រួសរាយរាក់ទាក់',
+    'my': 'ပျော်ရွှင်တက်ကြွ', 'si': 'සතුටුදායක ගතිය',
+    'uz': 'Ochiq ko\'ngillik', 'mn': 'Эерэг зан',
+  }, 'Positive attitude');
+  String get selfStrPunctual => _t({
+    'ko': '시간 약속을 잘 지켜요', 'en': 'Always on time', 'zh': '守时',
+    'hi': 'समय का पाबंद', 'ja': '時間を守ります', 'th': 'ตรงต่อเวลา',
+    'vi': 'Đúng giờ', 'bn': 'সময়নিষ্ঠ', 'ru': 'Пунктуальность',
+    'id': 'Tepat waktu', 'ne': 'समय पालना गर्छु', 'km': 'ទៀងពេលវេលា',
+    'my': 'အချိန်တိကျ', 'si': 'වේලාවට වැඩ', 'uz': 'Vaqtida kelaman',
+    'mn': 'Цаг баримталдаг',
+  }, 'Always on time');
+  String get selfQResolve => _t({
+    'ko': '일에 대한 각오를 골라주세요',
+    'en': 'Pick your commitment',
+    'zh': '选择您的工作决心', 'hi': 'काम के प्रति अपना संकल्प चुनें',
+    'ja': '仕事への意気込みを選んでください', 'th': 'เลือกความตั้งใจของคุณ',
+    'vi': 'Chọn quyết tâm của bạn', 'bn': 'কাজের প্রতি সংকল্প বাছুন',
+    'ru': 'Выберите настрой на работу', 'id': 'Pilih tekadmu',
+    'ne': 'कामप्रतिको प्रतिबद्धता छान्नुहोस्',
+    'km': 'ជ្រើសរើសការប្តេជ្ញាចិត្ត', 'my': 'သင့်သံဓိဋ္ဌာန်ရွေးပါ',
+    'si': 'ඔබේ කැපවීම තෝරන්න', 'uz': 'Ishga bo\'lgan ahdingiz',
+    'mn': 'Ажилд хандах зорилгоо сонго',
+  }, 'Pick your commitment');
+  String get selfResLongTerm => _t({
+    'ko': '오래 일하고 싶어요', 'en': 'I want to work long-term',
+    'zh': '想长期工作', 'hi': 'लंबे समय तक काम करना चाहता हूँ',
+    'ja': '長く働きたいです', 'th': 'อยากทำงานระยะยาว',
+    'vi': 'Muốn làm việc lâu dài', 'bn': 'দীর্ঘদিন কাজ করতে চাই',
+    'ru': 'Хочу работать долго', 'id': 'Ingin kerja jangka panjang',
+    'ne': 'लामो समय काम गर्न चाहन्छु', 'km': 'ចង់ធ្វើការរយៈពេលវែង',
+    'my': 'ရေရှည်အလုပ်လုပ်ချင်', 'si': 'දිගු කලක් වැඩ කිරීමට කැමතියි',
+    'uz': 'Uzoq ishlashni xohlayman', 'mn': 'Удаан ажиллахыг хүсч байна',
+  }, 'I want to work long-term');
+  String get selfResLearnHard => _t({
+    'ko': '열심히 배우겠습니다', 'en': 'I will learn eagerly',
+    'zh': '会努力学习', 'hi': 'लगन से सीखूंगा', 'ja': '一生懸命学びます',
+    'th': 'จะตั้งใจเรียนรู้', 'vi': 'Sẽ học hỏi chăm chỉ',
+    'bn': 'মন দিয়ে শিখব', 'ru': 'Буду усердно учиться',
+    'id': 'Akan belajar dengan giat', 'ne': 'मन लगाएर सिक्नेछु',
+    'km': 'នឹងខិតខំរៀន', 'my': 'ကြိုးစားသင်ယူပါမည်',
+    'si': 'උනන්දුවෙන් ඉගෙන ගන්නම්', 'uz': 'Astoydil o\'rganaman',
+    'mn': 'Хичээнгүйлэн сурна',
+  }, 'I will learn eagerly');
+  String get selfResStartNow => _t({
+    'ko': '바로 출근할 수 있어요', 'en': 'I can start right away',
+    'zh': '可以立即上班', 'hi': 'तुरंत काम शुरू कर सकता हूँ',
+    'ja': 'すぐに出勤できます', 'th': 'เริ่มงานได้ทันที',
+    'vi': 'Có thể đi làm ngay', 'bn': 'সাথে সাথে কাজ শুরু করতে পারি',
+    'ru': 'Могу выйти сразу', 'id': 'Bisa langsung mulai kerja',
+    'ne': 'तुरुन्तै काम सुरु गर्न सक्छु', 'km': 'អាចចាប់ផ្តើមភ្លាមៗ',
+    'my': 'ချက်ချင်းအလုပ်ဆင်းနိုင်', 'si': 'වහාම වැඩ ආරම්භ කළ හැක',
+    'uz': 'Darhol ishga chiqa olaman', 'mn': 'Шууд ажилд гарч чадна',
+  }, 'I can start right away');
+  // ── 임시저장 이탈 확인 (2026-10-09) ──
+  String get resumeDraftAskTitle => _t({
+    'ko': '임시저장할까요?', 'en': 'Save as draft?', 'zh': '要暂存吗？',
+    'hi': 'ड्राफ़्ट सहेजें?', 'ja': '一時保存しますか？',
+    'th': 'บันทึกฉบับร่างไหม?', 'vi': 'Lưu nháp nhé?',
+    'bn': 'খসড়া সংরক্ষণ করবেন?', 'ru': 'Сохранить черновик?',
+    'id': 'Simpan sebagai draf?', 'ne': 'ड्राफ्ट सुरक्षित गर्ने?',
+    'km': 'រក្សាទុកជាសេចក្តីព្រាង?', 'my': 'မူကြမ်းသိမ်းမလား?',
+    'si': 'කෙටුම්පතක් ලෙස සුරකින්නද?', 'uz': 'Qoralama saqlansinmi?',
+    'mn': 'Ноорог болгож хадгалах уу?',
+  }, 'Save as draft?');
+  String get resumeDraftAskBody => _t({
+    'ko': '지금까지 입력한 내용을 저장해두면 다음에 이어서 쓸 수 있어요.',
+    'en': 'Save what you entered so you can continue later.',
+    'zh': '保存已输入的内容，下次可以继续填写。',
+    'hi': 'अभी तक दर्ज की गई जानकारी सहेजें ताकि बाद में जारी रख सकें।',
+    'ja': '入力した内容を保存しておけば、次回続きから書けます。',
+    'th': 'บันทึกสิ่งที่กรอกไว้เพื่อทำต่อภายหลัง',
+    'vi': 'Lưu nội dung đã nhập để lần sau viết tiếp.',
+    'bn': 'এ পর্যন্ত লেখা সংরক্ষণ করলে পরে চালিয়ে যেতে পারবেন।',
+    'ru': 'Сохраните введённое, чтобы продолжить позже.',
+    'id': 'Simpan yang sudah diisi agar bisa dilanjutkan nanti.',
+    'ne': 'अहिलेसम्म लेखेको सुरक्षित गरे पछि फेरि जारी राख्न सकिन्छ।',
+    'km': 'រក្សាទុកអ្វីដែលបានបញ្ចូល ដើម្បីបន្តពេលក្រោយ។',
+    'my': 'ထည့်ပြီးသားကိုသိမ်းထားလျှင် နောက်မှဆက်ရေးနိုင်သည်။',
+    'si': 'ඇතුළත් කළ දේ සුරැකුවොත් පසුව දිගටම ලිවිය හැක.',
+    'uz': 'Kiritilganlarni saqlasangiz keyin davom ettirasiz.',
+    'mn': 'Оруулснаа хадгалбал дараа үргэлжлүүлж болно.',
+  }, 'Save what you entered so you can continue later.');
+  // ── K-HIRE 동기화 안내 (A안, 2026-10-09) ──
+  String get resumeSyncPendingToast => _t({
+    'ko': '다음 지원 때 K-HIRE 이력서에 자동으로 반영돼요',
+    'en': 'Changes will sync to your K-HIRE resume on your next apply',
+    'zh': '下次申请时会自动同步到K-HIRE简历',
+    'hi': 'अगली बार आवेदन पर K-HIRE रिज़्यूमे में अपने आप लागू होगा',
+    'ja': '次回応募時にK-HIREの履歴書へ自動反映されます',
+    'th': 'จะซิงค์กับเรซูเม่ K-HIRE เมื่อสมัครครั้งถัดไป',
+    'vi': 'Sẽ tự động cập nhật vào hồ sơ K-HIRE khi ứng tuyển lần sau',
+    'bn': 'পরের আবেদনের সময় K-HIRE জীবনবৃত্তান্তে স্বয়ংক্রিয়ভাবে যুক্ত হবে',
+    'ru': 'Изменения применятся к резюме K-HIRE при следующем отклике',
+    'id': 'Akan otomatis diterapkan ke resume K-HIRE saat melamar berikutnya',
+    'ne': 'अर्को आवेदनमा K-HIRE बायोडाटामा स्वतः लागू हुन्छ',
+    'km': 'នឹងធ្វើបច្ចុប្បន្នភាពទៅប្រវត្តិរូប K-HIRE ពេលដាក់ពាក្យលើកក្រោយ',
+    'my': 'နောက်တစ်ကြိမ်လျှောက်သည့်အခါ K-HIRE တွင် အလိုအလျောက်ပြင်ပေးမည်',
+    'si': 'ඊළඟ අයදුම් කිරීමේදී K-HIRE ජීවදත්තයට ස්වයංක්‍රීයව යෙදේ',
+    'uz': 'Keyingi arizada K-HIRE rezyumesiga avtomatik qo\'llanadi',
+    'mn': 'Дараагийн өргөдөлд K-HIRE анкетад автоматаар шинэчлэгдэнэ',
+  }, 'Changes will sync to your K-HIRE resume on your next apply');
+  String get resumeManageIntro => _t({
+    'ko': '이력서는 한 번만 작성하면 돼요. 지원할 때 사이트 양식에 맞춰 자동으로 입력돼요.',
+    'en': 'You only need to write your resume once. It is filled in automatically when you apply.',
+    'zh': '简历只需填写一次，申请时会自动按网站格式填入。',
+    'hi': 'रिज़्यूमे केवल एक बार लिखना है। आवेदन करते समय यह अपने आप भर जाता है।',
+    'ja': '履歴書は一度作成するだけでOK。応募時にサイトの様式に合わせて自動入力されます。',
+    'th': 'เขียนเรซูเม่เพียงครั้งเดียว เมื่อสมัครจะถูกกรอกให้อัตโนมัติ',
+    'vi': 'Chỉ cần viết hồ sơ một lần. Khi ứng tuyển sẽ được điền tự động.',
+    'bn': 'জীবনবৃত্তান্ত একবারই লিখলে হবে। আবেদনের সময় স্বয়ংক্রিয়ভাবে পূরণ হবে।',
+    'ru': 'Резюме достаточно заполнить один раз — при отклике оно подставится автоматически.',
+    'id': 'Resume cukup ditulis sekali. Saat melamar akan terisi otomatis.',
+    'ne': 'बायोडाटा एकपटक मात्र लेखे पुग्छ। आवेदन गर्दा स्वतः भरिन्छ।',
+    'km': 'សរសេរប្រវត្តិរូបតែម្តងប៉ុណ្ណោះ។ ពេលដាក់ពាក្យ វានឹងបំពេញដោយស្វ័យប្រវត្តិ។',
+    'my': 'ကိုယ်ရေးမှတ်တမ်းကို တစ်ကြိမ်သာရေးရန်လိုသည်။ လျှောက်သည့်အခါ အလိုအလျောက်ဖြည့်ပေးသည်။',
+    'si': 'ජීවදත්ත පත්‍රය එක් වරක් පමණක් ලිවීම ප්‍රමාණවත්. අයදුම් කරන විට ස්වයංක්‍රීයව පිරවේ.',
+    'uz': 'Rezyumeni bir marta yozish kifoya. Ariza topshirganda avtomatik to\'ldiriladi.',
+    'mn': 'Анкетыг нэг л удаа бичихэд хангалттай. Өргөдөл гаргахад автоматаар бөглөгдөнө.',
+  }, 'You only need to write your resume once. It is filled in automatically when you apply.');
+  String get resumeEmptyTitle => _t({
+    'ko': '아직 이력서가 없어요',
+    'en': 'No resume yet',
+    'zh': '还没有简历',
+    'hi': 'अभी कोई रिज़्यूमे नहीं है',
+    'ja': 'まだ履歴書がありません',
+    'th': 'ยังไม่มีเรซูเม่',
+    'vi': 'Chưa có hồ sơ',
+    'bn': 'এখনও কোনো জীবনবৃত্তান্ত নেই',
+    'ru': 'Резюме пока нет',
+    'id': 'Belum ada resume',
+    'ne': 'अहिलेसम्म बायोडाटा छैन',
+    'km': 'មិនទាន់មានប្រវត្តិរូបនៅឡើយ',
+    'my': 'ကိုယ်ရေးမှတ်တမ်း မရှိသေးပါ',
+    'si': 'තවම ජීවදත්ත පත්‍රයක් නැත',
+    'uz': 'Hali rezyume yo\'q',
+    'mn': 'Одоогоор анкет алга',
+  }, 'No resume yet');
+  String get resumeEmptyDesc => _t({
+    'ko': '작성해두면 지원할 때 바로 써요',
+    'en': 'Write it now and use it right away when applying',
+    'zh': '提前填写，申请时立即使用',
+    'hi': 'अभी लिखें और आवेदन करते समय तुरंत उपयोग करें',
+    'ja': '作成しておけば応募時にすぐ使えます',
+    'th': 'เขียนไว้ก่อน ใช้ได้ทันทีเมื่อสมัคร',
+    'vi': 'Viết sẵn để dùng ngay khi ứng tuyển',
+    'bn': 'লিখে রাখলে আবেদনের সময় সাথে সাথে ব্যবহার করা যাবে',
+    'ru': 'Заполните заранее — пригодится при отклике',
+    'id': 'Tulis sekarang, langsung dipakai saat melamar',
+    'ne': 'लेखेर राखे आवेदन गर्दा तुरुन्तै प्रयोग हुन्छ',
+    'km': 'សរសេរទុក នឹងប្រើបានភ្លាមពេលដាក់ពាក្យ',
+    'my': 'ကြိုရေးထားလျှင် လျှောက်သည့်အခါ ချက်ချင်းသုံးနိုင်သည်',
+    'si': 'දැන් ලියා තැබුවොත් අයදුම් කරන විට වහාම භාවිතා කළ හැක',
+    'uz': 'Oldindan yozib qo\'ysangiz, ariza berganda darhol ishlatiladi',
+    'mn': 'Урьдчилан бичвэл өргөдөл гаргахад шууд ашиглана',
+  }, 'Write it now and use it right away when applying');
+  String get resumeCreateButton => _t({
+    'ko': '이력서 작성하기',
+    'en': 'Write my resume',
+    'zh': '填写简历',
+    'hi': 'रिज़्यूमे लिखें',
+    'ja': '履歴書を作成する',
+    'th': 'เขียนเรซูเม่',
+    'vi': 'Viết hồ sơ',
+    'bn': 'জীবনবৃত্তান্ত লিখুন',
+    'ru': 'Создать резюме',
+    'id': 'Tulis resume',
+    'ne': 'बायोडाटा लेख्नुहोस्',
+    'km': 'សរសេរប្រវត្តិរូប',
+    'my': 'ကိုယ်ရေးမှတ်တမ်းရေးရန်',
+    'si': 'ජීවදත්ත පත්‍රය ලියන්න',
+    'uz': 'Rezyume yozish',
+    'mn': 'Анкет бичих',
+  }, 'Write my resume');
+  String get resumeIncompleteBanner => _t({
+    'ko': '아직 완성되지 않았어요',
+    'en': 'Not finished yet',
+    'zh': '尚未完成',
+    'hi': 'अभी पूरा नहीं हुआ है',
+    'ja': 'まだ完成していません',
+    'th': 'ยังไม่เสร็จสมบูรณ์',
+    'vi': 'Chưa hoàn thành',
+    'bn': 'এখনও সম্পূর্ণ হয়নি',
+    'ru': 'Ещё не завершено',
+    'id': 'Belum selesai',
+    'ne': 'अझै पूरा भएको छैन',
+    'km': 'មិនទាន់បញ្ចប់នៅឡើយ',
+    'my': 'မပြီးသေးပါ',
+    'si': 'තවම සම්පූර්ණ වී නැත',
+    'uz': 'Hali tugallanmagan',
+    'mn': 'Хараахан дуусаагүй байна',
+  }, 'Not finished yet');
+  String get resumeContinueButton => _t({
+    'ko': '이어서 작성하기',
+    'en': 'Continue writing',
+    'zh': '继续填写',
+    'hi': 'लिखना जारी रखें',
+    'ja': '続きを作成する',
+    'th': 'เขียนต่อ',
+    'vi': 'Viết tiếp',
+    'bn': 'লেখা চালিয়ে যান',
+    'ru': 'Продолжить заполнение',
+    'id': 'Lanjutkan menulis',
+    'ne': 'लेख्न जारी राख्नुहोस्',
+    'km': 'បន្តសរសេរ',
+    'my': 'ဆက်ရေးရန်',
+    'si': 'දිගටම ලියන්න',
+    'uz': 'Yozishda davom etish',
+    'mn': 'Үргэлжлүүлэн бичих',
+  }, 'Continue writing');
+  String get resumeSaveDraft => _t({
+    'ko': '임시저장',
+    'en': 'Save draft',
+    'zh': '暂存',
+    'hi': 'ड्राफ़्ट सहेजें',
+    'ja': '一時保存',
+    'th': 'บันทึกฉบับร่าง',
+    'vi': 'Lưu nháp',
+    'bn': 'খসড়া সংরক্ষণ',
+    'ru': 'Сохранить черновик',
+    'id': 'Simpan draf',
+    'ne': 'ड्राफ्ट सुरक्षित गर्नुहोस्',
+    'km': 'រក្សាទុកសេចក្តីព្រាង',
+    'my': 'မူကြမ်းသိမ်းရန်',
+    'si': 'කෙටුම්පත සුරකින්න',
+    'uz': 'Qoralama saqlash',
+    'mn': 'Ноорог хадгалах',
+  }, 'Save draft');
+  String get resumeNotEntered => _t({
+    'ko': '미입력',
+    'en': 'Not entered',
+    'zh': '未填写',
+    'hi': 'दर्ज नहीं',
+    'ja': '未入力',
+    'th': 'ยังไม่กรอก',
+    'vi': 'Chưa nhập',
+    'bn': 'পূরণ হয়নি',
+    'ru': 'Не заполнено',
+    'id': 'Belum diisi',
+    'ne': 'भरिएको छैन',
+    'km': 'មិនទាន់បញ្ចូល',
+    'my': 'မဖြည့်ရသေး',
+    'si': 'ඇතුළත් කර නැත',
+    'uz': 'Kiritilmagan',
+    'mn': 'Оруулаагүй',
+  }, 'Not entered');
+  String get resumeAreaLimit => _t({
+    'ko': '희망 근무지는 최대 3개까지 선택할 수 있어요',
+    'en': 'You can select up to 3 preferred locations',
+    'zh': '最多可选择3个期望工作地区',
+    'hi': 'अधिकतम 3 स्थान चुन सकते हैं',
+    'ja': '希望勤務地は最大3つまで選べます',
+    'th': 'เลือกสถานที่ทำงานได้สูงสุด 3 แห่ง',
+    'vi': 'Chỉ có thể chọn tối đa 3 khu vực làm việc',
+    'bn': 'সর্বোচ্চ ৩টি পছন্দের এলাকা নির্বাচন করা যাবে',
+    'ru': 'Можно выбрать не более 3 регионов',
+    'id': 'Maksimal 3 lokasi kerja dapat dipilih',
+    'ne': 'बढीमा ३ वटा कार्यस्थल छान्न सकिन्छ',
+    'km': 'អាចជ្រើសរើសទីកន្លែងធ្វើការបានច្រើនបំផុត 3 កន្លែង',
+    'my': 'အလုပ်နေရာ အများဆုံး ၃ ခု ရွေးနိုင်သည်',
+    'si': 'කැමති ස්ථාන උපරිම 3ක් තෝරිය හැක',
+    'uz': 'Ko\'pi bilan 3 ta ish joyini tanlash mumkin',
+    'mn': 'Дээд тал нь 3 ажлын байр сонгож болно',
+  }, 'You can select up to 3 preferred locations');
+  String get addressTapHint => _t({
+    'ko': '탭해서 주소를 입력해주세요',
+    'en': 'Tap to enter your address',
+    'zh': '点击输入地址',
+    'hi': 'पता दर्ज करने के लिए टैप करें',
+    'ja': 'タップして住所を入力してください',
+    'th': 'แตะเพื่อกรอกที่อยู่',
+    'vi': 'Chạm để nhập địa chỉ',
+    'bn': 'ঠিকানা লিখতে ট্যাপ করুন',
+    'ru': 'Нажмите, чтобы ввести адрес',
+    'id': 'Ketuk untuk memasukkan alamat',
+    'ne': 'ठेगाना लेख्न ट्याप गर्नुहोस्',
+    'km': 'ចុចដើម្បីបញ្ចូលអាសយដ្ឋាន',
+    'my': 'လိပ်စာထည့်ရန် နှိပ်ပါ',
+    'si': 'ලිපිනය ඇතුළත් කිරීමට තට්ටු කරන්න',
+    'uz': 'Manzil kiritish uchun bosing',
+    'mn': 'Хаяг оруулахын тулд товшино уу',
+  }, 'Tap to enter your address');
+  String get resumeStatusNone => _t({
+    'ko': '미작성', 'en': 'Not started', 'zh': '未填写', 'hi': 'शुरू नहीं हुआ',
+    'ja': '未作成', 'th': 'ยังไม่เริ่ม', 'vi': 'Chưa tạo', 'bn': 'শুরু হয়নি',
+    'ru': 'Не создано', 'id': 'Belum dibuat', 'ne': 'सुरु भएको छैन',
+    'km': 'មិនទាន់ចាប់ផ្តើម', 'my': 'မစတင်ရသေး', 'si': 'ආරම්භ කර නැත',
+    'uz': 'Boshlanmagan', 'mn': 'Эхлээгүй',
+  }, 'Not started');
+  String get resumeStatusDraft => _t({
+    'ko': '작성 중', 'en': 'In progress', 'zh': '填写中', 'hi': 'प्रगति पर',
+    'ja': '作成中', 'th': 'กำลังเขียน', 'vi': 'Đang viết', 'bn': 'চলমান',
+    'ru': 'В процессе', 'id': 'Sedang diisi', 'ne': 'लेख्दै',
+    'km': 'កំពុងសរសេរ', 'my': 'ရေးနေဆဲ', 'si': 'ලියමින්',
+    'uz': 'Yozilmoqda', 'mn': 'Бичиж байна',
+  }, 'In progress');
+  String get resumeStatusDone => _t({
+    'ko': '작성 완료', 'en': 'Complete', 'zh': '已完成', 'hi': 'पूर्ण',
+    'ja': '作成済み', 'th': 'เสร็จแล้ว', 'vi': 'Hoàn tất', 'bn': 'সম্পন্ন',
+    'ru': 'Готово', 'id': 'Selesai', 'ne': 'पूरा भयो', 'km': 'បានបញ្ចប់',
+    'my': 'ပြီးစီး', 'si': 'සම්පූර්ණයි', 'uz': 'Tayyor', 'mn': 'Дууссан',
+  }, 'Complete');
+
+  // ── Address (이력서/간편지원 주소) ──
+  String get addressTitle => _t({
+    'ko': '주소', 'en': 'Address', 'zh': '地址', 'hi': 'पता', 'ja': '住所',
+    'th': 'ที่อยู่', 'vi': 'Địa chỉ', 'bn': 'ঠিকানা', 'ru': 'Адрес',
+    'id': 'Alamat', 'ne': 'ठेगाना', 'km': 'អាសយដ្ឋាន', 'my': 'လိပ်စာ',
+    'si': 'ලිපිනය', 'uz': 'Manzil', 'mn': 'Хаяг',
+  }, 'Address');
+
+  String get addressSearchTitle => _t({
+    'ko': '주소 검색', 'en': 'Search address', 'zh': '搜索地址',
+    'hi': 'पता खोजें', 'ja': '住所検索', 'th': 'ค้นหาที่อยู่',
+    'vi': 'Tìm địa chỉ', 'bn': 'ঠিকানা খুঁজুন', 'ru': 'Поиск адреса',
+    'id': 'Cari alamat', 'ne': 'ठेगाना खोज्नुहोस्', 'km': 'ស្វែងរកអាសយដ្ឋាន',
+    'my': 'လိပ်စာရှာရန်', 'si': 'ලිපිනය සොයන්න', 'uz': 'Manzil qidirish',
+    'mn': 'Хаяг хайх',
+  }, 'Search address');
+
+  String get addressGpsButton => _t({
+    'ko': '현재 위치로 찾기', 'en': 'Use current location',
+    'zh': '使用当前位置', 'hi': 'वर्तमान स्थान से खोजें',
+    'ja': '現在地から探す', 'th': 'ใช้ตำแหน่งปัจจุบัน',
+    'vi': 'Dùng vị trí hiện tại', 'bn': 'বর্তমান অবস্থান ব্যবহার করুন',
+    'ru': 'По текущему местоположению', 'id': 'Gunakan lokasi saat ini',
+    'ne': 'हालको स्थानबाट खोज्नुहोस्', 'km': 'ប្រើទីតាំងបច្ចុប្បន្ន',
+    'my': 'လက်ရှိတည်နေရာသုံးရန်', 'si': 'වත්මන් ස්ථානය භාවිතා කරන්න',
+    'uz': 'Joriy joylashuvdan', 'mn': 'Одоогийн байршлаар',
+  }, 'Use current location');
+
+  String get addressSearchButton => _t({
+    'ko': '주소 검색으로 찾기', 'en': 'Search by address',
+    'zh': '按地址搜索', 'hi': 'पते से खोजें', 'ja': '住所検索で探す',
+    'th': 'ค้นหาตามที่อยู่', 'vi': 'Tìm theo địa chỉ',
+    'bn': 'ঠিকানা দিয়ে খুঁজুন', 'ru': 'Поиск по адресу',
+    'id': 'Cari berdasarkan alamat', 'ne': 'ठेगानाबाट खोज्नुहोस्',
+    'km': 'ស្វែងរកតាមអាសយដ្ឋាន', 'my': 'လိပ်စာဖြင့်ရှာရန်',
+    'si': 'ලිපිනයෙන් සොයන්න', 'uz': 'Manzil bo\'yicha qidirish',
+    'mn': 'Хаягаар хайх',
+  }, 'Search by address');
+
+  String get addressDetailHint => _t({
+    'ko': '상세주소 (동/호수 등)', 'en': 'Detailed address (unit, etc.)',
+    'zh': '详细地址（栋/室等）', 'hi': 'विस्तृत पता (यूनिट आदि)',
+    'ja': '詳細住所（棟・号室など）', 'th': 'ที่อยู่โดยละเอียด (ห้อง ฯลฯ)',
+    'vi': 'Địa chỉ chi tiết (số phòng, v.v.)',
+    'bn': 'বিস্তারিত ঠিকানা (ইউনিট ইত্যাদি)', 'ru': 'Точный адрес (кв. и т.д.)',
+    'id': 'Alamat lengkap (unit, dll.)', 'ne': 'विस्तृत ठेगाना (कोठा आदि)',
+    'km': 'អាសយដ្ឋានលម្អិត (បន្ទប់ ។ល។)', 'my': 'အသေးစိတ်လိပ်စာ (အခန်းစသည်)',
+    'si': 'සවිස්තර ලිපිනය (ඒකකය ආදිය)', 'uz': 'Batafsil manzil (xona va h.k.)',
+    'mn': 'Дэлгэрэнгүй хаяг (өрөө гэх мэт)',
+  }, 'Detailed address (unit, etc.)');
+
+  String get addressZipLabel => _t({
+    'ko': '우편번호', 'en': 'Postal code', 'zh': '邮编', 'hi': 'पिन कोड',
+    'ja': '郵便番号', 'th': 'รหัสไปรษณีย์', 'vi': 'Mã bưu điện',
+    'bn': 'পোস্টাল কোড', 'ru': 'Индекс', 'id': 'Kode pos',
+    'ne': 'पोस्टल कोड', 'km': 'លេខកូដប្រៃសណីយ៍', 'my': 'စာတိုက်ကုဒ်',
+    'si': 'තැපැල් කේතය', 'uz': 'Pochta indeksi', 'mn': 'Шуудангийн код',
+  }, 'Postal code');
+
+  String get addressGpsLoading => _t({
+    'ko': '현재 위치를 확인하고 있어요…', 'en': 'Finding your location…',
+    'zh': '正在确认当前位置…', 'hi': 'आपका स्थान खोजा जा रहा है…',
+    'ja': '現在地を確認しています…', 'th': 'กำลังค้นหาตำแหน่งของคุณ…',
+    'vi': 'Đang xác định vị trí…', 'bn': 'আপনার অবস্থান খোঁজা হচ্ছে…',
+    'ru': 'Определяем ваше местоположение…', 'id': 'Mencari lokasi Anda…',
+    'ne': 'तपाईंको स्थान पत्ता लगाउँदै…', 'km': 'កំពុងរកទីតាំងរបស់អ្នក…',
+    'my': 'သင့်တည်နေရာကိုရှာနေသည်…', 'si': 'ඔබේ ස්ථානය සොයමින්…',
+    'uz': 'Joylashuvingiz aniqlanmoqda…', 'mn': 'Байршлыг тань тодорхойлж байна…',
+  }, 'Finding your location…');
+
+  String get addressErrorService => _t({
+    'ko': '위치 서비스가 꺼져 있어요. 설정에서 켜주세요.',
+    'en': 'Location services are off. Please turn them on in Settings.',
+    'zh': '定位服务已关闭，请在设置中开启。',
+    'hi': 'स्थान सेवाएं बंद हैं। कृपया सेटिंग्स में चालू करें।',
+    'ja': '位置情報サービスがオフです。設定でオンにしてください。',
+    'th': 'บริการระบุตำแหน่งปิดอยู่ กรุณาเปิดในการตั้งค่า',
+    'vi': 'Dịch vụ vị trí đang tắt. Vui lòng bật trong Cài đặt.',
+    'bn': 'লোকেশন সার্ভিস বন্ধ। সেটিংসে চালু করুন।',
+    'ru': 'Службы геолокации выключены. Включите их в настройках.',
+    'id': 'Layanan lokasi mati. Aktifkan di Pengaturan.',
+    'ne': 'स्थान सेवा बन्द छ। सेटिङमा खोल्नुहोस्।',
+    'km': 'សេវាទីតាំងបិទ។ សូមបើកក្នុងការកំណត់។',
+    'my': 'တည်နေရာဝန်ဆောင်မှုပိတ်ထားသည်။ ဆက်တင်တွင်ဖွင့်ပါ။',
+    'si': 'ස්ථාන සේවා ක්‍රියා විරහිතයි. සැකසීම්වල සක්‍රිය කරන්න.',
+    'uz': 'Joylashuv xizmati o\'chiq. Sozlamalarda yoqing.',
+    'mn': 'Байршлын үйлчилгээ унтраалттай байна. Тохиргоонд асаана уу.',
+  }, 'Location services are off. Please turn them on in Settings.');
+
+  String get addressErrorDenied => _t({
+    'ko': '위치 권한이 필요해요. 주소 검색을 이용해주세요.',
+    'en': 'Location permission needed. Please use address search instead.',
+    'zh': '需要定位权限，请改用地址搜索。',
+    'hi': 'स्थान अनुमति चाहिए। कृपया पता खोज का उपयोग करें।',
+    'ja': '位置情報の許可が必要です。住所検索をご利用ください。',
+    'th': 'ต้องการสิทธิ์ตำแหน่ง กรุณาใช้การค้นหาที่อยู่แทน',
+    'vi': 'Cần quyền vị trí. Vui lòng dùng tìm địa chỉ.',
+    'bn': 'লোকেশন অনুমতি প্রয়োজন। ঠিকানা খোঁজ ব্যবহার করুন।',
+    'ru': 'Нужно разрешение на геолокацию. Используйте поиск адреса.',
+    'id': 'Perlu izin lokasi. Gunakan pencarian alamat.',
+    'ne': 'स्थान अनुमति चाहिन्छ। ठेगाना खोज प्रयोग गर्नुहोस्।',
+    'km': 'ត្រូវការសិទ្ធិទីតាំង។ សូមប្រើការស្វែងរកអាសយដ្ឋាន។',
+    'my': 'တည်နေရာခွင့်ပြုချက်လိုသည်။ လိပ်စာရှာဖွေမှုသုံးပါ။',
+    'si': 'ස්ථාන අවසරය අවශ්‍යයි. ලිපින සෙවීම භාවිතා කරන්න.',
+    'uz': 'Joylashuv ruxsati kerak. Manzil qidiruvidan foydalaning.',
+    'mn': 'Байршлын зөвшөөрөл хэрэгтэй. Хаяг хайлтыг ашиглана уу.',
+  }, 'Location permission needed. Please use address search instead.');
+
+  String get addressErrorNotFound => _t({
+    'ko': '위치에서 주소를 찾지 못했어요. 주소 검색을 이용해주세요.',
+    'en': 'Could not find an address here. Please use address search.',
+    'zh': '无法从该位置找到地址，请使用地址搜索。',
+    'hi': 'यहाँ पता नहीं मिला। कृपया पता खोज का उपयोग करें।',
+    'ja': 'この位置で住所が見つかりませんでした。住所検索をご利用ください。',
+    'th': 'ไม่พบที่อยู่จากตำแหน่งนี้ กรุณาใช้การค้นหาที่อยู่',
+    'vi': 'Không tìm thấy địa chỉ. Vui lòng dùng tìm địa chỉ.',
+    'bn': 'এখানে ঠিকানা পাওয়া যায়নি। ঠিকানা খোঁজ ব্যবহার করুন।',
+    'ru': 'Не удалось найти адрес. Используйте поиск адреса.',
+    'id': 'Alamat tidak ditemukan. Gunakan pencarian alamat.',
+    'ne': 'यहाँ ठेगाना फेला परेन। ठेगाना खोज प्रयोग गर्नुहोस्।',
+    'km': 'រកមិនឃើញអាសយដ្ឋានទេ។ សូមប្រើការស្វែងរកអាសយដ្ឋាន។',
+    'my': 'ဤနေရာတွင်လိပ်စာမတွေ့ပါ။ လိပ်စာရှာဖွေမှုသုံးပါ။',
+    'si': 'ලිපිනයක් සොයාගත නොහැකි විය. ලිපින සෙවීම භාවිතා කරන්න.',
+    'uz': 'Manzil topilmadi. Manzil qidiruvidan foydalaning.',
+    'mn': 'Хаяг олдсонгүй. Хаяг хайлтыг ашиглана уу.',
+  }, 'Could not find an address here. Please use address search.');
+
+  String get addressSave => _t({
+    'ko': '저장', 'en': 'Save', 'zh': '保存', 'hi': 'सहेजें', 'ja': '保存',
+    'th': 'บันทึก', 'vi': 'Lưu', 'bn': 'সংরক্ষণ', 'ru': 'Сохранить',
+    'id': 'Simpan', 'ne': 'सुरक्षित गर्नुहोस्', 'km': 'រក្សាទុក',
+    'my': 'သိမ်းရန်', 'si': 'සුරකින්න', 'uz': 'Saqlash', 'mn': 'Хадгалах',
+  }, 'Save');
+
+  String get addressEmptyHint => _t({
+    'ko': '아직 주소가 없어요. 위 버튼으로 입력해주세요.',
+    'en': 'No address yet. Please add one using the buttons above.',
+    'zh': '尚无地址，请使用上方按钮添加。',
+    'hi': 'अभी कोई पता नहीं है। ऊपर के बटन से जोड़ें।',
+    'ja': 'まだ住所がありません。上のボタンから入力してください。',
+    'th': 'ยังไม่มีที่อยู่ กรุณาเพิ่มด้วยปุ่มด้านบน',
+    'vi': 'Chưa có địa chỉ. Hãy thêm bằng các nút phía trên.',
+    'bn': 'এখনো ঠিকানা নেই। উপরের বোতাম দিয়ে যোগ করুন।',
+    'ru': 'Адреса пока нет. Добавьте его кнопками выше.',
+    'id': 'Belum ada alamat. Tambahkan dengan tombol di atas.',
+    'ne': 'अझै ठेगाना छैन। माथिको बटनबाट थप्नुहोस्।',
+    'km': 'មិនទាន់មានអាសយដ្ឋានទេ។ សូមបន្ថែមដោយប៊ូតុងខាងលើ។',
+    'my': 'လိပ်စာမရှိသေးပါ။ အပေါ်ကခလုတ်ဖြင့်ထည့်ပါ။',
+    'si': 'තවම ලිපිනයක් නැත. ඉහත බොත්තම් භාවිතයෙන් එක් කරන්න.',
+    'uz': 'Hali manzil yo\'q. Yuqoridagi tugmalar bilan qo\'shing.',
+    'mn': 'Одоогоор хаяг алга. Дээрх товчоор нэмнэ үү.',
+  }, 'No address yet. Please add one using the buttons above.');
 
   // ── Helper ──
   String _t(Map<String, String> map, String fallback) {

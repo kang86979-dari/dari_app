@@ -148,7 +148,7 @@ const worldCountries = <(String code, String en, String ko)>[
   ('FM', 'Micronesia', '미크로네시아'),
   ('MD', 'Moldova', '몰도바'),
   ('MC', 'Monaco', '모나코'),
-  ('MN', 'Mongolia', '몽골국'),
+  ('MN', 'Mongolia', '몽골'),
   ('ME', 'Montenegro', '몬테네그로'),
   ('MS', 'Montserrat', '몬트세랫'),
   ('MA', 'Morocco', '모로코'),

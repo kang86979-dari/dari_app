@@ -12,6 +12,8 @@
 	<string>Dari</string>
 	<key>NSUserTrackingUsageDescription</key>
 	<string>This allows us to show you more relevant job ads and keep the app free.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Your location is used to auto-fill your postal code and address for job applications.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<!-- 지원하기 웹뷰가 http(비-https) 채용사이트도 로드할 수 있게 웹콘텐츠에 한정 허용 -->

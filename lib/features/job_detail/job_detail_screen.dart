@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -19,6 +21,8 @@ import '../../providers/account_provider.dart';
 import '../../providers/applied_job_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../core/constants/colors.dart';
+import '../favorites/favorite_actions.dart';
+import '../../core/widgets/app_back_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
@@ -104,19 +108,8 @@ class JobDetailScreen extends ConsumerWidget {
             return _DetailBody(
               job: job, s: s, langCode: langCode,
               isFavorite: isFav,
-              onFavoriteToggle: () {
-                if (isFav) {
-                  analytics.favoriteRemoved(job.id);
-                } else {
-                  analytics.favoriteAdded(job.id, 'detail');
-                }
-                ref.read(favoriteProvider.notifier).toggle(job.id);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-                  duration: const Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ));
-              },
+              onFavoriteToggle: () =>
+                  toggleFavoriteWithAuth(context, ref, job.id, source: 'detail'),
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
@@ -138,7 +131,7 @@ class JobDetailScreen extends ConsumerWidget {
   }
 }
 
-class _DetailBody extends StatefulWidget {
+class _DetailBody extends ConsumerStatefulWidget {
   final Job job;
   final AppStrings s;
   final String langCode;
@@ -150,10 +143,10 @@ class _DetailBody extends StatefulWidget {
   });
 
   @override
-  State<_DetailBody> createState() => _DetailBodyState();
+  ConsumerState<_DetailBody> createState() => _DetailBodyState();
 }
 
-class _DetailBodyState extends State<_DetailBody> {
+class _DetailBodyState extends ConsumerState<_DetailBody> {
   String? _pendingUrl;
   bool _showKoreanAddress = false;
   final _adController = NativeAdController(); // 상세 상단 small 네이티브
@@ -207,6 +200,7 @@ class _DetailBodyState extends State<_DetailBody> {
 
 
   void _loadInterstitialAd() {
+    if (kDebugMode) return; // 개발 빌드에서는 전면 광고 숨김
     // 이미 준비됐거나 로딩 중이면 스킵 (세션 전역 공유)
     if (_interstitialAd != null || _interstitialLoading) return;
     _interstitialLoading = true;
@@ -461,6 +455,11 @@ class _DetailBodyState extends State<_DetailBody> {
     final langCode = widget.langCode;
     final isFavorite = widget.isFavorite;
     final onFavoriteToggle = widget.onFavoriteToggle;
+    // 마감 여부 — 지원방법 칩/하단 버튼에서 공유.
+    final isExpired = job.expiresAt != null &&
+        (DateTime.tryParse(job.expiresAt!)
+                ?.isBefore(DateUtils.dateOnly(DateTime.now())) ??
+            false);
 
     return Column(
       children: [
@@ -599,13 +598,27 @@ class _DetailBodyState extends State<_DetailBody> {
                         ),
                       if (job.visaSponsorship == true)
                         _InfoRow(label: s.tabVisaSponsorship, value: s.visaSponsorshipYes),
-                      // 지원방법: 크롤 수집 apply_methods 있을 때만 표시(1단계=표시 전용, 칩 탭 동작 없음).
+                      // 지원방법: 크롤 수집 apply_methods 있을 때만 표시. 칩 탭 시
+                      // 해당 방법으로 바로 진행(지원하러 가기 생략, 2026-10-05).
                       // null/빈 배열/미지 코드뿐이면 위젯이 행 자체를 숨김.
                       if (job.applyMethods.isNotEmpty)
                         _ApplyMethodsRow(
                           label: s.infoApplyMethod,
                           methods: job.applyMethods,
                           strings: s,
+                          hasPhone:
+                              (job.applyContact?['phone'] as String?)?.isNotEmpty ==
+                                  true,
+                          onMethodTap: isExpired
+                              ? (_) {}
+                              : (code) => selectApplyMethod(
+                                    context,
+                                    ref,
+                                    job: job,
+                                    strings: s,
+                                    code: code,
+                                    onProceedToSite: () => _onApplyTap(job.url),
+                                  ),
                         ),
                       // 사이트명 없으면(RLS로 숨겨진 testing 사이트) 출처 행 생략 — UUID 노출 방지
                       if (job.siteName != null && job.siteName!.isNotEmpty)
@@ -662,8 +675,6 @@ class _DetailBodyState extends State<_DetailBody> {
           decoration: const BoxDecoration(
               border: Border(top: BorderSide(color: Color(0xFFF0F0F0)))),
           child: Builder(builder: (context) {
-            final isExpired = job.expiresAt != null &&
-                (DateTime.tryParse(job.expiresAt!)?.isBefore(DateUtils.dateOnly(DateTime.now())) ?? false);
             return SizedBox(
               width: double.infinity,
               child: Column(
@@ -772,12 +783,7 @@ class _TopBar extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          GestureDetector(
-            onTap: onBack,
-            child: const SizedBox(
-                width: 40, height: 40,
-                child: Icon(Icons.arrow_back_ios_new, size: 20)),
-          ),
+          AppBackButton(onTap: onBack),
           Text(title,
               style: const TextStyle(
                   fontSize: 17,
@@ -938,10 +944,15 @@ class _ApplyMethodsRow extends StatelessWidget {
   final String label;
   final List<String> methods; // 정규화 코드
   final AppStrings strings;
+  // 칩 탭 → 해당 지원방법으로 바로 진행(지원하러 가기 생략, 2026-10-05).
+  final void Function(String code) onMethodTap;
+  final bool hasPhone; // 전화번호 없으면 전화 칩 숨김
   const _ApplyMethodsRow({
     required this.label,
     required this.methods,
     required this.strings,
+    required this.onMethodTap,
+    required this.hasPhone,
   });
 
   @override
@@ -952,6 +963,8 @@ class _ApplyMethodsRow extends StatelessWidget {
     final seenLabels = <String>{};
     final renderable = <String>[];
     for (final m in methods) {
+      if (m == 'visit') continue; // 방문접수는 노출 안 함(DB엔 유지, 2026-10-05)
+      if (m == 'phone' && !hasPhone) continue; // 번호 없는 전화 숨김
       final label = strings.applyMethodLabel(m) ?? strings.applyMethodOther;
       if (seenLabels.add(label)) renderable.add(m);
     }
@@ -1000,23 +1013,27 @@ class _ApplyMethodsRow extends StatelessWidget {
     final style = ApplyMethodStyle.of(code);
     // 모르는 코드는 "기타" 라벨로 폴백 (16개 언어)
     final text = strings.applyMethodLabel(code) ?? strings.applyMethodOther;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: style.bg,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(style.icon, size: 13, color: style.fg),
-          const SizedBox(width: 4),
-          Text(text,
-              style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: style.fg)),
-        ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => onMethodTap(code),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: style.bg,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(style.icon, size: 13, color: style.fg),
+            const SizedBox(width: 4),
+            Text(text,
+                style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: style.fg)),
+          ],
+        ),
       ),
     );
   }
@@ -1108,64 +1125,33 @@ class _JobMemoSection extends ConsumerWidget {
                 color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(
-                        Icons.edit_note,
-                        size: 16,
-                        color: Color(0xFF9A7B24),
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        strings.jobMemoTitle,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF9A7B24),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    memo!,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      height: 1.5,
-                      color: Color(0xFF6D5B1F),
-                    ),
-                  ),
-                ],
+              // 메모 있을 때 — 제목·아이콘 없이 내용만(2026-10-05).
+              child: Text(
+                memo!,
+                style: const TextStyle(
+                  fontSize: 13,
+                  height: 1.5,
+                  color: Color(0xFF6D5B1F),
+                ),
               ),
             )
           : Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 11),
               decoration: BoxDecoration(
-                border: Border.all(color: const Color(0xFFEADFB8)),
+                // 작성된 메모와 동일한 노란 배경(2026-10-05).
+                color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(
-                    Icons.edit_note,
-                    size: 16,
-                    color: Color(0xFFB1953B),
-                  ),
-                  const SizedBox(width: 4),
-                  Text(
-                    strings.jobMemoAdd,
-                    style: const TextStyle(
-                      fontSize: 12.5,
-                      fontWeight: FontWeight.w600,
-                      color: Color(0xFFB1953B),
-                    ),
-                  ),
-                ],
+              // 메모 없음 — "+ 메모 남기기"(문자열에 + 포함, 아이콘 없음).
+              alignment: Alignment.center,
+              child: Text(
+                strings.jobMemoAdd,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF9A7B24),
+                ),
               ),
             ),
     );
@@ -2651,31 +2637,38 @@ class _DetailBannerAd extends StatefulWidget {
 class _DetailBannerAdState extends State<_DetailBannerAd> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  Timer? _delayTimer;
 
   // 상세는 사용자가 머무는 화면 → 고정 크기 MREC(300x250)로 단가 상승.
-  // 크기 고정이라 화면 폭 계산이 필요 없어 initState에서 바로 로드.
+  // 크기 고정이라 화면 폭 계산이 필요 없어 로드 시 바로 노출.
   static const AdSize _size = AdSize.mediumRectangle;
 
   @override
   void initState() {
     super.initState();
-    _bannerAd = BannerAd(
-      adUnitId: AdHelper.mrecId,
-      size: _size,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) setState(() => _isLoaded = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-        },
-      ),
-    )..load();
+    // 진입하자마자 노출하지 않고 ~1.5초 후 로드 — 화면이 먼저 안정적으로
+    // 보이게 하고 광고가 뒤늦게 뜨도록(사용자 요청 2026-10-05).
+    _delayTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      _bannerAd = BannerAd(
+        adUnitId: AdHelper.mrecId,
+        size: _size,
+        request: const AdRequest(),
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            if (mounted) setState(() => _isLoaded = true);
+          },
+          onAdFailedToLoad: (ad, error) {
+            ad.dispose();
+          },
+        ),
+      )..load();
+    });
   }
 
   @override
   void dispose() {
+    _delayTimer?.cancel();
     _bannerAd?.dispose();
     super.dispose();
   }
