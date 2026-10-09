@@ -43,38 +43,59 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     _prepareLang();
   }
 
-  /// KoMate(사라민 SPA): '지원하기' 클릭이 .saramin.co.kr 세션 쿠키
-  /// (PHPSESSID — 로그인 대기 상태)를 남겨 재진입 시 상세 대신 로그인
-  /// 팝업이 뜸. 2026-10-09 웹뷰 저장소 덤프 분석: localStorage는 추적
-  /// 쿠키뿐, 상태는 세션 쿠키에 있음 → **만료일 없는 세션 쿠키만** 삭제
-  /// (브라우저 재시작과 동일). 자동로그인 등 영구 쿠키는 보존(B안).
+  /// KoMate: 비로그인 열람 5회 제한(RECRUIT_VIEW_COUNT + httpOnly 서버
+  /// 쿠키)이 넘으면 모든 상세가 "로그인하고 공고 더보기" 모달로 가려짐.
+  /// 라이브 DevTools 검증(2026-10-09): 쿠키 전체 삭제 → 모달 사라지고
+  /// 상세 정상. deleteCookies()는 .saramin.co.kr 부모 도메인 쿠키를 못
+  /// 지워서(A/B안 실패 원인) **만료 과거 덮어쓰기**로 삭제한다.
+  /// 트레이드오프: KoMate 로그인 세션도 매번 초기화(사용자 승인).
   bool get _isKomate =>
       Uri.tryParse(widget.url)?.host == 'komate.saramin.co.kr';
 
-  Future<void> _clearKomateSessionCookies() async {
+  Future<void> _clearKomateCookies() async {
     try {
       final cm = CookieManager.instance();
+      final expired = DateTime(2000).millisecondsSinceEpoch;
       for (final origin in const [
         'https://komate.saramin.co.kr',
         'https://www.saramin.co.kr',
         'https://m.saramin.co.kr',
       ]) {
-        final cookies = await cm.getCookies(url: WebUri(origin));
+        final url = WebUri(origin);
+        final cookies = await cm.getCookies(url: url);
         for (final c in cookies) {
-          if (c.expiresDate == null) {
-            await cm.deleteCookie(
-              url: WebUri(origin),
-              name: c.name,
-              domain: c.domain,
-            );
-          }
+          // 호스트 쿠키와 .saramin.co.kr 도메인 쿠키 둘 다 만료 처리.
+          await cm.setCookie(
+            url: url,
+            name: c.name,
+            value: '',
+            path: '/',
+            expiresDate: expired,
+          );
+          await cm.setCookie(
+            url: url,
+            name: c.name,
+            value: '',
+            domain: '.saramin.co.kr',
+            path: '/',
+            expiresDate: expired,
+          );
         }
       }
+      // 쿠키 초기화로 '첫 방문'이 되면 가입 유도 모달이 매번 뜸 →
+      // 닫기 버튼이 심는 쿠키를 미리 세팅해 억제(라이브 확인: 닫기 시
+      // mobile_modal_recruit_shown=true 저장, 2026-10-09).
+      await cm.setCookie(
+        url: WebUri('https://komate.saramin.co.kr'),
+        name: 'mobile_modal_recruit_shown',
+        value: 'true',
+        path: '/',
+      );
     } catch (_) {}
   }
 
   Future<void> _prepareLang() async {
-    if (_isKomate) await _clearKomateSessionCookies();
+    if (_isKomate) await _clearKomateCookies();
     await SiteLang.presetCookies(widget.url, widget.langCode);
     if (mounted) setState(() => _langReady = true);
   }
