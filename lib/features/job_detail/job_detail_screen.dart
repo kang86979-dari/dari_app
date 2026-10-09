@@ -623,8 +623,11 @@ class _DetailBodyState extends State<_DetailBody> {
                   child: _DetailBannerAd(),
                 ),
 
-                // 메모 섹션 — 로컬 저장(2026-10-09).
-                JobMemoSection(job: job, langCode: widget.langCode),
+                // 공고 메모 — 광고 영역 바로 아래(feature와 동일 위치·디자인).
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 8),
+                  child: JobMemoSection(job: job, langCode: widget.langCode),
+                ),
 
                 // 상세 내용 영역 제거 — 원문은 출처 사이트에서 확인(불안정한 실시간 번역 의존 제거)
 

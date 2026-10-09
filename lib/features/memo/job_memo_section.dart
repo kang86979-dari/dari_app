@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
 import '../../providers/job_memo_provider.dart';
 import 'memo_actions.dart';
 
 /// 공고 상세 메모 섹션 — 로컬 저장(2026-10-09).
-/// 있으면 노랑 박스에 전문(탭=수정), 없으면 "+ 메모 남기기"
-/// (카드 메모 바와 동일한 노랑 톤으로 통일).
+/// feature 브랜치 _JobMemoSection과 동일 디자인: 제목·아이콘 없이
+/// 있으면 노랑 박스에 전문, 없으면 가운데 정렬 "+ 메모 남기기" 바.
 class JobMemoSection extends ConsumerWidget {
   final Job job;
   final String langCode;
@@ -21,51 +20,45 @@ class JobMemoSection extends ConsumerWidget {
     final memo = ref.watch(jobMemoTextProvider(job.id));
     final hasMemo = memo != null && memo.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 8),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.edit_note, size: 18, color: AppColors.gray600),
-              const SizedBox(width: 4),
-              Text(
-                s.jobMemoTitle,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => editJobMemo(context, ref, job, langCode),
-            child: Container(
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => editJobMemo(context, ref, job, langCode),
+      child: hasMemo
+          ? Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF8E1),
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(12),
               ),
+              // 메모 있을 때 — 제목·아이콘 없이 내용만(2026-10-05 확정).
               child: Text(
-                hasMemo ? memo : s.jobMemoAdd,
-                style: TextStyle(
+                memo,
+                style: const TextStyle(
                   fontSize: 13,
                   height: 1.5,
-                  fontWeight: hasMemo ? FontWeight.w500 : FontWeight.w600,
-                  color: hasMemo
-                      ? const Color(0xFF6D5B1F)
-                      : const Color(0xFF9A7B24),
+                  color: Color(0xFF6D5B1F),
+                ),
+              ),
+            )
+          : Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 11),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFF8E1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              // 메모 없음 — "+ 메모 남기기"(문자열에 + 포함, 아이콘 없음).
+              alignment: Alignment.center,
+              child: Text(
+                s.jobMemoAdd,
+                style: const TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF9A7B24),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
     );
   }
 }

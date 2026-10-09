@@ -493,6 +493,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   Row(
                     children: [
                       // 메모 아이콘 — 하트 왼쪽, 메모 리스트 진입(2026-10-09).
+                      // 메모 포스트잇과 동일한 노랑 톤(주황이면 메모 느낌 X).
                       GestureDetector(
                         onTap: () => context.push('/memos'),
                         child: Padding(
@@ -504,13 +505,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                 width: 34,
                                 height: 34,
                                 decoration: const BoxDecoration(
-                                  color: AppColors.carrotLight,
+                                  color: Color(0xFFFFF8E1),
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Icon(
                                   Icons.edit_note,
                                   size: 22,
-                                  color: AppColors.carrot,
+                                  color: Color(0xFF9A7B24),
                                 ),
                               ),
                               if (ref.watch(jobMemoProvider).isNotEmpty)
@@ -523,7 +524,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       color: Colors.white,
                                       shape: BoxShape.circle,
                                       border: Border.all(
-                                        color: AppColors.carrot,
+                                        color: const Color(0xFF9A7B24),
                                         width: 1.5,
                                       ),
                                     ),
@@ -536,7 +537,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                                       style: const TextStyle(
                                         fontSize: 9,
                                         fontWeight: FontWeight.w700,
-                                        color: AppColors.carrot,
+                                        color: Color(0xFF9A7B24),
                                       ),
                                       textAlign: TextAlign.center,
                                     ),
