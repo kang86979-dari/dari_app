@@ -1,5 +1,3 @@
-import 'dart:collection';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_inappwebview/flutter_inappwebview.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -45,19 +43,38 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     _prepareLang();
   }
 
-  /// KoMate(사라민 SPA): '지원하기' 클릭이 로그인 대기 상태(쿠키·스토리지)를
-  /// 남겨 재진입 시 상세 대신 로그인 팝업이 뜸 → 열 때마다 첫 방문처럼
-  /// 사이트 상태 초기화(A안, 2026-10-09). 호스트 한정이라 타 사이트 무영향.
+  /// KoMate(사라민 SPA): '지원하기' 클릭이 .saramin.co.kr 세션 쿠키
+  /// (PHPSESSID — 로그인 대기 상태)를 남겨 재진입 시 상세 대신 로그인
+  /// 팝업이 뜸. 2026-10-09 웹뷰 저장소 덤프 분석: localStorage는 추적
+  /// 쿠키뿐, 상태는 세션 쿠키에 있음 → **만료일 없는 세션 쿠키만** 삭제
+  /// (브라우저 재시작과 동일). 자동로그인 등 영구 쿠키는 보존(B안).
   bool get _isKomate =>
       Uri.tryParse(widget.url)?.host == 'komate.saramin.co.kr';
 
+  Future<void> _clearKomateSessionCookies() async {
+    try {
+      final cm = CookieManager.instance();
+      for (final origin in const [
+        'https://komate.saramin.co.kr',
+        'https://www.saramin.co.kr',
+        'https://m.saramin.co.kr',
+      ]) {
+        final cookies = await cm.getCookies(url: WebUri(origin));
+        for (final c in cookies) {
+          if (c.expiresDate == null) {
+            await cm.deleteCookie(
+              url: WebUri(origin),
+              name: c.name,
+              domain: c.domain,
+            );
+          }
+        }
+      }
+    } catch (_) {}
+  }
+
   Future<void> _prepareLang() async {
-    if (_isKomate) {
-      try {
-        await CookieManager.instance()
-            .deleteCookies(url: WebUri('https://komate.saramin.co.kr'));
-      } catch (_) {}
-    }
+    if (_isKomate) await _clearKomateSessionCookies();
     await SiteLang.presetCookies(widget.url, widget.langCode);
     if (mounted) setState(() => _langReady = true);
   }
@@ -179,25 +196,8 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     }
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_entryUrl)),
-      // KoMate: SPA가 읽기 전에 local/sessionStorage의 로그인 대기 상태를
-      // 제거(문서 시작 시점). sessionStorage 마커로 이 웹뷰 세션 안에서는
-      // 1회만 실행 — 이후 로그인 흐름의 저장소는 건드리지 않음.
-      initialUserScripts: _isKomate
-          ? UnmodifiableListView<UserScript>([
-              UserScript(
-                source: '''
-try {
-  if (sessionStorage.getItem('dari_cleared') !== '1') {
-    localStorage.clear();
-    sessionStorage.clear();
-    sessionStorage.setItem('dari_cleared', '1');
-  }
-} catch (e) {}
-''',
-                injectionTime: UserScriptInjectionTime.AT_DOCUMENT_START,
-              ),
-            ])
-          : null,
+      // (KoMate storage 초기화 스크립트는 제거 — 덤프 분석 결과 localStorage엔
+      //  추적 데이터뿐, 로그인 대기 상태는 세션 쿠키에 있어 쿠키만 처리)
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         javaScriptCanOpenWindowsAutomatically: true,
