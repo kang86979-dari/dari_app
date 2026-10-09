@@ -52,7 +52,23 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
   bool get _isKomate =>
       Uri.tryParse(widget.url)?.host == 'komate.saramin.co.kr';
 
+  /// 사라민 로그인 여부 — CUST_NO(회원번호) 쿠키 존재로 판별.
+  /// 라이브 확인(2026-10-09): 로그인 시 .saramin.co.kr에 CUST_NO/UID/AUID
+  /// (회원번호)가 생기고 RECRUIT_VIEW_COUNT(열람제한)는 사라짐.
+  Future<bool> _isKomateLoggedIn() async {
+    try {
+      final cookies = await CookieManager.instance()
+          .getCookies(url: WebUri('https://www.saramin.co.kr'));
+      return cookies
+          .any((c) => c.name == 'CUST_NO' && '${c.value}'.isNotEmpty);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> _clearKomateCookies() async {
+    // 로그인 상태면 초기화 생략 — 세션 보존(로그인하면 열람제한 자체가 없음).
+    if (await _isKomateLoggedIn()) return;
     try {
       final cm = CookieManager.instance();
       // 열람 제한 카운트는 **.komate.saramin.co.kr**(점 접두) 도메인 쿠키에
