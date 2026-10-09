@@ -10,6 +10,7 @@ import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
 import '../../providers/job_memo_provider.dart';
 import '../../providers/language_provider.dart';
+import '../home/widgets/ad_banner.dart';
 import '../home/widgets/job_card.dart';
 import 'memo_actions.dart';
 
@@ -109,9 +110,16 @@ class MemoListScreen extends ConsumerWidget {
                         };
                         return ListView.builder(
                           padding: const EdgeInsets.only(top: 6, bottom: 20),
-                          itemCount: jobIds.length,
+                          // +1: 최상단 광고 배너(2026-10-09 사용자 요청).
+                          itemCount: jobIds.length + 1,
                           itemBuilder: (context, i) {
-                            final id = jobIds[i];
+                            if (i == 0) {
+                              return const Padding(
+                                padding: EdgeInsets.only(bottom: 6),
+                                child: AdBanner(),
+                              );
+                            }
+                            final id = jobIds[i - 1];
                             final job = byId[id];
                             if (job == null) return const SizedBox.shrink();
                             return JobCard(
