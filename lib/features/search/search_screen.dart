@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -16,6 +18,7 @@ import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/utils/filter_matcher.dart';
 import '../../core/utils/region_mapper.dart';
+import '../filter/filter_chips_row.dart';
 import '../../core/widgets/segmented_tabs.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
@@ -46,6 +49,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   bool _hasMore = true;
   String _sortBy = 'relevance'; // 'relevance' | 'latest' | 'salary_desc'
   String? _lastLangCode;
+  String? _lastFilterJson; // 전역 필터 변경 감지 — 검색 결과 리셋용(2026-10-09)
 
   // 필터 추천 탭
   int _activeTab = 0; // 0=검색결과, 1=필터추천
@@ -160,8 +164,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     setState(() => _isLoadingMore = true);
     try {
       final query = ref.read(searchQueryProvider);
-      final newJobs =
-          await JobRepository().searchJobs(query, page: _searchPage + 1, langCode: ref.read(languageProvider), sortBy: _sortBy);
+      final newJobs = await JobRepository().searchJobs(query,
+          page: _searchPage + 1,
+          langCode: ref.read(languageProvider),
+          sortBy: _sortBy,
+          filter: ref.read(filterStateProvider));
       if (!mounted) return;
       setState(() {
         _searchPage++;
@@ -197,6 +204,18 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       ref.invalidate(searchResultProvider);
     }
     _lastLangCode = langCode;
+
+    // 전역 필터 변경 시 검색 결과·건수 리셋 — 검색은 검색어 AND 필터(2026-10-09).
+    final searchFilter = ref.watch(filterStateProvider);
+    final filterJson = jsonEncode(searchFilter.toJson());
+    if (_lastFilterJson != null && _lastFilterJson != filterJson && _showResults) {
+      _searchJobs.clear();
+      _searchPage = 0;
+      _hasMore = true;
+      ref.invalidate(searchResultProvider);
+      ref.invalidate(searchTotalCountProvider);
+    }
+    _lastFilterJson = filterJson;
 
     return Scaffold(
       floatingActionButton: _showFab
@@ -476,6 +495,47 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ],
                     ),
                   ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                  // 필터 버튼 — 검색 결과를 전역 필터로 좁히기(2026-10-09).
+                  // 활성 필터가 있으면 carrot 톤 + 개수 뱃지.
+                  Builder(builder: (context) {
+                    final f = ref.watch(filterStateProvider);
+                    final n = f.activeCount;
+                    final active = n > 0;
+                    return GestureDetector(
+                      onTap: () => context.push('/filter'),
+                      child: Container(
+                        margin: const EdgeInsets.only(right: 6),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                          color:
+                              active ? AppColors.carrotLight : AppColors.gray50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.tune,
+                                size: 15,
+                                color: active
+                                    ? AppColors.carrot
+                                    : AppColors.gray600),
+                            if (active) ...[
+                              const SizedBox(width: 4),
+                              Text('$n',
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.carrot)),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
                   GestureDetector(
                     onTap: () => _showSortSheet(context, s),
                     child: Container(
@@ -498,9 +558,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                     ),
                   ),
+                    ],
+                  ),
                 ],
               ),
             ),
+            // 적용된 필터 칩 (홈과 동일 위젯, 탭=삭제) — 2026-10-09.
+            if (!ref.watch(filterStateProvider).isEmpty)
+              ReadOnlyFilterChips(
+                  filter: ref.watch(filterStateProvider), ref: ref),
             Expanded(
               child: ListView.builder(
                 controller: _scrollController,

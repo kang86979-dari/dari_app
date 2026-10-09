@@ -12,7 +12,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/filter_state.dart';
@@ -900,7 +899,6 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   // ── 하단 바 ── (트레이 아래 언더라인 제거 — 상단 보더 없음)
   Widget _bottomBar(FilterState f, dynamic s, String langCode) {
     final total = _total(f);
-    final countAsync = ref.watch(jobTotalCountProvider);
     return Container(
       // 시스템 하단 여백(홈바/내비) + 고정 10 → 양 플랫폼 일관된 간격
       padding: EdgeInsets.fromLTRB(
@@ -940,49 +938,15 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Flexible(
-                      child: countAsync.when(
-                        data: (count) {
-                          final formatted = count < 0
-                              ? '...'
-                              : NumberFormat.decimalPattern(langCode)
-                                  .format(count);
-                          return Text('${s.showResults} ($formatted)',
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: -0.2,
-                                  color: Colors.white));
-                        },
-                        loading: () => Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const SizedBox(
-                              width: 14, height: 14,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.white),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(s.showResults as String,
-                                style: const TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white)),
-                          ],
-                        ),
-                        error: (_, __) => Text(s.showResults as String,
-                            style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white)),
-                      ),
-                    ),
-                  ],
-                ),
+                // 건수 표시 제거 — 결과 화면 Total이 이미 보여줌(검색 조합
+                // 도입으로 화면마다 기준이 달라 혼동, 2026-10-09 사용자 확정).
+                child: Text(s.showResults as String,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: -0.2,
+                        color: Colors.white)),
               ),
             ),
           ),

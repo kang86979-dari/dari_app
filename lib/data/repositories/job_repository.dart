@@ -289,13 +289,37 @@ class JobRepository {
     }
   }
 
-  Future<List<Job>> searchJobs(String queryText, {int page = 0, String langCode = 'en', String sortBy = 'relevance', bool includeTesting = false}) async {
+  /// FilterState → 검색 v2용 필터 파라미터 (p_visa_ids 등 필터만 추출).
+  /// _buildRpcParams의 변환 규칙(지역 전국 포함, 협의 승격 등)을 그대로 재사용.
+  Future<Map<String, dynamic>> _searchFilterParams(
+      FilterState filter, String langCode, bool includeTesting) async {
+    final params = await _buildRpcParams(
+      filter: filter,
+      langCode: langCode,
+      limit: 1,
+      offset: 0,
+      includeTesting: includeTesting,
+    );
+    // 비필터 파라미터는 search_* 함수 규약(search_query 등)으로 따로 전달.
+    params
+      ..remove('p_lang')
+      ..remove('p_limit')
+      ..remove('p_offset')
+      ..remove('p_sort_by')
+      ..remove('p_include_testing')
+      ..remove('p_app_build');
+    return params;
+  }
+
+  Future<List<Job>> searchJobs(String queryText, {int page = 0, String langCode = 'en', String sortBy = 'relevance', bool includeTesting = false, FilterState filter = FilterState.empty}) async {
     final q = queryText.trim();
     if (q.isEmpty) return [];
 
     final offset = page * _pageSize;
     final appBuild = await AppInfo.buildNumber();
-    final data = await _traced('search_jobs_fuzzy', () => _t(_client.rpc('search_jobs_fuzzy', params: {
+    // v2: 검색어 + 홈과 동일한 필터 AND 조합(2026-10-09).
+    final filterParams = await _searchFilterParams(filter, langCode, includeTesting);
+    final data = await _traced('search_jobs_fuzzy_v2', () => _t(_client.rpc('search_jobs_fuzzy_v2', params: {
       'search_query': q,
       'lang_code': langCode,
       'sort_by': sortBy,
@@ -303,6 +327,7 @@ class JobRepository {
       'result_offset': offset,
       if (includeTesting) 'include_testing': true, // 테스트 모드 (search는 p_ 없음)
       if (appBuild != null) 'app_build': appBuild, // 버전 게이트 (search는 p_ 없음)
+      ...filterParams,
     })));
 
     final rows = data as List;
@@ -341,15 +366,17 @@ class JobRepository {
         .toList();
   }
 
-  Future<int> searchJobsCount(String queryText, {String langCode = 'en', bool includeTesting = false}) async {
+  Future<int> searchJobsCount(String queryText, {String langCode = 'en', bool includeTesting = false, FilterState filter = FilterState.empty}) async {
     final q = queryText.trim();
     if (q.isEmpty) return 0;
     final appBuild = await AppInfo.buildNumber();
-    final data = await _t(_client.rpc('search_jobs_count', params: {
+    final filterParams = await _searchFilterParams(filter, langCode, includeTesting);
+    final data = await _t(_client.rpc('search_jobs_count_v2', params: {
       'search_query': q,
       'lang_code': langCode,
       if (includeTesting) 'include_testing': true,
       if (appBuild != null) 'app_build': appBuild,
+      ...filterParams,
     }));
     return (data as int?) ?? 0;
   }
