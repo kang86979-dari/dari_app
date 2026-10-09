@@ -118,18 +118,30 @@ class JobCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               maxLines: 1,
             ),
-            // 주소
+            // 주소 — 위치 핀 포함 별도 행.
             if (job.getShortLocation(langCode).isNotEmpty)
               Padding(
                 padding: const EdgeInsets.only(top: 3),
-                child: Text(
-                  job.getShortLocation(langCode),
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: AppColors.gray300,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
+                child: Row(
+                  children: [
+                    const Icon(
+                      Icons.place_outlined,
+                      size: 12,
+                      color: AppColors.gray300,
+                    ),
+                    const SizedBox(width: 2),
+                    Expanded(
+                      child: Text(
+                        job.getShortLocation(langCode),
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: AppColors.gray300,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             const SizedBox(height: 8),

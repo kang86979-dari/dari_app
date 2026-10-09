@@ -11,6 +11,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../apply/apply_webview_screen.dart';
 import '../apply/site_lang.dart';
+import '../../core/constants/apply_method_style.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -863,19 +864,6 @@ class _ApplyMethodsRow extends StatelessWidget {
     required this.strings,
   });
 
-  // 코드 → 아이콘. 라벨은 app_strings(다국어)에서 가져옴.
-  static const Map<String, IconData> _icons = {
-    'online': Icons.computer_outlined,
-    'homepage': Icons.language,
-    'email': Icons.email_outlined,
-    'phone': Icons.phone_outlined,
-    'sms': Icons.sms_outlined,
-    'simple': Icons.flash_on,
-    'chat': Icons.chat_bubble_outline,
-    'visit': Icons.place_outlined,
-    'other': Icons.more_horiz,
-  };
-
   @override
   Widget build(BuildContext context) {
     // 서버가 새 코드를 추가해도 정보 공백이 없도록, 모르는 코드는 "기타" 칩으로 표시.
@@ -928,25 +916,26 @@ class _ApplyMethodsRow extends StatelessWidget {
   }
 
   Widget _chip(String code) {
-    final icon = _icons[code] ?? Icons.more_horiz;
+    // 아이콘·색은 공용 정의(ApplyMethodStyle) — 방법별 색으로 전 화면 통일(2026-09-26).
+    final style = ApplyMethodStyle.of(code);
     // 모르는 코드는 "기타" 라벨로 폴백 (16개 언어)
     final text = strings.applyMethodLabel(code) ?? strings.applyMethodOther;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
       decoration: BoxDecoration(
-        color: AppColors.carrotLight, // 연한 주황 배경 — 회색 정보 속에서 눈에 띄게
+        color: style.bg,
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 13, color: AppColors.carrot),
+          Icon(style.icon, size: 13, color: style.fg),
           const SizedBox(width: 4),
           Text(text,
-              style: const TextStyle(
+              style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: AppColors.carrot)),
+                  color: style.fg)),
         ],
       ),
     );

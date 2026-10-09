@@ -22,6 +22,9 @@ class AppColors {
   static const Color tagBlueTxt = Color(0xFF1565C0);
   static const Color tagGreen = Color(0xFFE8F5E9);
   static const Color tagGreenTxt = Color(0xFF2E7D32);
+  // 지원방법(이메일) 전용 — 주황은 브랜드 색이라 방법 칩에 안 씀(2026-09-26).
+  static const Color tagPurple = Color(0xFFF3E8FD);
+  static const Color tagPurpleTxt = Color(0xFF7B1FA2);
   static const Color urgent = Color(0xFFE53935);
 
   static const Color navy = Color(0xFF003478);
