@@ -3,6 +3,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'core/theme/app_theme.dart';
+import 'features/memo/memo_list_screen.dart';
 import 'features/splash/splash_screen.dart';
 import 'features/onboarding/language_select_screen.dart';
 import 'features/onboarding/visa_select_screen.dart';
@@ -48,6 +49,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         // extra: 푸시 딥링크 등에서 넘기는 초기 검색어 — 진입 즉시 검색 실행.
         builder: (context, state) =>
             SearchScreen(initialQuery: state.extra as String?),
+      ),
+      GoRoute(
+        path: '/memos',
+        builder: (context, state) => const MemoListScreen(),
       ),
       GoRoute(
         path: '/settings',

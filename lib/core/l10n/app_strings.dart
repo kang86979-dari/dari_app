@@ -559,6 +559,24 @@ class AppStrings {
  'uz': 'Faqat 1 ta kalit so\'z bildirishnomasi saqlanadi. Eskisi almashtiriladi.',
  'mn': 'Зөвхөн 1 түлхүүр үгийн мэдэгдэл хадгалагдана. Хуучин нь солигдоно.',
  }, 'Only one keyword alert can be saved. The existing condition will be replaced.');
+ // ── 공고 메모 (로컬, 2026-10-09) — ko/en, 나머지는 en 폴백 ──
+ String get jobMemoTitle => _t({'ko': '메모', 'en': 'Memo'}, 'Memo');
+ String get jobMemoAdd => _t({'ko': '+ 메모 남기기', 'en': '+ Add memo'}, '+ Add memo');
+ String get jobMemoPlaceholder => _t({
+ 'ko': '이 공고에 대해 기억할 것을 적어보세요',
+ 'en': 'Write anything to remember about this job',
+ }, 'Write anything to remember about this job');
+ String get jobMemoSave => _t({'ko': '저장', 'en': 'Save'}, 'Save');
+ String get myMemosTitle =>
+ _t({'ko': '내 메모', 'en': 'My Memos'}, 'My Memos');
+ String get myMemosEmpty => _t({
+ 'ko': '아직 메모한 공고가 없어요',
+ 'en': "You haven't added any memos yet",
+ }, "You haven't added any memos yet");
+ String get myMemosEmptyDesc => _t({
+ 'ko': '공고 상세에서 메모를 남기면\n여기에 모여요',
+ 'en': 'Memos you write on job postings\nwill be collected here',
+ }, 'Memos you write on job postings\nwill be collected here');
  String get searchAlertDeleteAsk => _t({
  'ko': '키워드 알림을 삭제할까요?',
  'en': 'Delete this keyword alert?',

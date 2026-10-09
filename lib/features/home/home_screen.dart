@@ -26,6 +26,8 @@ import '../../core/utils/native_ad_controller.dart';
 import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../filter/filter_chips_row.dart';
+import '../../providers/job_memo_provider.dart';
+import '../memo/memo_actions.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
@@ -490,6 +492,60 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   ),
                   Row(
                     children: [
+                      // 메모 아이콘 — 하트 왼쪽, 메모 리스트 진입(2026-10-09).
+                      GestureDetector(
+                        onTap: () => context.push('/memos'),
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 14),
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Container(
+                                width: 34,
+                                height: 34,
+                                decoration: const BoxDecoration(
+                                  color: AppColors.carrotLight,
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.edit_note,
+                                  size: 22,
+                                  color: AppColors.carrot,
+                                ),
+                              ),
+                              if (ref.watch(jobMemoProvider).isNotEmpty)
+                                Positioned(
+                                  right: -4,
+                                  top: -4,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(2),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(
+                                        color: AppColors.carrot,
+                                        width: 1.5,
+                                      ),
+                                    ),
+                                    constraints: const BoxConstraints(
+                                      minWidth: 16,
+                                      minHeight: 16,
+                                    ),
+                                    child: Text(
+                                      '${ref.watch(jobMemoProvider).length}',
+                                      style: const TextStyle(
+                                        fontSize: 9,
+                                        fontWeight: FontWeight.w700,
+                                        color: AppColors.carrot,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+                      ),
                       GestureDetector(
                         onTap: () => context.push('/favorites'),
                         child: Padding(
@@ -910,6 +966,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 salaryFallback: ref.read(stringsProvider).salaryByCompany,
                 strings: ref.read(stringsProvider),
                 isFavorite: ref.watch(isFavoriteProvider(job.id)),
+                memo: ref.watch(jobMemoTextProvider(job.id)),
+                memoAddLabel: ref.read(stringsProvider).jobMemoAdd,
+                onMemoTap: () => editJobMemo(context, ref, job, langCode),
                 onTap: () {
                   analytics.jobCardTap(job.id, jobIndex);
                   context.push('/job/${job.id}');

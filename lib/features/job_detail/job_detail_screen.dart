@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../apply/apply_webview_screen.dart';
 import '../apply/site_lang.dart';
 import '../../core/constants/apply_method_style.dart';
+import '../memo/job_memo_section.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
@@ -620,6 +622,9 @@ class _DetailBodyState extends State<_DetailBody> {
                   padding: EdgeInsets.fromLTRB(24, 8, 24, 8),
                   child: _DetailBannerAd(),
                 ),
+
+                // 메모 섹션 — 로컬 저장(2026-10-09).
+                JobMemoSection(job: job, langCode: widget.langCode),
 
                 // 상세 내용 영역 제거 — 원문은 출처 사이트에서 확인(불안정한 실시간 번역 의존 제거)
 
@@ -2421,31 +2426,37 @@ class _DetailBannerAd extends StatefulWidget {
 class _DetailBannerAdState extends State<_DetailBannerAd> {
   BannerAd? _bannerAd;
   bool _isLoaded = false;
+  Timer? _delayTimer;
 
   // 상세는 사용자가 머무는 화면 → 고정 크기 MREC(300x250)로 단가 상승.
-  // 크기 고정이라 화면 폭 계산이 필요 없어 initState에서 바로 로드.
   static const AdSize _size = AdSize.mediumRectangle;
 
   @override
   void initState() {
     super.initState();
-    _bannerAd = BannerAd(
-      adUnitId: AdHelper.mrecId,
-      size: _size,
-      request: const AdRequest(),
-      listener: BannerAdListener(
-        onAdLoaded: (ad) {
-          if (mounted) setState(() => _isLoaded = true);
-        },
-        onAdFailedToLoad: (ad, error) {
-          ad.dispose();
-        },
-      ),
-    )..load();
+    // 진입하자마자 노출하지 않고 ~1.5초 후 로드 — 화면이 먼저 안정적으로
+    // 보이게 하고 광고가 뒤늦게 뜨도록(사용자 요청 2026-10-05, feature 이식).
+    _delayTimer = Timer(const Duration(milliseconds: 1500), () {
+      if (!mounted) return;
+      _bannerAd = BannerAd(
+        adUnitId: AdHelper.mrecId,
+        size: _size,
+        request: const AdRequest(),
+        listener: BannerAdListener(
+          onAdLoaded: (ad) {
+            if (mounted) setState(() => _isLoaded = true);
+          },
+          onAdFailedToLoad: (ad, error) {
+            ad.dispose();
+          },
+        ),
+      )..load();
+    });
   }
 
   @override
   void dispose() {
+    _delayTimer?.cancel();
     _bannerAd?.dispose();
     super.dispose();
   }

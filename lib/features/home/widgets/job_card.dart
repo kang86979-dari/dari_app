@@ -14,6 +14,15 @@ class JobCard extends StatelessWidget {
   final VoidCallback? onFavoriteToggle;
 
   final String? expiredLabel;
+
+  // 메모(로컬, 2026-10-09): 있으면 노랑 미리보기, 없으면 "+ 메모 남기기".
+  // onMemoTap이 있어야 탭 동작(작성/수정) — 모든 카드 하단 공통.
+  // onMemoDelete: 메모 바 우측 휴지통(즉시 삭제) — 메모 리스트 전용.
+  final String? memo;
+  final VoidCallback? onMemoTap;
+  final String? memoAddLabel;
+  final VoidCallback? onMemoDelete;
+
   const JobCard({
     super.key,
     required this.job,
@@ -25,6 +34,10 @@ class JobCard extends StatelessWidget {
     required this.onTap,
     this.onFavoriteToggle,
     this.expiredLabel,
+    this.memo,
+    this.onMemoTap,
+    this.memoAddLabel,
+    this.onMemoDelete,
   });
 
   // CJK는 제목이 짧아 16 유지, 번역 언어는 텍스트가 길어져 축소 (2줄 내 표시)
@@ -237,6 +250,71 @@ class JobCard extends StatelessWidget {
                     ),
                   ),
                 ],
+                ),
+              ),
+
+            // 내 메모 미리보기 — 노랑 포스트잇 톤(feature와 동일, 2026-10-09).
+            if (memo != null && memo!.isNotEmpty)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMemoTap,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          memo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF6D5B1F),
+                          ),
+                        ),
+                      ),
+                      if (onMemoDelete != null)
+                        GestureDetector(
+                          onTap: onMemoDelete,
+                          behavior: HitTestBehavior.opaque,
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Icon(Icons.delete_outline,
+                                size: 16, color: Color(0xFF9A7B24)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              )
+            // 메모 없음: "+ 메모 남기기" — 작성 진입(모든 카드 공통).
+            else if (onMemoTap != null && memoAddLabel != null)
+              GestureDetector(
+                behavior: HitTestBehavior.opaque,
+                onTap: onMemoTap,
+                child: Container(
+                  margin: const EdgeInsets.only(top: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF8E1),
+                    borderRadius: BorderRadius.circular(7),
+                  ),
+                  child: Text(
+                    memoAddLabel!,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF9A7B24),
+                    ),
+                  ),
                 ),
               ),
           ],

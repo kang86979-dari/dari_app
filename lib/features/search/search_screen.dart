@@ -20,6 +20,8 @@ import '../../core/utils/filter_matcher.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../data/services/push_service.dart';
 import '../filter/filter_chips_row.dart';
+import '../../providers/job_memo_provider.dart';
+import '../memo/memo_actions.dart';
 import '../../core/widgets/segmented_tabs.dart';
 import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
@@ -734,6 +736,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     salaryFallback: s.salaryByCompany,
                     strings: s,
                     isFavorite: ref.watch(isFavoriteProvider(job.id)),
+                    memo: ref.watch(jobMemoTextProvider(job.id)),
+                    memoAddLabel: s.jobMemoAdd,
+                    onMemoTap: () => editJobMemo(context, ref, job, langCode),
                     onTap: () {
                       analytics.searchResultTap(job.id, query, jobIndex);
                       context.push('/job/${job.id}');

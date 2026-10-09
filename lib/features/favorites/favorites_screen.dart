@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../providers/job_memo_provider.dart';
+import '../memo/memo_actions.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -284,6 +286,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                                             salaryFallback: s.salaryByCompany,
                                             strings: s,
                                             expiredLabel: s.expired,
+                                            memo: ref.watch(
+                                                jobMemoTextProvider(job.id)),
                                             onTap: () {},
                                           ),
                                         ),
@@ -301,6 +305,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                               strings: s,
                               expiredLabel: s.expired,
                               isFavorite: true,
+                              memo: ref.watch(jobMemoTextProvider(job.id)),
+                              memoAddLabel: s.jobMemoAdd,
+                              onMemoTap: () =>
+                                  editJobMemo(context, ref, job, langCode),
                               onTap: () => context.push('/job/${job.id}'),
                               onFavoriteToggle: () {
                                 analytics.favoriteRemoved(job.id);
