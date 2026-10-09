@@ -437,7 +437,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             if (hasFilterMatches)
               SegmentedTabs(
                 tabs: [
-                  SegmentedTabItem(key: 'results', label: s.searchResultsTab, count: _searchJobs.length),
+                  // 로드된 페이지 수(20)가 전체 건수처럼 보여 혼동 — Total에 이미
+                  // 표시되므로 탭 숫자는 제거(2026-10-09).
+                  SegmentedTabItem(key: 'results', label: s.searchResultsTab),
                   SegmentedTabItem(key: 'filter', label: s.filterMatchTab, count: totalMatchCount),
                 ],
                 active: _activeTab == 0 ? 'results' : 'filter',
