@@ -55,42 +55,27 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
   Future<void> _clearKomateCookies() async {
     try {
       final cm = CookieManager.instance();
-      final expired = DateTime(2000).millisecondsSinceEpoch;
-      for (final origin in const [
-        'https://komate.saramin.co.kr',
-        'https://www.saramin.co.kr',
-        'https://m.saramin.co.kr',
-      ]) {
-        final url = WebUri(origin);
-        final cookies = await cm.getCookies(url: url);
-        for (final c in cookies) {
-          // 호스트 쿠키와 .saramin.co.kr 도메인 쿠키 둘 다 만료 처리.
-          await cm.setCookie(
-            url: url,
-            name: c.name,
-            value: '',
-            path: '/',
-            expiresDate: expired,
-          );
-          await cm.setCookie(
-            url: url,
-            name: c.name,
-            value: '',
-            domain: '.saramin.co.kr',
-            path: '/',
-            expiresDate: expired,
-          );
+      // 열람 제한 카운트는 **.komate.saramin.co.kr**(점 접두) 도메인 쿠키에
+      // 있음 — 라이브 DevTools 확정(2026-10-09). getCookies가 못 돌려주는
+      // 변형까지 지우려 모든 도메인 변형으로 삭제 시도.
+      final komate = WebUri('https://komate.saramin.co.kr');
+      for (final name in const ['RECRUIT_VIEW_COUNT', 'route', 'nudge_modal_shown']) {
+        for (final domain in const [
+          '.komate.saramin.co.kr',
+          'komate.saramin.co.kr',
+          '.saramin.co.kr',
+        ]) {
+          await cm.deleteCookie(url: komate, name: name, domain: domain, path: '/');
         }
+        // 도메인 미지정(호스트 전용) 변형도 삭제.
+        await cm.deleteCookie(url: komate, name: name, path: '/');
       }
-      // 쿠키 초기화로 '첫 방문'이 되면 가입 유도 모달이 매번 뜸 →
+      // 쿠키 초기화로 '첫 방문'이 되면 가입/추천 유도 모달 2종이 매번 뜸 →
       // 닫기 버튼이 심는 쿠키를 미리 세팅해 억제(라이브 확인: 닫기 시
-      // mobile_modal_recruit_shown=true 저장, 2026-10-09).
-      await cm.setCookie(
-        url: WebUri('https://komate.saramin.co.kr'),
-        name: 'mobile_modal_recruit_shown',
-        value: 'true',
-        path: '/',
-      );
+      // mobile_modal_recruit_shown / nudge_modal_shown 저장).
+      for (final name in const ['mobile_modal_recruit_shown', 'nudge_modal_shown']) {
+        await cm.setCookie(url: komate, name: name, value: 'true', path: '/');
+      }
     } catch (_) {}
   }
 
