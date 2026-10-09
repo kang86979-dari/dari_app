@@ -84,3 +84,21 @@ FCM data 필드:
   (filters jsonb → 파라미터 매핑만 필요. 파라미터 시맨틱은 get_jobs_page와 동일:
   지역은 regionIds 그대로, 학력/경력은 최고값 1개 등 — 앱 _buildRpcParams 참고)
 - 발송 후 last_sent_at 갱신은 기존 방식 유지
+
+## 8. (별건) 지원방법(apply_methods) 수집 누락 — 크롤러 수정 요청
+
+활성 공고 기준 apply_methods가 null/빈 배열인 비율이 높은 사이트 3곳
+(2026-10-09 집계):
+
+| 사이트 | 누락/전체 |
+|---|---|
+| KoMate | 586 / 1,929 (30%) |
+| K-Work | 430 / 680 (63%) |
+| JobnShop | 163 / 207 (79%) |
+
+확인된 사례: KoMate `recruits/54880641` — 페이지의 지원방법 영역
+(`#template_how_to_apply_howtoapply`)에 **"사람인 입사지원"**이라고 적혀
+있는데 매핑이 없어 null로 수집됨. "사람인 입사지원" → `online` 매핑 추가
+필요. K-Work·JobnShop도 같은 방식으로 미매핑 문구를 조사해 매핑 보강 요청.
+(앱은 apply_methods가 비면 지원방법 행을 통째로 숨기므로 사용자에게는
+"지원방법 없는 공고"로 보임.)

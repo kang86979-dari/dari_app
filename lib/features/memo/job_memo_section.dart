@@ -31,19 +31,33 @@ class JobMemoSection extends ConsumerWidget {
                 color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              // 메모 있을 때 — 제목·아이콘 없이 내용만(2026-10-05 확정).
-              child: Text(
-                memo,
-                style: const TextStyle(
-                  fontSize: 13,
-                  height: 1.5,
-                  color: Color(0xFF6D5B1F),
-                ),
+              // 내용 + 우측 연필(수정 가능 표시, 2026-10-09).
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Text(
+                      memo,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        height: 1.5,
+                        color: Color(0xFF6D5B1F),
+                      ),
+                    ),
+                  ),
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8),
+                    child: Icon(Icons.edit_outlined,
+                        size: 15, color: Color(0xFF9A7B24)),
+                  ),
+                ],
               ),
             )
           : Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 11),
+              padding: const EdgeInsets.all(12),
+              // 메모 1줄 상태와 같은 높이(2026-10-09).
+              constraints: const BoxConstraints(minHeight: 44),
               decoration: BoxDecoration(
                 color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(12),
@@ -54,6 +68,7 @@ class JobMemoSection extends ConsumerWidget {
                 s.jobMemoAdd,
                 style: const TextStyle(
                   fontSize: 12.5,
+                  height: 1.5,
                   fontWeight: FontWeight.w600,
                   color: Color(0xFF9A7B24),
                 ),

@@ -262,6 +262,9 @@ class JobCard extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 8),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  // 아이콘 유무와 무관하게 "+ 메모 남기기" 바와 같은 높이 유지.
+                  constraints: const BoxConstraints(minHeight: 26),
+                  alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(7),
@@ -280,6 +283,13 @@ class JobCard extends StatelessWidget {
                           ),
                         ),
                       ),
+                      // 연필 — 탭하면 수정 가능함을 알림(2026-10-09).
+                      if (onMemoTap != null)
+                        const Padding(
+                          padding: EdgeInsets.only(left: 8),
+                          child: Icon(Icons.edit_outlined,
+                              size: 14, color: Color(0xFF9A7B24)),
+                        ),
                       if (onMemoDelete != null)
                         GestureDetector(
                           onTap: onMemoDelete,
@@ -303,6 +313,9 @@ class JobCard extends StatelessWidget {
                   margin: const EdgeInsets.only(top: 8),
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  // 메모 바(아이콘 포함)와 동일 높이(2026-10-09).
+                  constraints: const BoxConstraints(minHeight: 26),
+                  alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(7),

@@ -569,6 +569,7 @@ class AppStrings {
  String get jobMemoSave => _t({'ko': '저장', 'en': 'Save'}, 'Save');
  String get myMemosTitle =>
  _t({'ko': '내 메모', 'en': 'My Memos'}, 'My Memos');
+ String get sortOldest => _t({'ko': '오래된순', 'en': 'Oldest'}, 'Oldest');
  String get myMemosEmpty => _t({
  'ko': '아직 메모한 공고가 없어요',
  'en': "You haven't added any memos yet",

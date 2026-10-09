@@ -4,31 +4,102 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
+import '../../core/utils/native_ad_controller.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
 import '../../providers/job_memo_provider.dart';
 import '../../providers/language_provider.dart';
-import '../home/widgets/ad_banner.dart';
 import '../home/widgets/job_card.dart';
+import '../home/widgets/native_ad_card.dart';
 import 'memo_actions.dart';
 
 /// 내 메모 — 메모 남긴 공고 모아보기 (홈 상단 진입, 로컬 저장, 2026-10-09).
-/// 기존 공고 카드 그대로 + 메모 바 우측 휴지통으로 개별 즉시 삭제.
-/// 최신 수정순 정렬.
-class MemoListScreen extends ConsumerWidget {
+/// 기존 공고 카드 그대로 + 메모 바 연필(수정)·휴지통(개별 즉시 삭제).
+/// 정렬: 메모 수정일 최신/오래된순(칩+바텀시트, 즐겨찾기 패턴).
+/// 최상단 네이티브 광고(즐겨찾기와 동일).
+class MemoListScreen extends ConsumerStatefulWidget {
   const MemoListScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<MemoListScreen> createState() => _MemoListScreenState();
+}
+
+class _MemoListScreenState extends ConsumerState<MemoListScreen> {
+  bool _newestFirst = true;
+  final _adController = NativeAdController();
+
+  @override
+  void dispose() {
+    _adController.disposeAll();
+    super.dispose();
+  }
+
+  void _showSortSheet(BuildContext context, dynamic s) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: AppColors.gray100,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            for (final (label, newest) in [
+              (s.sortLatest as String, true),
+              (s.sortOldest as String, false),
+            ])
+              ListTile(
+                title: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: _newestFirst == newest
+                        ? FontWeight.w700
+                        : FontWeight.w500,
+                    color: _newestFirst == newest
+                        ? AppColors.carrot
+                        : AppColors.gray900,
+                  ),
+                ),
+                trailing: _newestFirst == newest
+                    ? const Icon(Icons.check, size: 20, color: AppColors.carrot)
+                    : null,
+                onTap: () {
+                  setState(() => _newestFirst = newest);
+                  Navigator.pop(ctx);
+                },
+              ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final s = ref.watch(stringsProvider);
     final langCode = ref.watch(languageProvider);
     final memos = ref.watch(jobMemoProvider);
 
-    // 최신 수정순 ID 목록.
+    // 메모 수정일 기준 정렬.
     final jobIds = memos.keys.toList()
-      ..sort((a, b) => memos[b]!.updatedMs.compareTo(memos[a]!.updatedMs));
+      ..sort((a, b) => _newestFirst
+          ? memos[b]!.updatedMs.compareTo(memos[a]!.updatedMs)
+          : memos[a]!.updatedMs.compareTo(memos[b]!.updatedMs));
 
     return Scaffold(
       body: SafeArea(
@@ -66,6 +137,39 @@ class MemoListScreen extends ConsumerWidget {
                 ],
               ),
             ),
+            // 정렬 칩 (즐겨찾기와 동일 스타일, 메모 수정일 기준)
+            if (jobIds.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 10, 20, 4),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showSortSheet(context, s),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: AppColors.gray50,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              _newestFirst ? s.sortLatest : s.sortOldest,
+                              style: const TextStyle(
+                                  fontSize: 13, color: AppColors.gray600),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.keyboard_arrow_down,
+                                size: 16, color: AppColors.gray400),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Expanded(
               child: jobIds.isEmpty
                   ? Padding(
@@ -96,9 +200,7 @@ class MemoListScreen extends ConsumerWidget {
                       future: JobRepository().getFavoriteJobs(jobIds),
                       builder: (context, snapshot) {
                         if (snapshot.hasError) {
-                          return ErrorRetry(
-                              onRetry: () => (context as Element)
-                                  .markNeedsBuild());
+                          return ErrorRetry(onRetry: () => setState(() {}));
                         }
                         if (!snapshot.hasData) {
                           return const Center(
@@ -110,14 +212,12 @@ class MemoListScreen extends ConsumerWidget {
                         };
                         return ListView.builder(
                           padding: const EdgeInsets.only(top: 6, bottom: 20),
-                          // +1: 최상단 광고 배너(2026-10-09 사용자 요청).
+                          // +1: 최상단 네이티브 광고(즐겨찾기와 동일).
                           itemCount: jobIds.length + 1,
                           itemBuilder: (context, i) {
                             if (i == 0) {
-                              return const Padding(
-                                padding: EdgeInsets.only(bottom: 6),
-                                child: AdBanner(),
-                              );
+                              return NativeAdCard(
+                                  controller: _adController, slot: -1);
                             }
                             final id = jobIds[i - 1];
                             final job = byId[id];
