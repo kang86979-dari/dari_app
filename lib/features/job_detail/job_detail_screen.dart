@@ -877,6 +877,7 @@ class _ApplyMethodsRow extends StatelessWidget {
     final seenLabels = <String>{};
     final renderable = <String>[];
     for (final m in methods) {
+      if (m == 'visit') continue; // 방문접수는 노출 안 함(DB엔 유지, 2026-10-09)
       final label = strings.applyMethodLabel(m) ?? strings.applyMethodOther;
       if (seenLabels.add(label)) renderable.add(m);
     }
