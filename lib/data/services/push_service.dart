@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'dart:ui';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -223,46 +224,54 @@ class PushService {
     await prefs.setInt(_toggleCountKey, count + 1);
   }
 
-  /// 서버에 구독 등록/갱신
+  /// 토큰 확보 (없으면 발급 시도). 실패 시 null — APNs 미지원 환경 등.
+  Future<String?> _ensureToken() async {
+    if (_token != null) return _token;
+    try {
+      _token = await FirebaseMessaging.instance.getToken();
+    } catch (_) {
+      return null;
+    }
+    if (_token == null) return null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, _token!);
+    return _token;
+  }
+
+  /// FilterState → 구독 저장용 JSON (기본 조건·키워드 조건 공용).
+  static Map<String, dynamic> filterToJson(FilterState filter) => {
+        'visaIds': filter.visaIds.toList(),
+        'categoryIds': filter.categoryIds.toList(),
+        'employmentTypeIds': filter.employmentTypeIds.toList(),
+        'benefitIds': filter.benefitIds.toList(),
+        'countryIds': filter.countryIds.toList(),
+        'siteIds': filter.siteIds.toList(),
+        'regionIds': filter.regionIds.toList(),
+        'workScheduleIds': filter.workScheduleIds.toList(),
+        'koreanLevelIds': filter.koreanLevelIds.toList(),
+        'salaryTypes': filter.salaryTypes.toList(),
+        'gender': filter.gender,
+        'visaSponsorship': filter.visaSponsorship,
+      };
+
+  /// 서버에 구독 등록/갱신.
+  /// 빈 필터면 filter_state=null로 행 유지 — 키워드 알림·추천 푸시(19시)가
+  /// 같은 행을 쓰므로 삭제하면 안 됨(2026-10-09). 기본 조건 푸시는
+  /// filter_state null이면 크롤러가 스킵.
   Future<void> upsertSubscription({
     required FilterState filter,
     required String langCode,
   }) async {
-    // 토큰이 아직 없으면 발급 시도 (iOS 시뮬레이터 등 APNs 미지원 환경은 예외 무시)
-    if (_token == null) {
-      try {
-        _token = await FirebaseMessaging.instance.getToken();
-      } catch (_) {
-        return;
-      }
-      if (_token == null) return;
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_tokenKey, _token!);
-    }
+    if (await _ensureToken() == null) return;
     final enabled = await isEnabled();
     if (!enabled) return;
-
-    final filterJson = {
-      'visaIds': filter.visaIds.toList(),
-      'categoryIds': filter.categoryIds.toList(),
-      'employmentTypeIds': filter.employmentTypeIds.toList(),
-      'benefitIds': filter.benefitIds.toList(),
-      'countryIds': filter.countryIds.toList(),
-      'siteIds': filter.siteIds.toList(),
-      'regionIds': filter.regionIds.toList(),
-      'workScheduleIds': filter.workScheduleIds.toList(),
-      'koreanLevelIds': filter.koreanLevelIds.toList(),
-      'salaryTypes': filter.salaryTypes.toList(),
-      'gender': filter.gender,
-      'visaSponsorship': filter.visaSponsorship,
-    };
 
     try {
       await _client
           .from('push_subscriptions')
           .upsert({
             'device_token': _token!,
-            'filter_state': filterJson,
+            'filter_state': filter.isEmpty ? null : filterToJson(filter),
             'lang_code': langCode,
             'enabled': true,
             // iOS 출시 대비 — 서버가 플랫폼별 발송/집계에 사용 (기본값 android라 필수)
@@ -273,6 +282,146 @@ class PushService {
     } catch (e) {
       if (kDebugMode) print('🔴 push_subscriptions upsert 실패: $e');
     }
+  }
+
+  // ── 키워드 알림 조건 (기기당 1개, 2026-10-09) ──
+  // 로컬(SharedPreferences)이 원본, 서버(push_subscriptions.search_*)는
+  // 크롤러 매칭·발송용 사본. 조합 편집은 없음 — 재등록=교체.
+  static const _searchCondKey = 'search_alert_condition';
+
+  /// 저장된 키워드 조건 {'keyword','label','filter','enabled'} — 없으면 null.
+  Future<Map<String, dynamic>?> getSearchCondition() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_searchCondKey);
+    if (raw == null) return null;
+    try {
+      return Map<String, dynamic>.from(jsonDecode(raw) as Map);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// 키워드 조건 등록/교체. label은 표시용(저장 시점 언어의 칩 요약).
+  Future<void> saveSearchCondition({
+    required String keyword,
+    required String label,
+    required FilterState filter,
+    required String langCode,
+  }) async {
+    final cond = {
+      'keyword': keyword,
+      'label': label,
+      'filter': filterToJson(filter),
+      'enabled': true,
+    };
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_searchCondKey, jsonEncode(cond));
+    if (await _ensureToken() == null) return;
+    try {
+      await _client.from('push_subscriptions').upsert({
+        'device_token': _token!,
+        'search_keyword': keyword,
+        'search_filters': filterToJson(filter),
+        'search_enabled': true,
+        'lang_code': langCode,
+        'platform': Platform.isIOS ? 'ios' : 'android',
+        'app_version': await AppInfo.version(),
+      }, onConflict: 'device_token');
+    } catch (e) {
+      if (kDebugMode) print('🔴 search condition upsert 실패: $e');
+    }
+  }
+
+  /// 키워드 조건 삭제.
+  Future<void> clearSearchCondition() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_searchCondKey);
+    final token = _token ?? await getSavedToken();
+    if (token == null) return;
+    try {
+      await _client.from('push_subscriptions').update({
+        'search_keyword': null,
+        'search_filters': null,
+        'search_enabled': true,
+      }).eq('device_token', token);
+    } catch (_) {}
+  }
+
+  /// 키워드 조건 알림 켬/끔 (조건은 유지).
+  Future<void> setSearchAlertEnabled(bool value) async {
+    final cond = await getSearchCondition();
+    if (cond == null) return;
+    cond['enabled'] = value;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_searchCondKey, jsonEncode(cond));
+    final token = _token ?? await getSavedToken();
+    if (token == null) return;
+    try {
+      await _client
+          .from('push_subscriptions')
+          .update({'search_enabled': value}).eq('device_token', token);
+    } catch (_) {}
+  }
+
+  // ── 추천 공고 푸시(19시, 당일 미진입자) 켬/끔 — 2026-10-09 ──
+  static const _recommendKey = 'recommend_push_enabled';
+
+  Future<bool> isRecommendEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_recommendKey) ?? true;
+  }
+
+  Future<void> setRecommendEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_recommendKey, value);
+    final token = _token ?? await getSavedToken();
+    if (token == null) return;
+    try {
+      await _client
+          .from('push_subscriptions')
+          .update({'recommend_enabled': value}).eq('device_token', token);
+    } catch (_) {}
+  }
+
+  // ── 앱 진입 시각 — 추천 푸시 "당일 미진입자" 판정용(2026-10-09) ──
+  static const _lastOpenedSyncKey = 'last_opened_synced_ms';
+
+  /// 앱 실행/포그라운드 복귀 시 호출. 과호출 방지로 1시간에 1번만 서버 갱신.
+  Future<void> touchLastOpened() async {
+    final prefs = await SharedPreferences.getInstance();
+    final last = prefs.getInt(_lastOpenedSyncKey) ?? 0;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - last < 60 * 60 * 1000) return;
+    final token = _token ?? await getSavedToken();
+    if (token == null) return;
+    try {
+      await _client.from('push_subscriptions').update(
+          {'last_opened_at': DateTime.now().toUtc().toIso8601String()}).eq(
+          'device_token', token);
+      await prefs.setInt(_lastOpenedSyncKey, now);
+    } catch (_) {}
+  }
+
+  /// 푸시 재활성화(설정 ON) 시 서버 행 전체 재동기화 — OFF 때 행이 삭제돼
+  /// 키워드 조건·추천 설정도 함께 복원해야 함.
+  Future<void> resyncServer({
+    required FilterState filter,
+    required String langCode,
+  }) async {
+    await upsertSubscription(filter: filter, langCode: langCode);
+    final cond = await getSearchCondition();
+    if (cond != null) {
+      final token = _token ?? await getSavedToken();
+      if (token == null) return;
+      try {
+        await _client.from('push_subscriptions').update({
+          'search_keyword': cond['keyword'],
+          'search_filters': cond['filter'],
+          'search_enabled': cond['enabled'] ?? true,
+        }).eq('device_token', token);
+      } catch (_) {}
+    }
+    await setRecommendEnabled(await isRecommendEnabled());
   }
 
   /// 서버에서 구독 삭제 (푸시 OFF / 빈 필터)

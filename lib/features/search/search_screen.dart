@@ -18,6 +18,7 @@ import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/utils/filter_matcher.dart';
 import '../../core/utils/region_mapper.dart';
+import '../../data/services/push_service.dart';
 import '../filter/filter_chips_row.dart';
 import '../../core/widgets/segmented_tabs.dart';
 import '../../core/constants/ad_config.dart';
@@ -28,7 +29,9 @@ import '../home/widgets/mrec_ad_card.dart';
 import '../../data/models/filter_state.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
-  const SearchScreen({super.key});
+  /// 푸시 딥링크 등에서 넘어온 초기 검색어 — 있으면 진입 즉시 검색 실행.
+  final String? initialQuery;
+  const SearchScreen({super.key, this.initialQuery});
 
   @override
   ConsumerState<SearchScreen> createState() => _SearchScreenState();
@@ -51,6 +54,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String? _lastLangCode;
   String? _lastFilterJson; // 전역 필터 변경 감지 — 검색 결과 리셋용(2026-10-09)
 
+  // 키워드 알림 조건(기기당 1개) — 로컬 저장본 캐시(2026-10-09).
+  Map<String, dynamic>? _searchAlertCond;
+
   // 필터 추천 탭
   int _activeTab = 0; // 0=검색결과, 1=필터추천
   List<FilterMatchGroup> _filterMatches = [];
@@ -63,9 +69,91 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     super.initState();
     analytics.screenView('search');
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _focusNode.requestFocus();
+      final q = widget.initialQuery?.trim() ?? '';
+      if (q.isNotEmpty) {
+        _controller.text = q;
+        _executeSearch(q);
+      } else {
+        _focusNode.requestFocus();
+      }
     });
     _scrollController.addListener(_onScroll);
+    pushService.getSearchCondition().then((c) {
+      if (mounted) setState(() => _searchAlertCond = c);
+    });
+  }
+
+  // ── 키워드 알림 (종 버튼, 2026-10-09) ──
+  bool get _alertMatchesCurrent {
+    final c = _searchAlertCond;
+    if (c == null) return false;
+    final filter = ref.read(filterStateProvider);
+    return c['keyword'] == ref.read(searchQueryProvider) &&
+        jsonEncode(c['filter']) == jsonEncode(PushService.filterToJson(filter));
+  }
+
+  Future<void> _onBellTap(dynamic s) async {
+    // 현재 조건이 이미 등록돼 있으면 재탭 = 해제.
+    if (_alertMatchesCurrent) {
+      await pushService.clearSearchCondition();
+      if (!mounted) return;
+      setState(() => _searchAlertCond = null);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(s.searchAlertOffToast),
+        behavior: SnackBarBehavior.floating,
+      ));
+      return;
+    }
+    // 다른 조건이 등록돼 있으면 교체 확인(1개만 저장).
+    if (_searchAlertCond != null) {
+      final ok = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text(s.searchAlertReplaceTitle,
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+          content: Text(
+            '${_searchAlertCond!['label'] ?? ''}\n\n${s.searchAlertReplaceBody}',
+            style: const TextStyle(fontSize: 14, height: 1.5),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(s.no as String,
+                  style: const TextStyle(color: Color(0xFF999999))),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(s.yes as String,
+                  style: const TextStyle(
+                      color: AppColors.carrot, fontWeight: FontWeight.w700)),
+            ),
+          ],
+        ),
+      );
+      if (ok != true || !mounted) return;
+    }
+    final keyword = ref.read(searchQueryProvider);
+    final filter = ref.read(filterStateProvider);
+    // 표시용 라벨: 키워드 + 필터 칩 라벨 (저장 시점 언어).
+    final labels = buildFilterChipData(filter, ref).map((c) => c.label);
+    final label = [keyword, ...labels].join(' · ');
+    await pushService.saveSearchCondition(
+      keyword: keyword,
+      label: label,
+      filter: filter,
+      langCode: ref.read(languageProvider),
+    );
+    analytics.log('search_alert_saved', {'keyword': keyword});
+    final saved = await pushService.getSearchCondition();
+    if (!mounted) return;
+    setState(() => _searchAlertCond = saved);
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(s.searchAlertOnToast),
+      behavior: SnackBarBehavior.floating,
+    ));
   }
 
   @override
@@ -498,6 +586,30 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
+                  // 종 버튼 — 현재 검색어+필터 조합을 새 공고 알림으로 등록(1개).
+                  GestureDetector(
+                    onTap: () => _onBellTap(s),
+                    child: Container(
+                      margin: const EdgeInsets.only(right: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _alertMatchesCurrent
+                            ? AppColors.carrotLight
+                            : AppColors.gray50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Icon(
+                        _alertMatchesCurrent
+                            ? Icons.notifications_active
+                            : Icons.notifications_none,
+                        size: 15,
+                        color: _alertMatchesCurrent
+                            ? AppColors.carrot
+                            : AppColors.gray600,
+                      ),
+                    ),
+                  ),
                   // 필터 버튼 — 검색 결과를 전역 필터로 좁히기(2026-10-09).
                   // 활성 필터가 있으면 carrot 톤 + 개수 뱃지.
                   Builder(builder: (context) {

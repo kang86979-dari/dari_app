@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show FloatingHeaderSnapConfiguration;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -72,6 +73,29 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _scrollController.addListener(_onScroll);
     // 앱 시작 시 푸시 구독 동기화 (기존 사용자 업데이트 대응)
     _syncPushSubscription();
+    // 앱 진입 기록 — 추천 푸시(19시) "당일 미진입자" 판정용(2026-10-09).
+    pushService.waitForInit().then((_) => pushService.touchLastOpened());
+    // 푸시 탭 딥링크 — 키워드 알림=검색 결과, 추천 공고=상세(2026-10-09).
+    _wirePushTapHandlers();
+  }
+
+  void _wirePushTapHandlers() {
+    FirebaseMessaging.instance.getInitialMessage().then((m) {
+      if (m != null) _handlePushTap(m);
+    });
+    FirebaseMessaging.onMessageOpenedApp.listen(_handlePushTap);
+  }
+
+  void _handlePushTap(RemoteMessage m) {
+    if (!mounted) return;
+    final type = m.data['type'];
+    if (type == 'job' && (m.data['job_id'] as String?)?.isNotEmpty == true) {
+      context.push('/job/${m.data['job_id']}');
+    } else if (type == 'search' &&
+        (m.data['keyword'] as String?)?.isNotEmpty == true) {
+      context.push('/search', extra: m.data['keyword']);
+    }
+    // 그 외(기본 조건 건수 푸시 등)는 홈 유지.
   }
 
   Future<void> _syncPushSubscription() async {
@@ -237,6 +261,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
+      // 앱 복귀 기록 — 추천 푸시 "당일 미진입자" 판정용(시간당 1회 동기화).
+      pushService.touchLastOpened();
       // 광고 클릭 후 복귀: 리스트 위치 유지 (갱신/앱오픈광고 스킵)
       if (AdHelper.consumeAdClicked()) {
         if (kDebugMode) print('🔵 resumed: ad click return, skip refresh');
@@ -401,14 +427,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         (_lastLangCode != null && _lastLangCode != langCode)) {
       _initialLoaded = false;
       _filterGeneration++;
-      // 홈에서 필터 칩 삭제 시 서버 구독 업데이트
+      // 홈에서 필터 칩 삭제 시 서버 구독 업데이트. 빈 필터도 upsert —
+      // 행 삭제 금지(키워드 알림·추천 푸시가 같은 행 공유, 2026-10-09).
       if (_lastFilter != null && _lastFilter != filter) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (filter.isEmpty) {
-            pushService.deleteSubscription();
-          } else {
-            pushService.upsertSubscription(filter: filter, langCode: langCode);
-          }
+          pushService.upsertSubscription(filter: filter, langCode: langCode);
         });
       }
     }

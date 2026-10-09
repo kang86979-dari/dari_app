@@ -12,6 +12,7 @@ import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/test_mode_provider.dart';
+import '../filter/filter_chips_row.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -22,6 +23,9 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   bool _pushEnabled = true;
+  // 알림 조건(2026-10-09): 키워드 조건(검색서 등록, 1개) + 추천 공고 토글.
+  Map<String, dynamic>? _searchCond;
+  bool _recommendEnabled = true;
   bool _loaded = false;
 
   // 테스트 모드 숨김 스위치: 설정 제목 7탭으로 잠금 해제
@@ -43,6 +47,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadPushSetting();
+    _loadAlertConditions();
+  }
+
+  Future<void> _loadAlertConditions() async {
+    final cond = await pushService.getSearchCondition();
+    final rec = await pushService.isRecommendEnabled();
+    if (!mounted) return;
+    setState(() {
+      _searchCond = cond;
+      _recommendEnabled = rec;
+    });
   }
 
   @override
@@ -147,17 +162,57 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     analytics.log('push_toggle', {'enabled': value});
 
     if (value) {
-      // ON → 필터 있으면 구독 등록
-      final filter = ref.read(filterStateProvider);
-      if (!filter.isEmpty) {
-        final langCode = ref.read(languageProvider);
-        pushService.upsertSubscription(filter: filter, langCode: langCode);
-        pushService.markSynced();
-      }
+      // ON → 서버 행 전체 재동기화(기본 필터 + 키워드 조건 + 추천 설정).
+      // OFF 때 행이 삭제되므로 필터가 비어도 복원해야 함(2026-10-09).
+      pushService.resyncServer(
+        filter: ref.read(filterStateProvider),
+        langCode: ref.read(languageProvider),
+      );
+      pushService.markSynced();
     } else {
       // OFF → 서버에서 구독 삭제
       pushService.deleteSubscription();
     }
+  }
+
+  // ── 알림 조건 행 동작 (2026-10-09) ──
+  Future<void> _toggleSearchAlert(bool v) async {
+    await pushService.setSearchAlertEnabled(v);
+    if (!mounted) return;
+    setState(() => _searchCond = {...?_searchCond, 'enabled': v});
+  }
+
+  Future<void> _deleteSearchAlert() async {
+    final s = ref.read(stringsProvider);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: Text(s.searchAlertDeleteAsk,
+            style: const TextStyle(fontSize: 15, height: 1.5)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(s.cancel, style: const TextStyle(color: Color(0xFF999999))),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(s.delete,
+                style: const TextStyle(
+                    color: AppColors.carrot, fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    await pushService.clearSearchCondition();
+    if (mounted) setState(() => _searchCond = null);
+  }
+
+  Future<void> _toggleRecommend(bool v) async {
+    setState(() => _recommendEnabled = v);
+    await pushService.setRecommendEnabled(v);
+    analytics.log('recommend_push_toggle', {'enabled': v});
   }
 
   void _showLanguageSheet() {
@@ -242,6 +297,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                             activeColor: AppColors.carrot,
                           )
                         : const SizedBox(width: 48),
+                  ),
+
+                  // 알림 조건(2026-10-09): 기본=홈 필터(자동, 읽기 전용) +
+                  // 키워드 조건(검색서 등록, 1개) + 추천 공고(19시) 토글.
+                  _SectionHeader(title: s.settingsAlertConditions),
+                  Builder(builder: (context) {
+                    final filter = ref.watch(filterStateProvider);
+                    final labels = buildFilterChipData(filter, ref)
+                        .map((c) => c.label)
+                        .join(' · ');
+                    return _SettingsTile(
+                      title: s.settingsMyFilterAuto,
+                      subtitle: labels.isEmpty
+                          ? s.settingsMyFilterEmpty
+                          : '$labels\n${s.settingsMyFilterCaption}',
+                    );
+                  }),
+                  if (_searchCond != null)
+                    _SettingsTile(
+                      title: (_searchCond!['label'] as String?) ??
+                          (_searchCond!['keyword'] as String? ?? ''),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Switch(
+                            value: _searchCond!['enabled'] as bool? ?? true,
+                            onChanged: _pushEnabled ? _toggleSearchAlert : null,
+                            activeColor: AppColors.carrot,
+                          ),
+                          GestureDetector(
+                            onTap: _deleteSearchAlert,
+                            behavior: HitTestBehavior.opaque,
+                            child: const Padding(
+                              padding: EdgeInsets.all(6),
+                              child: Icon(Icons.close,
+                                  size: 18, color: AppColors.gray300),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  _SettingsTile(
+                    title: s.settingsRecommendPush,
+                    subtitle: s.settingsRecommendPushDesc,
+                    trailing: Switch(
+                      value: _recommendEnabled,
+                      onChanged: _pushEnabled ? _toggleRecommend : null,
+                      activeColor: AppColors.carrot,
+                    ),
                   ),
 
                   const SizedBox(height: 16),

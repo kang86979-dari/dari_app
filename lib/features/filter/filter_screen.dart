@@ -210,11 +210,9 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
       visaSponsorship: filter.visaSponsorship,
     );
     final langCode = ref.read(languageProvider);
-    if (filter.isEmpty) {
-      pushService.deleteSubscription();
-    } else {
-      pushService.upsertSubscription(filter: filter, langCode: langCode);
-    }
+    // 빈 필터도 upsert — 행 삭제 금지(키워드 알림·추천 푸시가 같은 행 공유,
+    // filter_state=null이면 크롤러가 기본 조건 푸시만 스킵, 2026-10-09).
+    pushService.upsertSubscription(filter: filter, langCode: langCode);
     context.pop();
   }
 
