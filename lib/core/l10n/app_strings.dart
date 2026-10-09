@@ -574,7 +574,7 @@ class AppStrings {
  'en': "You haven't added any memos yet",
  }, "You haven't added any memos yet");
  String get myMemosEmptyDesc => _t({
- 'ko': '공고 상세에서 메모를 남기면\n여기에 모여요',
+ 'ko': '공고에 메모를 남기면\n여기에 모여요',
  'en': 'Memos you write on job postings\nwill be collected here',
  }, 'Memos you write on job postings\nwill be collected here');
  String get searchAlertDeleteAsk => _t({
