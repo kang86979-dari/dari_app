@@ -31,10 +31,15 @@ class JobMemoSection extends ConsumerWidget {
                 color: const Color(0xFFFFF8E1),
                 borderRadius: BorderRadius.circular(12),
               ),
-              // 내용 + 우측 연필(수정 가능 표시, 2026-10-09).
+              // 앞쪽 연필(수정 가능 표시) + 내용(2026-10-09).
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const Padding(
+                    padding: EdgeInsets.only(right: 6, top: 2),
+                    child: Icon(Icons.edit_outlined,
+                        size: 15, color: Color(0xFF9A7B24)),
+                  ),
                   Expanded(
                     child: Text(
                       memo,
@@ -44,11 +49,6 @@ class JobMemoSection extends ConsumerWidget {
                         color: Color(0xFF6D5B1F),
                       ),
                     ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(left: 8),
-                    child: Icon(Icons.edit_outlined,
-                        size: 15, color: Color(0xFF9A7B24)),
                   ),
                 ],
               ),

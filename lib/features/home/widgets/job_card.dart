@@ -271,6 +271,13 @@ class JobCard extends StatelessWidget {
                   ),
                   child: Row(
                     children: [
+                      // 연필 — 메모 앞쪽, 탭하면 수정 가능함을 알림(2026-10-09).
+                      if (onMemoTap != null)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(Icons.edit_outlined,
+                              size: 14, color: Color(0xFF9A7B24)),
+                        ),
                       Expanded(
                         child: Text(
                           memo!,
@@ -283,13 +290,6 @@ class JobCard extends StatelessWidget {
                           ),
                         ),
                       ),
-                      // 연필 — 탭하면 수정 가능함을 알림(2026-10-09).
-                      if (onMemoTap != null)
-                        const Padding(
-                          padding: EdgeInsets.only(left: 8),
-                          child: Icon(Icons.edit_outlined,
-                              size: 14, color: Color(0xFF9A7B24)),
-                        ),
                       if (onMemoDelete != null)
                         GestureDetector(
                           onTap: onMemoDelete,
