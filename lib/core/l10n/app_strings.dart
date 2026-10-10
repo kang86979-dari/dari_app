@@ -533,24 +533,16 @@ class AppStrings {
     'mn': 'Шинэ ажлын мэдэгдэл',
   }, 'New job alerts');
 
-  String get newJobAlertsDesc => _t({
-    'ko': '내 필터에 맞는 신규 공고가 등록되면 알림',
-    'en': 'Get notified when new jobs match your filters',
-    'zh': '当有符合筛选条件的新职位时通知',
-    'hi': 'जब आपके फ़िल्टर से मेल खाने वाली नई नौकरी हो तो सूचना पाएं',
-    'ja': 'フィルターに合う新着求人があれば通知',
-    'th': 'รับแจ้งเตือนเมื่อมีงานใหม่ตรงกับตัวกรอง',
-    'vi': 'Nhận thông báo khi có việc mới phù hợp bộ lọc',
-    'bn': 'আপনার ফিল্টারের সাথে মিলে নতুন চাকরি হলে জানান',
-    'ru': 'Получайте уведомления о вакансиях по вашим фильтрам',
-    'id': 'Dapatkan notifikasi saat ada lowongan baru sesuai filter',
-    'ne': 'तपाईंको फिल्टरसँग मिल्ने नयाँ जागिर आउँदा सूचना',
-    'km': 'ទទួលបានការជូនដំណឹងពេលមានការងារថ្មីត្រូវនឹងតម្រង',
-    'my': 'သင့်စစ်ထုတ်မှုနှင့်ကိုက်ညီသော အလုပ်သစ်ရှိသောအခါ အသိပေးချက်',
-    'si': 'ඔබේ පෙරහන් සමඟ ගැළපෙන නව රැකියා ඇති විට දැනුම්දීම්',
-    'uz': 'Filtringizga mos yangi ish chiqsa xabar olish',
-    'mn': 'Таны шүүлтүүрт тохирох шинэ ажил гарвал мэдэгдэл',
-  }, 'Get notified when new jobs match your filters');
+ String get newJobAlertsDesc => _t({
+ 'ko': '조건에 맞는 신규 공고가 등록되면 알림', 'en': 'Get notified when new jobs match your conditions',
+ 'zh': '当有符合条件的新职位时通知', 'hi': 'जब आपकी शर्तों से मेल खाने वाली नई नौकरी हो तो सूचना पाएं',
+ 'ja': '条件に合う新着求人があれば通知', 'th': 'รับแจ้งเตือนเมื่อมีงานใหม่ตรงกับเงื่อนไข',
+ 'vi': 'Nhận thông báo khi có việc mới phù hợp điều kiện', 'bn': 'আপনার শর্তের সাথে মিলে নতুন চাকরি হলে জানান',
+ 'ru': 'Получайте уведомления о вакансиях по вашим условиям', 'id': 'Dapatkan notifikasi saat ada lowongan baru sesuai kondisi',
+ 'ne': 'तपाईंको सर्तसँग मिल्ने नयाँ जागिर आउँदा सूचना', 'km': 'ទទួលបានការជូនដំណឹងពេលមានការងារថ្មីត្រូវនឹងលក្ខខណ្ឌ',
+ 'my': 'သင့်အခြေအနေနှင့်ကိုက်ညီသော အလုပ်သစ်ရှိသောအခါ အသိပေးချက်', 'si': 'ඔබේ කොන්දේසි සමඟ ගැළපෙන නව රැකියා ඇති විට දැනුම්දීම්',
+ 'uz': 'Shartlaringizga mos yangi ish chiqsa xabar olish', 'mn': 'Таны нөхцөлд тохирох шинэ ажил гарвал мэдэгдэл',
+ }, 'Get notified when new jobs match your conditions');
 
   String get language => _t({
     'ko': '언어',
@@ -6220,24 +6212,24 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'si': 'ප්‍රතිඵල',
   }, 'Results');
 
-  String get filterMatchTab => _t({
-    'ko': '필터',
-    'en': 'Filter',
-    'zh': '筛选',
-    'hi': 'फ़िल्टर',
-    'ja': 'フィルター',
-    'th': 'ตัวกรอง',
-    'vi': 'Bộ lọc',
-    'bn': 'ফিল্টার',
-    'ru': 'Фильтр',
-    'id': 'Filter',
-    'ne': 'फिल्टर',
-    'km': 'តម្រង',
-    'my': 'စစ်ထုတ်',
-    'uz': 'Filtr',
-    'mn': 'Шүүлтүүр',
-    'si': 'පෙරහන',
-  }, 'Filter');
+ String get filterMatchTab => _t({
+ 'ko': '추천',
+ 'en': 'Suggested',
+ 'zh': '推荐筛选',
+ 'hi': 'सुझाव',
+ 'ja': 'おすすめ',
+ 'th': 'แนะนำ',
+ 'vi': 'Gợi ý',
+ 'bn': 'প্রস্তাবিত',
+ 'ru': 'Рекомендации',
+ 'id': 'Saran',
+ 'ne': 'सिफारिस',
+ 'km': 'ណែនាំ',
+ 'my': 'အကြံပြု',
+ 'uz': 'Tavsiya',
+ 'mn': 'Санал',
+ 'si': 'යෝජිත',
+ }, 'Suggested');
 
   String get applySelectedFilters => _t({
     'ko': '적용하기',
