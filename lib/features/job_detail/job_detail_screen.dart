@@ -21,6 +21,7 @@ import '../../providers/account_provider.dart';
 import '../../providers/applied_job_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_primary_button.dart';
 import '../favorites/favorite_actions.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/l10n/app_strings.dart';
@@ -740,29 +741,17 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
                       );
                     },
                   ),
-                  GestureDetector(
-                onTap: isExpired
-                    ? null
-                    : () => showApplyMethodSheet(
-                          context,
-                          job: job,
-                          strings: s,
-                          onProceedToSite: () => _onApplyTap(job.url),
-                        ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  decoration: BoxDecoration(
-                      color: isExpired ? AppColors.gray300 : AppColors.carrot,
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Text(
-                      isExpired ? s.expired : s.apply,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                ),
-              ),
+                  // 공용 버튼 모듈(2.1.6) + 지원방법 시트 흐름(feature) 결합(머지 후속).
+                  AppPrimaryButton(
+                    label: isExpired ? s.expired : s.apply,
+                    enabled: !isExpired,
+                    onTap: () => showApplyMethodSheet(
+                      context,
+                      job: job,
+                      strings: s,
+                      onProceedToSite: () => _onApplyTap(job.url),
+                    ),
+                  ),
                 ],
               ),
             );
