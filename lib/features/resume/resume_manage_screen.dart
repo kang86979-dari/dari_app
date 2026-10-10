@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_primary_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../core/widgets/info_row.dart';
@@ -170,25 +171,10 @@ class _EmptyBody extends StatelessWidget {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-          child: SizedBox(
-            width: double.infinity,
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => ResumeEditScreen.show(context, site: 'khire'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.carrot,
-                foregroundColor: Colors.white,
-                elevation: 0,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                s.resumeCreateButton,
-                style:
-                    const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-              ),
-            ),
+          child: AppPrimaryButton(
+            // 공용 CTA 모듈(2026-10-10).
+            label: s.resumeCreateButton,
+            onTap: () => ResumeEditScreen.show(context, site: 'khire'),
           ),
         ),
       ],
@@ -325,25 +311,10 @@ class _SummaryBody extends StatelessWidget {
         if (!complete)
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-            child: SizedBox(
-              width: double.infinity,
-              height: 52,
-              child: ElevatedButton(
-                onPressed: () => ResumeEditScreen.show(context, site: 'khire'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.carrot,
-                  foregroundColor: Colors.white,
-                  elevation: 0,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  s.resumeContinueButton,
-                  style: const TextStyle(
-                      fontSize: 16, fontWeight: FontWeight.w700),
-                ),
-              ),
+            child: AppPrimaryButton(
+              // 공용 CTA 모듈(2026-10-10).
+              label: s.resumeContinueButton,
+              onTap: () => ResumeEditScreen.show(context, site: 'khire'),
             ),
           ),
       ],

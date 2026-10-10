@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_primary_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../data/models/resume.dart';
@@ -447,16 +449,9 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
             );
           }
 
-          return AlertDialog(
-            backgroundColor: Colors.white,
-            surfaceTintColor: Colors.transparent,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16)),
-            title: Text(
-              s.resumeCareerLabel,
-              style:
-                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-            ),
+          // 공용 셸 — 라운드·패딩 통일, 액션은 유효성 게이트라 자체 유지(2026-10-10).
+          return AppDialogShell(
+            title: s.resumeCareerLabel,
             content: SingleChildScrollView(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -552,31 +547,13 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
       return;
     }
     final s = AppStrings.of(ref.read(languageProvider));
-    final save = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(s.resumeDraftAskTitle,
-            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-        content: Text(s.resumeDraftAskBody,
-            style: const TextStyle(
-                fontSize: 14, height: 1.5, color: AppColors.gray600)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child:
-                Text(s.no, style: const TextStyle(color: AppColors.gray400)),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(s.yes,
-                style: const TextStyle(
-                    color: AppColors.carrot, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+    // 공용 팝업 모듈(2026-10-10) — 디자인 확정안.
+    final save = await showAppDialog(
+      context,
+      title: s.resumeDraftAskTitle,
+      message: s.resumeDraftAskBody,
+      cancelLabel: s.no,
+      confirmLabel: s.yes,
     );
     if (!mounted || save == null) return;
     if (save) {
@@ -789,33 +766,11 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
   // 필수+주소를 다 채우면 '저장', 아니면 '임시저장' 문구.
   Widget _saveBar(AppStrings s) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-        child: SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton(
-            onPressed: _saving ? null : _save,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppColors.carrot,
-              disabledBackgroundColor: AppColors.gray200,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            child: _saving
-                ? const SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(
-                        strokeWidth: 2, color: Colors.white),
-                  )
-                : Text(
-                    _canSave ? s.resumeSave : s.resumeSaveDraft,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-          ),
+        // 공용 CTA 모듈 — 저장 중 스피너 포함(2026-10-10).
+        child: AppPrimaryButton(
+          label: _canSave ? s.resumeSave : s.resumeSaveDraft,
+          onTap: _save,
+          loading: _saving,
         ),
       );
 

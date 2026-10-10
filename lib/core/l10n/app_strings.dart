@@ -5415,8 +5415,18 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'th': 'การสมัครผ่านแชทใช้ได้เฉพาะในแอป K-HIRE ติดตั้งแล้วค่อยสมัคร',
     'id': 'Lamaran chat hanya di aplikasi K-HIRE. Pasang dulu, lalu lamar.',
   }, 'Chat apply works only in the K-HIRE app. Install it, then apply.');
-  String get yes => _t({'ko': '네', 'en': 'Yes'}, 'Yes');
-  String get no => _t({'ko': '아니요', 'en': 'No'}, 'No');
+  String get yes => _t({
+    'ko': '네', 'en': 'Yes', 'zh': '是', 'hi': 'हां',
+    'ja': 'はい', 'th': 'ใช่', 'vi': 'Có', 'bn': 'হ্যাঁ',
+    'ru': 'Да', 'id': 'Ya', 'ne': 'हो', 'km': 'បាទ/ចាស',
+    'my': 'ဟုတ်ကဲ့', 'si': 'ඔව්', 'uz': 'Ha', 'mn': 'Тийм',
+  }, 'Yes');
+  String get no => _t({
+    'ko': '아니요', 'en': 'No', 'zh': '否', 'hi': 'नहीं',
+    'ja': 'いいえ', 'th': 'ไม่', 'vi': 'Không', 'bn': 'না',
+    'ru': 'Нет', 'id': 'Tidak', 'ne': 'होइन', 'km': 'ទេ',
+    'my': 'မဟုတ်ပါ', 'si': 'නැත', 'uz': "Yo'q", 'mn': 'Үгүй',
+  }, 'No');
   String get applyManageTooltip => _t({
     'ko': '지원 내역을 관리하세요',
     'en': 'Manage your applications here',

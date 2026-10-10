@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_primary_button.dart';
 import '../../core/utils/district_names.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/widgets/info_row.dart';
@@ -1030,26 +1031,10 @@ class _AdditionalInfoScreenState extends ConsumerState<AdditionalInfoScreen> {
             else
               Padding(
                 padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: _onComplete,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.carrot,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: Text(
-                      s.accountComplete,
-                      style: const TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
+                child: AppPrimaryButton(
+                  // 공용 CTA 모듈(2026-10-10).
+                  label: s.accountComplete,
+                  onTap: _onComplete,
                 ),
               ),
           ],

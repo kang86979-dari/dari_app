@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants/colors.dart';
+import '../../../core/widgets/app_dialog.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/resume.dart';
 import '../../../data/services/khire_resume_codes.dart';
@@ -113,15 +114,9 @@ class ResumePickers {
     final yearCtrl = TextEditingController();
     return showDialog<ResumeLicense>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text(
-          s.resumeLicenseLabel,
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
-        ),
+      // 공용 셸 — 라운드·패딩 통일(2026-10-10).
+      builder: (ctx) => AppDialogShell(
+        title: s.resumeLicenseLabel,
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [

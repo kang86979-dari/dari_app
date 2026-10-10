@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_primary_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../data/constants/world_countries.dart';
@@ -301,25 +302,10 @@ class _ResumeSelfComposeScreenState
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: _save,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.carrot,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    s.resumeSave,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
+              child: AppPrimaryButton(
+                // 공용 CTA 모듈(2026-10-10).
+                label: s.resumeSave,
+                onTap: _save,
               ),
             ),
           ],
@@ -471,26 +457,11 @@ class _SelfTextEditScreenState extends State<_SelfTextEditScreen> {
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(20, 8, 20, 16),
-              child: SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  onPressed: () =>
+              child: AppPrimaryButton(
+                // 공용 CTA 모듈(2026-10-10).
+                label: widget.saveLabel,
+                onTap: () =>
                       Navigator.of(context).pop(_ctrl.text.trim()),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.carrot,
-                    foregroundColor: Colors.white,
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: Text(
-                    widget.saveLabel,
-                    style: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ),
               ),
             ),
           ],
