@@ -15,6 +15,7 @@ import '../apply/site_lang.dart';
 import '../../core/constants/apply_method_style.dart';
 import '../memo/job_memo_section.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_primary_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
@@ -657,26 +658,10 @@ class _DetailBodyState extends State<_DetailBody> {
           child: Builder(builder: (context) {
             final isExpired = job.expiresAt != null &&
                 (DateTime.tryParse(job.expiresAt!)?.isBefore(DateUtils.dateOnly(DateTime.now())) ?? false);
-            return SizedBox(
-              width: double.infinity,
-              child: GestureDetector(
-                onTap: isExpired
-                    ? null
-                    : () => _onApplyTap(job.url),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(vertical: 18),
-                  decoration: BoxDecoration(
-                      color: isExpired ? AppColors.gray300 : AppColors.carrot,
-                      borderRadius: BorderRadius.circular(16)),
-                  child: Text(
-                      isExpired ? s.expired : s.apply,
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.white)),
-                ),
-              ),
+            return AppPrimaryButton(
+              label: isExpired ? s.expired : s.apply,
+              enabled: !isExpired,
+              onTap: () => _onApplyTap(job.url),
             );
           }),
         ),

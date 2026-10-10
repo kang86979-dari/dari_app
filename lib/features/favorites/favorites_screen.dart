@@ -9,7 +9,6 @@ import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
 import '../../providers/favorite_provider.dart';
-import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
 import '../home/widgets/native_ad_card.dart';
@@ -20,6 +19,8 @@ import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
+import '../../core/widgets/empty_placeholder.dart';
+import '../../core/widgets/sort_sheet.dart';
 
 enum FavoriteSortType { deadline, added }
 
@@ -32,8 +33,6 @@ class FavoritesScreen extends ConsumerStatefulWidget {
 
 class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   FavoriteSortType _sortType = FavoriteSortType.added;
-  bool _editMode = false;
-  final Set<String> _selectedForDelete = {};
   bool _tracked = false;
   final _adController = NativeAdController();
   final _mrecController = MrecAdController();
@@ -112,20 +111,9 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       ),
                     ),
                   ),
-                  GestureDetector(
-                    onTap: () => setState(() {
-                      _editMode = !_editMode;
-                      _selectedForDelete.clear();
-                    }),
-                    child: Text(
-                      _editMode ? s.done : s.edit,
-                      style: TextStyle(
-                        fontSize: 15,
-                        fontWeight: FontWeight.w600,
-                        color: _editMode ? AppColors.carrot : AppColors.gray600,
-                      ),
-                    ),
-                  ),
+                  // 편집 버튼 삭제 — 하트 해제로 삭제 가능(2026-10-10).
+                  // 타이틀 중앙 유지용 더미(뒤로가기와 대칭).
+                  const SizedBox(width: 40),
                 ],
               ),
             ),
@@ -169,25 +157,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             // 목록
             Expanded(
               child: jobIds.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(bottom: 60),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.favorite_border,
-                                size: 64, color: Color(0xFFE0E0E0)),
-                            const SizedBox(height: 16),
-                            Text(s.noFavorites,
-                                style: const TextStyle(
-                                    fontSize: 16, color: AppColors.gray400)),
-                            const SizedBox(height: 8),
-                            Text(s.noFavoritesHint,
-                                style: const TextStyle(
-                                    fontSize: 13, color: AppColors.gray300)),
-                          ],
-                        ),
-                      ),
+                  ? EmptyPlaceholder(
+                      icon: Icons.favorite_border,
+                      title: s.noFavorites,
+                      subtitle: s.noFavoritesHint,
                     )
                   : FutureBuilder<List<Job>>(
                       future: JobRepository().getFavoriteJobs(jobIds),
@@ -249,54 +222,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                             final jobIndex = cycle * n + pos;
                             if (jobIndex >= jobs.length) return const SizedBox.shrink();
                             final job = jobs[jobIndex];
-                            if (_editMode) {
-                              final isChecked =
-                                  _selectedForDelete.contains(job.id);
-                              return GestureDetector(
-                                onTap: () => setState(() {
-                                  isChecked
-                                      ? _selectedForDelete.remove(job.id)
-                                      : _selectedForDelete.add(job.id);
-                                }),
-                                child: Container(
-                                  color: isChecked
-                                      ? AppColors.carrotLight
-                                      : Colors.transparent,
-                                  child: Row(
-                                    children: [
-                                      Padding(
-                                        padding:
-                                            const EdgeInsets.only(left: 16),
-                                        child: Icon(
-                                          isChecked
-                                              ? Icons.check_circle
-                                              : Icons.circle_outlined,
-                                          color: isChecked
-                                              ? AppColors.carrot
-                                              : AppColors.gray200,
-                                          size: 22,
-                                        ),
-                                      ),
-                                      Expanded(
-                                        child: IgnorePointer(
-                                          child: JobCard(
-                                            job: job,
-                                            langCode: langCode,
-                                            alwaysOpen: s.alwaysOpen,
-                                            salaryFallback: s.salaryByCompany,
-                                            strings: s,
-                                            expiredLabel: s.expired,
-                                            memo: ref.watch(
-                                                jobMemoTextProvider(job.id)),
-                                            onTap: () {},
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            }
                             return JobCard(
                               job: job,
                               langCode: langCode,
@@ -322,46 +247,6 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       },
                     ),
             ),
-
-            // 편집 모드 하단 삭제 버튼
-            if (_editMode && _selectedForDelete.isNotEmpty)
-              Container(
-                padding: const EdgeInsets.fromLTRB(20, 14, 20, 20),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFEEEEEE))),
-                ),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: GestureDetector(
-                    onTap: () {
-                      analytics.favoritesBulkDelete(_selectedForDelete.length);
-                      ref
-                          .read(favoriteProvider.notifier)
-                          .removeMultiple(_selectedForDelete);
-                      setState(() {
-                        _selectedForDelete.clear();
-                        _editMode = false;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 15),
-                      decoration: BoxDecoration(
-                        color: AppColors.urgent,
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Text(
-                        '${s.delete} (${_selectedForDelete.length})',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.white),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
           ],
         ),
       ),
@@ -376,86 +261,21 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
   }
 
   void _showSortSheet(BuildContext context, dynamic s) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            decoration: BoxDecoration(
-              color: AppColors.gray100,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: Text(s.sortBy,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black)),
-          ),
-          _SortOption(
-            label: s.sortByDeadline,
-            isSelected: _sortType == FavoriteSortType.deadline,
-            onTap: () {
-              _setSortType(FavoriteSortType.deadline);
-              Navigator.pop(context);
-            },
-          ),
-          _SortOption(
-            label: s.sortByAdded,
-            isSelected: _sortType == FavoriteSortType.added,
-            onTap: () {
-              _setSortType(FavoriteSortType.added);
-              Navigator.pop(context);
-            },
-          ),
-          SizedBox(height: 20 + MediaQuery.of(context).padding.bottom),
-        ],
-      ),
-    );
-  }
-}
-
-class _SortOption extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SortOption({
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        color: isSelected ? AppColors.carrotLight : Colors.transparent,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.carrotDark : AppColors.black,
-                )),
-            if (isSelected)
-              const Icon(Icons.check, size: 18, color: AppColors.carrot),
-          ],
+    showSortOptionsSheet(
+      context,
+      title: s.sortBy,
+      options: [
+        SortSheetOption(
+          label: s.sortByDeadline,
+          selected: _sortType == FavoriteSortType.deadline,
+          onSelect: () => _setSortType(FavoriteSortType.deadline),
         ),
-      ),
+        SortSheetOption(
+          label: s.sortByAdded,
+          selected: _sortType == FavoriteSortType.added,
+          onSelect: () => _setSortType(FavoriteSortType.added),
+        ),
+      ],
     );
   }
 }

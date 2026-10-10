@@ -10,13 +10,16 @@
 // X/백키로 나가면 변경 여부 확인 다이얼로그(적용/되돌리기).
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/filter_state.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/language_provider.dart';
+import '../../providers/search_alert_provider.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../core/utils/region_mapper.dart';
@@ -158,36 +161,24 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     }
   }
 
-  void _showExitDialog() {
+  void _showExitDialog() async {
     final s = ref.read(stringsProvider);
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Text(s.filterExitConfirm,
-            style: const TextStyle(fontSize: 15, height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              ref.read(filterStateProvider.notifier).setState(_snapshot);
-              context.pop();
-            },
-            child: Text(s.filterExitLeave,
-                style: const TextStyle(color: Color(0xFF999999))),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              _apply();
-            },
-            child: Text(s.filterExitApply,
-                style: const TextStyle(
-                    color: _T.orange, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
+    // true=적용하고 나가기 / false=되돌리고 나가기
+    final apply = await showAppDialog(
+      context,
+      // 타이틀=핵심 질문, 본문=미적용 시 결과(결정에 필요한 정보라 헬프 아님).
+      title: s.filterExitConfirm,
+      message: s.filterExitHelper,
+      cancelLabel: s.filterExitLeave,
+      confirmLabel: s.filterExitApply,
     );
+    if (!mounted || apply == null) return;
+    if (apply) {
+      _apply();
+    } else {
+      ref.read(filterStateProvider.notifier).setState(_snapshot);
+      context.pop();
+    }
   }
 
   void _apply() {
@@ -344,7 +335,12 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
               _header(s),
               _tabs(filter, s),
               Expanded(child: _body(filter, s, langCode)),
-              if (_total(filter) > 0) _tray(filter, s, langCode),
+              // 필터가 없어도 등록된 키워드가 있으면 트레이 표시(2026-10-10).
+              if (_total(filter) > 0 ||
+                  (ref.watch(searchAlertProvider)?['keyword'] as String?)
+                          ?.isNotEmpty ==
+                      true)
+                _tray(filter, s, langCode),
               _bottomBar(filter, s, langCode),
             ],
           ),
@@ -810,6 +806,17 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
     final chips = <Widget>[];
     final n = ref.read(filterStateProvider.notifier);
 
+    // 등록된 키워드 — 홈과 동일하게 항상 맨 앞, 남색 칩. ×=키워드 해제.
+    // 결과보기 건수가 키워드+필터 기준이라 여기서도 보여야 일관됨(2026-10-10).
+    final alertKeyword = ref.watch(searchAlertProvider)?['keyword'] as String?;
+    if (alertKeyword != null && alertKeyword.isNotEmpty) {
+      chips.add(_RemovableChip(
+        label: alertKeyword,
+        navy: true,
+        onRemove: () => ref.read(searchAlertProvider.notifier).clear(),
+      ));
+    }
+
     void addFromOptions(AsyncValue<List<FilterOption>> async, Set<String> sel,
         void Function(String) onToggle) {
       final options = async.valueOrNull ?? const <FilterOption>[];
@@ -897,6 +904,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   // ── 하단 바 ── (트레이 아래 언더라인 제거 — 상단 보더 없음)
   Widget _bottomBar(FilterState f, dynamic s, String langCode) {
     final total = _total(f);
+    final countAsync = ref.watch(jobTotalCountProvider);
     return Container(
       // 시스템 하단 여백(홈바/내비) + 고정 10 → 양 플랫폼 일관된 간격
       padding: EdgeInsets.fromLTRB(
@@ -936,15 +944,33 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                   shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(14)),
                 ),
-                // 건수 표시 제거 — 결과 화면 Total이 이미 보여줌(검색 조합
-                // 도입으로 화면마다 기준이 달라 혼동, 2026-10-09 사용자 확정).
-                child: Text(s.showResults as String,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: -0.2,
-                        color: Colors.white)),
+                // 건수 복구(2026-10-10) — 검색 화면에서 필터 진입을 없애
+                // "결과보기=필터만 적용 건수"로 의미가 하나로 고정됨.
+                child: countAsync.when(
+                  data: (count) {
+                    final label = count < 0
+                        ? s.showResults as String
+                        : '${s.showResults} (${NumberFormat.decimalPattern(langCode).format(count)})';
+                    return Text(label,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -0.2,
+                            color: Colors.white));
+                  },
+                  loading: () => const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: Colors.white),
+                  ),
+                  error: (_, __) => Text(s.showResults as String,
+                      style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white)),
+                ),
               ),
             ),
           ),
@@ -1170,12 +1196,15 @@ class _MoreChip extends StatelessWidget {
 class _RemovableChip extends StatelessWidget {
   final String label;
   final VoidCallback onRemove;
-  const _RemovableChip({required this.label, required this.onRemove});
+  // 키워드 칩: 연한 남색 배경+남색 글자 — 홈 칩 행과 동일 구분(2026-10-10).
+  final bool navy;
+  const _RemovableChip(
+      {required this.label, required this.onRemove, this.navy = false});
 
   @override
   // 홈 화면 필터 칩과 동일 스타일 (테두리 없음)
   Widget build(BuildContext context) => Material(
-        color: AppColors.carrotLight,
+        color: navy ? AppColors.navyLight : AppColors.carrotLight,
         borderRadius: BorderRadius.circular(15),
         child: InkWell(
           onTap: onRemove,
@@ -1187,12 +1216,14 @@ class _RemovableChip extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(label,
-                    style: const TextStyle(
+                    style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
-                        color: AppColors.carrotDark)),
+                        color: navy ? AppColors.navy : AppColors.carrotDark)),
                 const SizedBox(width: 4),
-                const Icon(Icons.close, size: 14, color: AppColors.carrot),
+                Icon(Icons.close,
+                    size: 14,
+                    color: navy ? AppColors.navy : AppColors.carrot),
               ],
             ),
           ),

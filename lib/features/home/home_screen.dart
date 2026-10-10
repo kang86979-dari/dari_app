@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -26,11 +27,14 @@ import '../../core/utils/native_ad_controller.dart';
 import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
 import '../filter/filter_chips_row.dart';
+import '../../providers/search_alert_provider.dart';
+import '../settings/widgets/language_sheet.dart';
 import '../../providers/job_memo_provider.dart';
 import '../memo/memo_actions.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../data/services/app_open_ad_service.dart';
 import '../../data/services/push_service.dart';
 
@@ -52,6 +56,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   bool _initialLoaded = false;
   FilterState? _lastFilter;
   String? _lastLangCode;
+  // 키워드 등록/해제 시에도 리스트 리셋 — 필터 변경과 동일 취급(2026-10-10).
+  String? _lastAlertKeyword;
+  StreamSubscription<RemoteMessage>? _pushTapSub;
   int _filterGeneration = 0;
   bool _isRefreshing = false;
   bool _showFilterTooltip = false;
@@ -83,19 +90,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
   void _wirePushTapHandlers() {
     FirebaseMessaging.instance.getInitialMessage().then((m) {
-      if (m != null) _handlePushTap(m);
+      // 콜드스타트: 빌드 중 네비게이션 방지 — 프레임 이후로 미룸(2026-10-10).
+      if (m == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _routeFromPush(m.data));
     });
-    FirebaseMessaging.onMessageOpenedApp.listen(_handlePushTap);
+    _pushTapSub = FirebaseMessaging.onMessageOpenedApp
+        .listen((m) => _routeFromPush(m.data));
+    // 포그라운드 수신 → 로컬 알림 탭도 동일 딥링크(2026-10-10).
+    pushService.onNotificationTap = _routeFromPush;
   }
 
-  void _handlePushTap(RemoteMessage m) {
+  void _routeFromPush(Map<String, dynamic> data) {
     if (!mounted) return;
-    final type = m.data['type'];
-    if (type == 'job' && (m.data['job_id'] as String?)?.isNotEmpty == true) {
-      context.push('/job/${m.data['job_id']}');
+    final type = data['type'];
+    if (type == 'job' && (data['job_id'] as String?)?.isNotEmpty == true) {
+      context.push('/job/${data['job_id']}');
     } else if (type == 'search' &&
-        (m.data['keyword'] as String?)?.isNotEmpty == true) {
-      context.push('/search', extra: m.data['keyword']);
+        (data['keyword'] as String?)?.isNotEmpty == true) {
+      context.push('/search', extra: data['keyword']);
     }
     // 그 외(기본 조건 건수 푸시 등)는 홈 유지.
   }
@@ -144,12 +156,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            notice.getTitle(langCode),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
+        builder: (ctx, setDialogState) => AppDialogShell(
+          title: notice.getTitle(langCode),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -290,6 +298,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // 중복 네비게이션 방지 — 홈 재생성 시 리스너 중복 금지(2026-10-10).
+    _pushTapSub?.cancel();
+    pushService.onNotificationTap = null;
     _scrollController.dispose();
     _adController.disposeAll();
     _mrecController.disposeAll();
@@ -318,7 +329,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final repo = ref.read(jobRepositoryProvider);
       final filter = ref.read(filterStateProvider);
       final langCode = ref.read(languageProvider);
-      final newJobs = await repo.getJobs(filter: filter, page: _currentPage + 1, langCode: langCode);
+      // 키워드 등록 시 첫 페이지(jobListProvider)와 동일 기준으로 로드(2026-10-10).
+      final kw = ref.read(searchAlertProvider)?['keyword'] as String?;
+      final newJobs = (kw != null && kw.isNotEmpty)
+          ? await repo.searchJobs(kw,
+              page: _currentPage + 1,
+              langCode: langCode,
+              sortBy: 'latest',
+              filter: filter)
+          : await repo.getJobs(
+              filter: filter, page: _currentPage + 1, langCode: langCode);
       if (!mounted || gen != _filterGeneration) return;
       analytics.scrollDepth(_currentPage + 1);
       analytics.pageLoaded(_currentPage + 1);
@@ -357,7 +377,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final repo = ref.read(jobRepositoryProvider);
       final filter = ref.read(filterStateProvider);
       final langCode = ref.read(languageProvider);
-      final newJobs = await repo.getJobs(filter: filter, page: 0, langCode: langCode);
+      // 키워드 등록 시 첫 페이지(jobListProvider)와 동일 기준으로 갱신(2026-10-10).
+      final kw = ref.read(searchAlertProvider)?['keyword'] as String?;
+      final newJobs = (kw != null && kw.isNotEmpty)
+          ? await repo.searchJobs(kw,
+              page: 0, langCode: langCode, sortBy: 'latest', filter: filter)
+          : await repo.getJobs(filter: filter, page: 0, langCode: langCode);
       if (!mounted || gen != _filterGeneration) return;
       setState(() {
         _jobs.clear();
@@ -394,27 +419,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     String currentLang,
     LanguageNotifier notifier,
   ) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _LanguageBottomSheet(
-        currentLang: currentLang,
-        title: ref.read(stringsProvider).changeLanguage,
-        onSelect: (code) {
-          analytics.languageChanged(currentLang, code);
-          notifier.setLanguage(code);
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(ref.read(stringsProvider).languageChanged),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-      ),
+    showLanguageSheet(
+      context,
+      title: ref.read(stringsProvider).changeLanguage,
+      currentLang: currentLang,
+      onSelect: (code) {
+        analytics.languageChanged(currentLang, code);
+        notifier.setLanguage(code);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(stringsProvider).languageChanged),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
     );
   }
 
@@ -439,6 +459,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     }
     _lastFilter = filter;
     _lastLangCode = langCode;
+    // 키워드 등록/해제 시에도 리셋 — 안 하면 jobListProvider(0)가 새 기준으로
+    // 다시 불러와도 누적 리스트(_jobs)가 이전 결과를 그대로 유지(2026-10-10).
+    final alertKeyword =
+        ref.watch(searchAlertProvider)?['keyword'] as String?;
+    if (_lastAlertKeyword != alertKeyword) {
+      if (_initialLoaded) {
+        _initialLoaded = false;
+        _filterGeneration++;
+      }
+      _lastAlertKeyword = alertKeyword;
+    }
     final langNotifier = ref.read(languageProvider.notifier);
     final s = ref.watch(stringsProvider);
 
@@ -654,25 +685,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                     // 고정 영역 (결과 행 / 필터 있을 땐 선택 칩 포함)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _FixedHeaderDelegate(
-                        // 결과 행은 글꼴 확대 시 커지므로 textScaler 반영 (칩 38 고정)
-                        // +20 slack: 오버플로우 방지
-                        height: (filter.isEmpty ? 0.0 : 38.0)
-                            + MediaQuery.textScalerOf(context).scale(20) + 20,
-                        child: Container(
-                          color: Colors.white,
-                          child: Column(
-                            children: [
-                              if (!filter.isEmpty)
-                                ReadOnlyFilterChips(filter: filter, ref: ref),
-                              _resultRow(s),
-                            ],
+                    Builder(builder: (context) {
+                      // 검색어 알림 칩(남색)을 필터 칩 앞에 — 등록돼 있으면 표시.
+                      final kw =
+                          ref.watch(searchAlertProvider)?['keyword'] as String?;
+                      final leading = <FilterChipData>[
+                        if (kw != null && kw.isNotEmpty)
+                          FilterChipData(kw,
+                              () => ref.read(searchAlertProvider.notifier).clear(),
+                              navy: true),
+                      ];
+                      final hasChips = !filter.isEmpty || leading.isNotEmpty;
+                      return SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _FixedHeaderDelegate(
+                          height: (hasChips ? 38.0 : 0.0) +
+                              MediaQuery.textScalerOf(context).scale(20) +
+                              20,
+                          child: Container(
+                            color: Colors.white,
+                            child: Column(
+                              children: [
+                                if (hasChips)
+                                  ReadOnlyFilterChips(
+                                      filter: filter,
+                                      ref: ref,
+                                      leading: leading),
+                                _resultRow(s),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                     // 공고 목록
                     ..._buildListSlivers(jobsAsync, langCode),
                   ],
@@ -816,7 +861,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.carrotDark,
+                // 시그니처 색으로 통일(2026-10-10) — carrotDark는 눌림/보조용.
+                color: AppColors.carrot,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -999,114 +1045,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 }
 
-class _LanguageBottomSheet extends ConsumerWidget {
-  final String currentLang;
-  final String title;
-  final void Function(String code) onSelect;
-
-  const _LanguageBottomSheet({
-    required this.currentLang,
-    required this.title,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final languagesAsync = ref.watch(supportedLanguagesProvider);
-    final languages = languagesAsync.valueOrNull ?? [];
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 40,
-          height: 4,
-          margin: const EdgeInsets.only(top: 14, bottom: 4),
-          decoration: BoxDecoration(
-            color: AppColors.gray100,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: const Text(
-                  '×',
-                  style: TextStyle(fontSize: 24, color: Color(0xFFBBBBBB)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, color: Color(0xFFF0F0F0)),
-        Flexible(
-          child: ListView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-            itemCount: languages.length,
-            itemBuilder: (context, index) {
-              final lang = languages[index];
-              final isSelected = lang.code == currentLang;
-              return GestureDetector(
-                onTap: () => onSelect(lang.code),
-                child: Container(
-                  color: isSelected ? AppColors.carrotLight : Colors.transparent,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        lang.name,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? AppColors.carrot : Colors.transparent,
-                          border: Border.all(
-                            color: isSelected ? AppColors.carrot : const Color(0xFFDDDDDD),
-                            width: 2,
-                          ),
-                        ),
-                        child: isSelected
-                            ? const Center(
-                                child: CircleAvatar(
-                                  radius: 4,
-                                  backgroundColor: Colors.white,
-                                ),
-                              )
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 
 class _TotalCount extends ConsumerWidget {

@@ -53,15 +53,15 @@ class JobCard extends StatelessWidget {
     }
     if (s != null) {
       switch (job.salaryType) {
-        case SalaryType.companyRule:
-          return s.salaryByCompany;
         case SalaryType.negotiable:
           return s.salaryNegotiable;
         default:
-          break;
+          // 파싱 불가 원문(예: 제목이 salary에 들어온 오염 데이터)을 그대로
+          // 노출하지 않도록 상세 화면과 동일하게 회사내규로 폴백(2026-10-10).
+          return s.salaryByCompany;
       }
     }
-    return job.salary ?? salaryFallback;
+    return salaryFallback;
   }
 
   static String _formatDeadline(String? expiresAt, String alwaysOpen) {
@@ -92,7 +92,8 @@ class JobCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF0F0F0)),
+          // 테두리 한 단계 진하게 — 카드 구분이 또렷하게(2026-10-09).
+          border: Border.all(color: const Color(0xFFE2E2E2)),
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -305,6 +306,7 @@ class JobCard extends StatelessWidget {
                 ),
               )
             // 메모 없음: "+ 메모 남기기" — 작성 진입(모든 카드 공통).
+            // 메모 있는 바와 구분: 배경 없이 노랑 계열 텍스트만(2026-10-10).
             else if (onMemoTap != null && memoAddLabel != null)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
@@ -316,16 +318,13 @@ class JobCard extends StatelessWidget {
                   // 메모 바(아이콘 포함)와 동일 높이(2026-10-09).
                   constraints: const BoxConstraints(minHeight: 26),
                   alignment: Alignment.centerLeft,
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
                   child: Text(
                     memoAddLabel!,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF9A7B24),
+                      // 배경 없는 상태에서 노랑끼가 보이도록 골든 옐로(2026-10-10).
+                      color: Color(0xFFC9A227),
                     ),
                   ),
                 ),

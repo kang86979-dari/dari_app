@@ -2,9 +2,9 @@ import 'package:flutter/services.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/app_strings.dart';
-import '../../core/widgets/sheet_handle.dart';
+import '../../core/widgets/app_sheet.dart';
 
-/// 공고 메모 입력·수정 바텀시트 (지원 내역·공고 상세 공용, 2026-09-26).
+/// 공고 메모 입력·수정 바텀시트 (공용 showAppSheet 껍데기 사용, 2026-10-10).
 /// 반환: 저장 시 trim된 텍스트('' = 삭제), 그냥 닫으면 null.
 Future<String?> showJobMemoSheet(
   BuildContext context, {
@@ -13,27 +13,15 @@ Future<String?> showJobMemoSheet(
   String? initialMemo,
 }) {
   final controller = TextEditingController(text: initialMemo ?? '');
-  return showModalBottomSheet<String>(
-    context: context,
+  return showAppSheet<String>(
+    context,
     isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-    ),
-    builder: (sheetContext) => Padding(
-      // 키보드 높이만큼 올려서 입력창이 가려지지 않게.
-      padding: EdgeInsets.only(
-        left: 20,
-        right: 20,
-        top: 10,
-        bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 16,
-      ),
+    child: Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const SheetHandle(),
-          const SizedBox(height: 10),
           Row(
             children: [
               const Icon(Icons.edit_note, size: 20, color: AppColors.gray600),
@@ -98,7 +86,7 @@ Future<String?> showJobMemoSheet(
                 TextButton(
                   onPressed: () {
                     HapticFeedback.mediumImpact(); // 삭제 실행
-                    Navigator.of(sheetContext).pop('');
+                    Navigator.of(context).pop('');
                   },
                   style: TextButton.styleFrom(
                     padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -118,7 +106,7 @@ Future<String?> showJobMemoSheet(
                 width: 120,
                 child: ElevatedButton(
                   onPressed: () =>
-                      Navigator.of(sheetContext).pop(controller.text.trim()),
+                      Navigator.of(context).pop(controller.text.trim()),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.carrot,
                     foregroundColor: Colors.white,

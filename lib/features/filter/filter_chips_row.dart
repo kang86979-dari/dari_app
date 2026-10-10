@@ -16,18 +16,25 @@ import '../../providers/language_provider.dart';
 class FilterChipData {
   final String label;
   final VoidCallback onRemove;
-  const FilterChipData(this.label, this.onRemove);
+  final bool navy; // 검색어 칩=남색(흰 글씨)로 필터 칩과 구분(2026-10-10)
+  const FilterChipData(this.label, this.onRemove, {this.navy = false});
 }
 
 class ReadOnlyFilterChips extends StatelessWidget {
   final FilterState filter;
   final WidgetRef ref;
+  // 맨 앞에 끼울 추가 칩(검색어 알림 등) — 필터 칩보다 먼저 표시.
+  final List<FilterChipData> leading;
 
-  const ReadOnlyFilterChips({required this.filter, required this.ref});
+  const ReadOnlyFilterChips({
+    required this.filter,
+    required this.ref,
+    this.leading = const [],
+  });
 
   @override
   Widget build(BuildContext context) {
-    final chips = buildFilterChipData(filter, ref);
+    final chips = [...leading, ...buildFilterChipData(filter, ref)];
     if (chips.isEmpty) return const SizedBox.shrink();
 
     return Padding(
@@ -38,32 +45,40 @@ class ReadOnlyFilterChips extends StatelessWidget {
           scrollDirection: Axis.horizontal,
           itemCount: chips.length,
           separatorBuilder: (_, __) => const SizedBox(width: 6),
-          itemBuilder: (_, i) => GestureDetector(
-            onTap: chips[i].onRemove, // 칩 전체 탭으로 삭제 (X만 누르기 어려운 문제 해결)
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.only(left: 12, right: 8, top: 6, bottom: 6),
-              decoration: BoxDecoration(
-                color: AppColors.carrotLight,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    chips[i].label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.carrotDark,
+          itemBuilder: (_, i) {
+            final navy = chips[i].navy;
+            return GestureDetector(
+              onTap: chips[i].onRemove, // 칩 전체 탭으로 삭제
+              behavior: HitTestBehavior.opaque,
+              child: Container(
+                padding:
+                    const EdgeInsets.only(left: 12, right: 8, top: 6, bottom: 6),
+                decoration: BoxDecoration(
+                  // 키워드 칩: 필터 칩과 같은 톤 방식(연한 배경+진한 글자),
+                  // 색만 남색 계열로 구분(2026-10-10 — 진한 남색이 무겁다는 피드백).
+                  color: navy ? AppColors.navyLight : AppColors.carrotLight,
+                  borderRadius: BorderRadius.circular(15),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      chips[i].label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: navy ? AppColors.navy : AppColors.carrotDark,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.close, size: 14, color: AppColors.carrot),
-                ],
+                    const SizedBox(width: 4),
+                    Icon(Icons.close,
+                        size: 14,
+                        color: navy ? AppColors.navy : AppColors.carrot),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         ),
       ),
     );

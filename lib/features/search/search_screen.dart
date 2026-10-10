@@ -18,7 +18,10 @@ import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/utils/filter_matcher.dart';
 import '../../core/utils/region_mapper.dart';
-import '../../data/services/push_service.dart';
+import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/empty_placeholder.dart';
+import '../../core/widgets/sort_sheet.dart';
+import '../../providers/search_alert_provider.dart';
 import '../filter/filter_chips_row.dart';
 import '../../providers/job_memo_provider.dart';
 import '../memo/memo_actions.dart';
@@ -56,9 +59,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   String? _lastLangCode;
   String? _lastFilterJson; // 전역 필터 변경 감지 — 검색 결과 리셋용(2026-10-09)
 
-  // 키워드 알림 조건(기기당 1개) — 로컬 저장본 캐시(2026-10-09).
-  Map<String, dynamic>? _searchAlertCond;
-
   // 필터 추천 탭
   int _activeTab = 0; // 0=검색결과, 1=필터추천
   List<FilterMatchGroup> _filterMatches = [];
@@ -80,78 +80,148 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
       }
     });
     _scrollController.addListener(_onScroll);
-    pushService.getSearchCondition().then((c) {
-      if (mounted) setState(() => _searchAlertCond = c);
-    });
   }
 
-  // ── 키워드 알림 (종 버튼, 2026-10-09) ──
-  bool get _alertMatchesCurrent {
-    final c = _searchAlertCond;
-    if (c == null) return false;
-    final filter = ref.read(filterStateProvider);
-    return c['keyword'] == ref.read(searchQueryProvider) &&
-        jsonEncode(c['filter']) == jsonEncode(PushService.filterToJson(filter));
+  // ── 키워드 알림 (결과 상단 제안 배너, 2026-10-10) ──
+  // 판정은 **검색어만** 일치로 — 공유 프로바이더(searchAlertProvider) 사용.
+  bool get _alertMatchesCurrent =>
+      ref.watch(searchAlertProvider.notifier).matchesKeyword(
+          ref.read(searchQueryProvider));
+
+  // 결과 상단 알림 제안/활성 배너 — 아이콘만으론 "검색 저장+알림" 개념이
+  // 안 보여서 문장으로 제안(2026-10-10). 현재 조건이 등록돼 있으면
+  // "받고 있어요 + 해제", 아니면 "알려드릴까요? [알림 받기]".
+  Widget _alertOfferBanner(dynamic s) {
+    final q = ref.read(searchQueryProvider);
+    if (q.isEmpty) return const SizedBox.shrink();
+    // 상태를 무조건 watch — 조건부(&&) 뒤에 두면 활성 상태에선 watch가
+    // 등록되지 않아 해제해도 배너가 안 바뀌는 버그(2026-10-10 수정).
+    final cond = ref.watch(searchAlertProvider);
+    final active = (cond?['keyword'] as String?) == q;
+    // 다른 키워드가 이미 등록돼 있으면 "등록"이 아닌 "변경"으로 안내.
+    final hasOther = !active && cond != null;
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 6, 20, 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.carrotLight,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            active ? Icons.notifications_active : Icons.notifications_none,
+            size: 18,
+            color: AppColors.carrot,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              active ? s.searchAlertActiveBanner(q) : s.searchAlertOfferTitle(q),
+              style: const TextStyle(
+                fontSize: 13,
+                height: 1.3,
+                fontWeight: FontWeight.w500,
+                color: AppColors.carrotDark,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => _onBellTap(s),
+            behavior: HitTestBehavior.opaque,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+              decoration: BoxDecoration(
+                color: active ? Colors.transparent : AppColors.carrot,
+                borderRadius: BorderRadius.circular(8),
+                border: active ? Border.all(color: AppColors.carrot) : null,
+              ),
+              child: Text(
+                active
+                    ? s.searchAlertOffButton
+                    : hasOther
+                        ? s.searchAlertChangeButton
+                        : s.searchAlertOfferButton,
+                style: TextStyle(
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w700,
+                  color: active ? AppColors.carrot : Colors.white,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// {from}/{to} 템플릿 → 키워드만 색 강조(기존=남색, 새=carrot)한 리치 본문.
+  Widget _replaceBodyRich(String tpl, String from, String to) {
+    const base = TextStyle(
+        fontSize: 15.5,
+        height: 1.45,
+        fontWeight: FontWeight.w500,
+        color: AppColors.gray900);
+    final spans = <TextSpan>[];
+    var i = 0;
+    for (final m in RegExp(r'\{from\}|\{to\}').allMatches(tpl)) {
+      if (m.start > i) spans.add(TextSpan(text: tpl.substring(i, m.start)));
+      final isFrom = m.group(0) == '{from}';
+      spans.add(TextSpan(
+        text: isFrom ? from : to,
+        style: TextStyle(
+            fontWeight: FontWeight.w800,
+            color: isFrom ? AppColors.navy : AppColors.carrot),
+      ));
+      i = m.end;
+    }
+    if (i < tpl.length) spans.add(TextSpan(text: tpl.substring(i)));
+    return Text.rich(TextSpan(style: base, children: spans));
   }
 
   Future<void> _onBellTap(dynamic s) async {
-    // 현재 조건이 이미 등록돼 있으면 재탭 = 해제.
+    final alertNotifier = ref.read(searchAlertProvider.notifier);
+    final cond = ref.read(searchAlertProvider);
+    // 현재 검색어가 이미 등록돼 있으면 재탭 = 해제.
     if (_alertMatchesCurrent) {
-      await pushService.clearSearchCondition();
+      await alertNotifier.clear();
       if (!mounted) return;
-      setState(() => _searchAlertCond = null);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(s.searchAlertOffToast),
         behavior: SnackBarBehavior.floating,
       ));
       return;
     }
-    // 다른 조건이 등록돼 있으면 교체 확인(1개만 저장).
-    if (_searchAlertCond != null) {
-      final ok = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(s.searchAlertReplaceTitle,
-              style:
-                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
-          content: Text(
-            '${_searchAlertCond!['label'] ?? ''}\n\n${s.searchAlertReplaceBody}',
-            style: const TextStyle(fontSize: 14, height: 1.5),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(s.no as String,
-                  style: const TextStyle(color: Color(0xFF999999))),
-            ),
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(s.yes as String,
-                  style: const TextStyle(
-                      color: AppColors.carrot, fontWeight: FontWeight.w700)),
-            ),
-          ],
-        ),
+    // 다른 키워드가 등록돼 있으면 변경 확인(1개만 등록).
+    if (cond != null) {
+      final ok = await showAppDialog(
+        context,
+        title: s.searchAlertReplaceTitle,
+        // 문장 속 키워드만 색 강조(기존=남색, 새=carrot) — 캡처 디자인(2026-10-10).
+        body: _replaceBodyRich(
+            s.searchAlertReplaceTemplate as String,
+            (cond['keyword'] as String?) ?? '',
+            ref.read(searchQueryProvider)),
+        helper: s.searchAlertReplaceBody,
+        cancelLabel: s.cancel,
+        confirmLabel: s.searchAlertReplaceConfirm,
       );
       if (ok != true || !mounted) return;
     }
     final keyword = ref.read(searchQueryProvider);
     final filter = ref.read(filterStateProvider);
-    // 표시용 라벨: 키워드 + 필터 칩 라벨 (저장 시점 언어).
+    // 표시용 라벨: 검색어 + 필터 칩 라벨 (저장 시점 언어).
     final labels = buildFilterChipData(filter, ref).map((c) => c.label);
     final label = [keyword, ...labels].join(' · ');
-    await pushService.saveSearchCondition(
+    await alertNotifier.register(
       keyword: keyword,
       label: label,
       filter: filter,
       langCode: ref.read(languageProvider),
     );
     analytics.log('search_alert_saved', {'keyword': keyword});
-    final saved = await pushService.getSearchCondition();
     if (!mounted) return;
-    setState(() => _searchAlertCond = saved);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(s.searchAlertOnToast),
       behavior: SnackBarBehavior.floating,
@@ -585,71 +655,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ],
                     ),
                   ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                  // 종 버튼 — 현재 검색어+필터 조합을 새 공고 알림으로 등록(1개).
-                  GestureDetector(
-                    onTap: () => _onBellTap(s),
-                    child: Container(
-                      margin: const EdgeInsets.only(right: 6),
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: _alertMatchesCurrent
-                            ? AppColors.carrotLight
-                            : AppColors.gray50,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(
-                        _alertMatchesCurrent
-                            ? Icons.notifications_active
-                            : Icons.notifications_none,
-                        size: 15,
-                        color: _alertMatchesCurrent
-                            ? AppColors.carrot
-                            : AppColors.gray600,
-                      ),
-                    ),
-                  ),
-                  // 필터 버튼 — 검색 결과를 전역 필터로 좁히기(2026-10-09).
-                  // 활성 필터가 있으면 carrot 톤 + 개수 뱃지.
-                  Builder(builder: (context) {
-                    final f = ref.watch(filterStateProvider);
-                    final n = f.activeCount;
-                    final active = n > 0;
-                    return GestureDetector(
-                      onTap: () => context.push('/filter'),
-                      child: Container(
-                        margin: const EdgeInsets.only(right: 6),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                          color:
-                              active ? AppColors.carrotLight : AppColors.gray50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.tune,
-                                size: 15,
-                                color: active
-                                    ? AppColors.carrot
-                                    : AppColors.gray600),
-                            if (active) ...[
-                              const SizedBox(width: 4),
-                              Text('$n',
-                                  style: const TextStyle(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.carrot)),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
+                  // 종 버튼 제거(2026-10-10) — 알림 등록은 결과 상단 제안
+                  // 배너(문장)로 유도. 필터 버튼도 제거(조정은 홈에서만).
                   GestureDetector(
                     onTap: () => _showSortSheet(context, s),
                     child: Container(
@@ -672,8 +679,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       ),
                     ),
                   ),
-                    ],
-                  ),
                 ],
               ),
             ),
@@ -682,14 +687,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ReadOnlyFilterChips(
                   filter: ref.watch(filterStateProvider), ref: ref),
             Expanded(
-              child: ListView.builder(
+              child: Builder(builder: (context) {
+                // 알림 배너를 리스트 첫 항목(헤더)으로 넣어 스크롤 시 함께
+                // 올라가게 함(2026-10-10). header=배너 유무.
+                final showBanner = _searchJobs.isNotEmpty;
+                final header = showBanner ? 1 : 0;
+                return ListView.builder(
                 controller: _scrollController,
                 padding: const EdgeInsets.only(bottom: 20),
-                itemCount: 1 +
+                itemCount: header +
+                    1 +
                     _searchJobs.length +
                     (_searchJobs.length ~/ AdConfig.listAdInterval) +
                     (_isLoadingMore ? 1 : 0),
-                itemBuilder: (context, index) {
+                itemBuilder: (context, rawIndex) {
+                  // 헤더(배너) 먼저.
+                  if (showBanner && rawIndex == 0) return _alertOfferBanner(s);
+                  final index = rawIndex - header;
                   const n = AdConfig.listAdInterval;
                   final total = 1 +
                       _searchJobs.length +
@@ -760,7 +774,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     },
                   );
                 },
-              ),
+              );
+              }),
             ),
             ], // ...[  닫기
           ],
@@ -799,6 +814,15 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
             children: [
+              // 이 탭이 "검색어 관련 추천 필터"임을 안내(2026-10-10).
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  s.filterMatchHint,
+                  style: const TextStyle(
+                      fontSize: 12.5, height: 1.4, color: AppColors.gray400),
+                ),
+              ),
               for (final group in _filterMatches) ...[
                 // 카테고리 헤더
                 Padding(
@@ -1124,45 +1148,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   void _showSortSheet(BuildContext context, dynamic s) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      builder: (_) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 40, height: 4,
-            margin: const EdgeInsets.only(top: 12, bottom: 8),
-            decoration: BoxDecoration(
-              color: AppColors.gray100,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(20, 8, 20, 12),
-            child: Text(s.sortBy,
-                style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.black)),
-          ),
-          _SortListItem(
-              label: s.sortAccuracy,
-              isSelected: _sortBy == 'relevance',
-              onTap: () { Navigator.pop(context); _changeSort('relevance'); }),
-          _SortListItem(
-              label: s.sortLatest,
-              isSelected: _sortBy == 'latest',
-              onTap: () { Navigator.pop(context); _changeSort('latest'); }),
-          _SortListItem(
-              label: s.sortSalaryHigh,
-              isSelected: _sortBy == 'salary_desc',
-              onTap: () { Navigator.pop(context); _changeSort('salary_desc'); }),
-          SizedBox(height: 20 + MediaQuery.of(context).padding.bottom),
-        ],
-      ),
+    showSortOptionsSheet(
+      context,
+      title: s.sortBy,
+      options: [
+        SortSheetOption(
+          label: s.sortAccuracy,
+          selected: _sortBy == 'relevance',
+          onSelect: () => _changeSort('relevance'),
+        ),
+        SortSheetOption(
+          label: s.sortLatest,
+          selected: _sortBy == 'latest',
+          onSelect: () => _changeSort('latest'),
+        ),
+        SortSheetOption(
+          label: s.sortSalaryHigh,
+          selected: _sortBy == 'salary_desc',
+          onSelect: () => _changeSort('salary_desc'),
+        ),
+      ],
     );
   }
 }
@@ -1237,90 +1242,15 @@ class _NoResults extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final s = ref.watch(stringsProvider);
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 60),
-      child: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.search_off, size: 72, color: Color(0xFFE0E0E0)),
-          const SizedBox(height: 16),
-          Text(title,
-              style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black)),
-          const SizedBox(height: 8),
-          Text(subtitle,
-              textAlign: TextAlign.center,
-              style: const TextStyle(
-                  fontSize: 14, color: AppColors.gray300, height: 1.6)),
-          const SizedBox(height: 24),
-          GestureDetector(
-            onTap: () {
-              context.go('/home');
-              context.push('/filter');
-            },
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: AppColors.carrot,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.tune, size: 16, color: Colors.white),
-                  const SizedBox(width: 8),
-                  Text(
-                    s.useFilter,
-                    style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
-      ),
-    );
-  }
-}
-
-class _SortListItem extends StatelessWidget {
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _SortListItem(
-      {required this.label, required this.isSelected, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        color: isSelected ? AppColors.carrotLight : Colors.transparent,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label,
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                  color: isSelected ? AppColors.carrotDark : AppColors.black,
-                )),
-            if (isSelected)
-              const Icon(Icons.check, size: 18, color: AppColors.carrot),
-          ],
-        ),
-      ),
+    return EmptyPlaceholder(
+      icon: Icons.search_off,
+      title: title,
+      subtitle: subtitle,
+      buttonLabel: s.useFilter,
+      onButton: () {
+        context.go('/home');
+        context.push('/filter');
+      },
     );
   }
 }

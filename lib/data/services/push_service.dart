@@ -136,12 +136,24 @@ class PushService {
         ?.createNotificationChannel(channel);
 
     // flutter_local_notifications 초기화
+    // 포그라운드 수신 알림 탭도 FCM 탭과 동일하게 딥링크(2026-10-10).
     await flnPlugin.initialize(
       settings: const InitializationSettings(
         android: AndroidInitializationSettings('@drawable/ic_notification'),
       ),
+      onDidReceiveNotificationResponse: (resp) {
+        final p = resp.payload;
+        if (p == null || p.isEmpty) return;
+        try {
+          final data = (jsonDecode(p) as Map).cast<String, dynamic>();
+          onNotificationTap?.call(data);
+        } catch (_) {}
+      },
     );
   }
+
+  /// 로컬 알림(포그라운드 수신분) 탭 시 호출 — 홈에서 딥링크 핸들러 연결.
+  void Function(Map<String, dynamic> data)? onNotificationTap;
 
   /// 포그라운드에서 받은 메시지를 로컬 알림으로 표시
   Future<void> _showForegroundNotification(RemoteMessage message) async {
@@ -153,6 +165,8 @@ class PushService {
       id: notification.hashCode,
       title: notification.title,
       body: notification.body,
+      // 탭 딥링크용 — FCM data를 그대로 실어 onDidReceiveNotificationResponse에서 사용.
+      payload: message.data.isEmpty ? null : jsonEncode(message.data),
       notificationDetails: const NotificationDetails(
         android: AndroidNotificationDetails(
           'dari_jobs',
@@ -395,9 +409,14 @@ class PushService {
     final token = _token ?? await getSavedToken();
     if (token == null) return;
     try {
-      await _client.from('push_subscriptions').update(
-          {'last_opened_at': DateTime.now().toUtc().toIso8601String()}).eq(
-          'device_token', token);
+      // app_version·platform도 함께 갱신 — 앱 업데이트 후 필터를 안 건드려도
+      // 버전이 최신화되게(추천 푸시 2.1.6 판정이 stale 버전으로 틀어지던 문제
+      // 해결, 2026-10-10).
+      await _client.from('push_subscriptions').update({
+        'last_opened_at': DateTime.now().toUtc().toIso8601String(),
+        'app_version': await AppInfo.version(),
+        'platform': Platform.isIOS ? 'ios' : 'android',
+      }).eq('device_token', token);
       await prefs.setInt(_lastOpenedSyncKey, now);
     } catch (_) {}
   }

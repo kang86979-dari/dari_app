@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../providers/language_provider.dart';
@@ -12,7 +11,10 @@ import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/test_mode_provider.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../filter/filter_chips_row.dart';
+import '../../providers/search_alert_provider.dart';
+import 'widgets/language_sheet.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -23,8 +25,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   bool _pushEnabled = true;
-  // 알림 조건(2026-10-09): 키워드 조건(검색서 등록, 1개) + 추천 공고 토글.
-  Map<String, dynamic>? _searchCond;
+  // 검색어 알림 조건은 공유 프로바이더(searchAlertProvider)에서 watch.
   bool _recommendEnabled = true;
   bool _loaded = false;
 
@@ -51,13 +52,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   }
 
   Future<void> _loadAlertConditions() async {
-    final cond = await pushService.getSearchCondition();
     final rec = await pushService.isRecommendEnabled();
     if (!mounted) return;
-    setState(() {
-      _searchCond = cond;
-      _recommendEnabled = rec;
-    });
+    setState(() => _recommendEnabled = rec);
+    ref.read(searchAlertProvider.notifier).refresh();
   }
 
   @override
@@ -104,7 +102,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     // 토글 횟수 제한
     if (!await pushService.canToggle()) {
       if (!mounted) return;
-      final s = ref.read(stringsProvider);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(ref.read(languageProvider) == 'ko'
             ? '오늘 변경 횟수를 초과했습니다. 내일 다시 시도해주세요.'
@@ -124,34 +121,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
       }
       if (settings.authorizationStatus != AuthorizationStatus.authorized &&
           settings.authorizationStatus != AuthorizationStatus.provisional) {
-        // 권한 거부됨 → 다이얼로그로 OS 설정 안내
+        // 권한 거부됨 → 다이얼로그로 OS 설정 안내(공용 showAppDialog)
         if (!mounted) return;
         final s = ref.read(stringsProvider);
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            content: Text(
-              s.enableNotificationsInSettings,
-              style: const TextStyle(fontSize: 15, height: 1.5),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text(ref.read(languageProvider) == 'ko' ? '닫기' : 'Close',
-                  style: const TextStyle(color: Color(0xFF999999))),
-              ),
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  AppSettings.openAppSettings(type: AppSettingsType.notification);
-                },
-                child: Text(s.settings,
-                  style: const TextStyle(color: AppColors.carrot, fontWeight: FontWeight.w700)),
-              ),
-            ],
-          ),
+        final go = await showAppDialog(
+          context,
+          message: s.enableNotificationsInSettings,
+          cancelLabel: ref.read(languageProvider) == 'ko' ? '닫기' : 'Close',
+          confirmLabel: s.settings,
         );
+        if (go == true) {
+          AppSettings.openAppSettings(type: AppSettingsType.notification);
+        }
         return;
       }
     }
@@ -175,39 +156,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     }
   }
 
-  // ── 알림 조건 행 동작 (2026-10-09) ──
-  Future<void> _toggleSearchAlert(bool v) async {
-    await pushService.setSearchAlertEnabled(v);
-    if (!mounted) return;
-    setState(() => _searchCond = {...?_searchCond, 'enabled': v});
-  }
-
-  Future<void> _deleteSearchAlert() async {
-    final s = ref.read(stringsProvider);
-    final ok = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: Text(s.searchAlertDeleteAsk,
-            style: const TextStyle(fontSize: 15, height: 1.5)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: Text(s.cancel, style: const TextStyle(color: Color(0xFF999999))),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(s.delete,
-                style: const TextStyle(
-                    color: AppColors.carrot, fontWeight: FontWeight.w700)),
-          ),
-        ],
-      ),
-    );
-    if (ok != true) return;
-    await pushService.clearSearchCondition();
-    if (mounted) setState(() => _searchCond = null);
-  }
+  // 검색어 조건의 토글·삭제는 설정에서 제거 — 조건은 신규 공고 알림의
+  // 한 줄 요약으로만 표시(등록·변경·해제는 검색 화면 종 버튼에서, 2026-10-09).
 
   Future<void> _toggleRecommend(bool v) async {
     setState(() => _recommendEnabled = v);
@@ -215,23 +165,94 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     analytics.log('recommend_push_toggle', {'enabled': v});
   }
 
+  // 조건 칩(×삭제) — 검색어 칩=알림 해제(navy) / 필터 칩=홈 필터 해제(carrot).
+  Widget _condChip(String label, VoidCallback onRemove, {bool navy = false}) {
+    // 홈 칩 행과 동일 톤: 연한 배경+진한 글자(2026-10-10).
+    final bg = navy ? AppColors.navyLight : AppColors.carrotLight;
+    final fg = navy ? AppColors.navy : AppColors.carrotDark;
+    final icon = navy ? AppColors.navy : AppColors.carrot;
+    return GestureDetector(
+      onTap: onRemove,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.only(left: 10, right: 6, top: 5, bottom: 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label,
+                style: TextStyle(
+                    fontSize: 12, fontWeight: FontWeight.w600, color: fg)),
+            const SizedBox(width: 3),
+            Icon(Icons.close, size: 13, color: icon),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // 신규 공고 알림: 조건(칩)·알림시간 — 토글과 같은 블록(구분선 없음).
+  // 조건 = 검색어 칩(등록된 경우) + 홈 필터 칩. 각 × 로 개별 삭제.
+  Widget _alertConditionRow(dynamic s) {
+    // 검색어 칩(등록된 알림, 공유 프로바이더) — × 시 해제. 남색 칩으로 구분.
+    final keyword = ref.watch(searchAlertProvider)?['keyword'] as String?;
+    // 필터 칩(현재 홈 필터, 실시간) — × 시 홈 필터에서 해제.
+    final filterChips = buildFilterChipData(ref.watch(filterStateProvider), ref);
+
+    final chips = <Widget>[
+      if (keyword != null && keyword.isNotEmpty)
+        _condChip(keyword,
+            () => ref.read(searchAlertProvider.notifier).clear(),
+            navy: true),
+      for (final c in filterChips) _condChip(c.label, c.onRemove),
+    ];
+
+    // 칩 없으면 구분선만 (토글 행과 다음 블록 분리) — 알림시간 표시는
+    // 제거(2026-10-10, 굳이 보여줄 필요 없음).
+    if (chips.isEmpty) {
+      return Container(height: 1, color: const Color(0xFFF5F5F5));
+    }
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(32, 0, 20, 14),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5))),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // 칩(높이 ~26)의 첫 줄과 세로 중앙을 맞추기 위한 보정(2026-10-10).
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text('·  ${s.settingsFilterHead}  ',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray400)),
+          ),
+          Expanded(
+            child: Wrap(spacing: 6, runSpacing: 6, children: chips),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showLanguageSheet() {
     final currentLang = ref.read(languageProvider);
     final langNotifier = ref.read(languageProvider.notifier);
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _LanguageBottomSheet(
-        currentLang: currentLang,
-        title: ref.read(stringsProvider).appLanguage,
-        onSelect: (code) {
-          analytics.languageChanged(currentLang, code);
-          langNotifier.setLanguage(code);
-          Navigator.pop(context);
-        },
-      ),
+    showLanguageSheet(
+      context,
+      title: ref.read(stringsProvider).appLanguage,
+      currentLang: currentLang,
+      onSelect: (code) {
+        analytics.languageChanged(currentLang, code);
+        langNotifier.setLanguage(code);
+        Navigator.pop(context);
+      },
     );
   }
 
@@ -283,13 +304,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
 
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                // 상단 16 — 첫 섹션 위 여백을 다른 섹션(SizedBox16+헤더8=24)과
+                // 맞춤(16+헤더8=24, 2026-10-09).
+                padding: const EdgeInsets.only(top: 16, bottom: 8),
                 children: [
-                  // 알림 섹션
                   _SectionHeader(title: s.notifications),
                   _SettingsTile(
                     title: s.newJobAlerts,
                     subtitle: s.newJobAlertsDesc,
+                    showDivider: false,
                     trailing: _loaded
                         ? Switch(
                             value: _pushEnabled,
@@ -298,46 +321,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                           )
                         : const SizedBox(width: 48),
                   ),
-
-                  // 알림 조건(2026-10-09): 기본=홈 필터(자동, 읽기 전용) +
-                  // 키워드 조건(검색서 등록, 1개) + 추천 공고(19시) 토글.
-                  _SectionHeader(title: s.settingsAlertConditions),
-                  Builder(builder: (context) {
-                    final filter = ref.watch(filterStateProvider);
-                    final labels = buildFilterChipData(filter, ref)
-                        .map((c) => c.label)
-                        .join(' · ');
-                    return _SettingsTile(
-                      title: s.settingsMyFilterAuto,
-                      subtitle: labels.isEmpty
-                          ? s.settingsMyFilterEmpty
-                          : '$labels\n${s.settingsMyFilterCaption}',
-                    );
-                  }),
-                  if (_searchCond != null)
-                    _SettingsTile(
-                      title: (_searchCond!['label'] as String?) ??
-                          (_searchCond!['keyword'] as String? ?? ''),
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Switch(
-                            value: _searchCond!['enabled'] as bool? ?? true,
-                            onChanged: _pushEnabled ? _toggleSearchAlert : null,
-                            activeColor: AppColors.carrot,
-                          ),
-                          GestureDetector(
-                            onTap: _deleteSearchAlert,
-                            behavior: HitTestBehavior.opaque,
-                            child: const Padding(
-                              padding: EdgeInsets.all(6),
-                              child: Icon(Icons.close,
-                                  size: 18, color: AppColors.gray300),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  _alertConditionRow(s),
                   _SettingsTile(
                     title: s.settingsRecommendPush,
                     subtitle: s.settingsRecommendPushDesc,
@@ -414,7 +398,8 @@ class _SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
+      // top 8 — 섹션 앞 SizedBox(16)와 합쳐 24px(과다 32px 방지, 2026-10-09).
+      padding: const EdgeInsets.fromLTRB(20, 8, 20, 8),
       child: Text(
         title,
         style: const TextStyle(
@@ -432,12 +417,14 @@ class _SettingsTile extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
+  final bool showDivider;
 
   const _SettingsTile({
     required this.title,
     this.subtitle,
     this.trailing,
     this.onTap,
+    this.showDivider = true,
   });
 
   @override
@@ -446,11 +433,16 @@ class _SettingsTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        decoration: const BoxDecoration(
-          border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5))),
+        padding: EdgeInsets.fromLTRB(20, 14, 20, showDivider ? 14 : 6),
+        decoration: BoxDecoration(
+          border: showDivider
+              ? const Border(
+                  bottom: BorderSide(color: Color(0xFFF5F5F5)))
+              : null,
         ),
         child: Row(
+          // trailing(토글·값)을 제목 줄에 맞춤 — 설명이 길어도 안 쳐짐(통일).
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
               child: Column(
@@ -482,92 +474,6 @@ class _SettingsTile extends StatelessWidget {
           ],
         ),
       ),
-    );
-  }
-}
-
-class _LanguageBottomSheet extends ConsumerWidget {
-  final String currentLang;
-  final String title;
-  final void Function(String code) onSelect;
-
-  const _LanguageBottomSheet({
-    required this.currentLang,
-    required this.title,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final languagesAsync = ref.watch(supportedLanguagesProvider);
-    final languages = languagesAsync.valueOrNull ?? [];
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 40, height: 4,
-          margin: const EdgeInsets.only(top: 14, bottom: 4),
-          decoration: BoxDecoration(
-            color: AppColors.gray100,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(title,
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: AppColors.black)),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: const Text('×', style: TextStyle(fontSize: 24, color: Color(0xFFBBBBBB))),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, color: Color(0xFFF0F0F0)),
-        Flexible(
-          child: ListView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-            itemCount: languages.length,
-            itemBuilder: (context, index) {
-              final lang = languages[index];
-              final isSelected = lang.code == currentLang;
-              return GestureDetector(
-                onTap: () => onSelect(lang.code),
-                child: Container(
-                  color: isSelected ? AppColors.carrotLight : Colors.transparent,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(lang.name,
-                        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500, color: AppColors.black)),
-                      Container(
-                        width: 22, height: 22,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? AppColors.carrot : Colors.transparent,
-                          border: Border.all(
-                            color: isSelected ? AppColors.carrot : const Color(0xFFDDDDDD),
-                            width: 2,
-                          ),
-                        ),
-                        child: isSelected
-                            ? const Center(child: CircleAvatar(radius: 4, backgroundColor: Colors.white))
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
     );
   }
 }

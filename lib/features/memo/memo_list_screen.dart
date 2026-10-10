@@ -5,10 +5,14 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../core/utils/native_ad_controller.dart';
+import '../../core/widgets/empty_placeholder.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/widgets/offline_banner.dart';
+import '../../core/widgets/sort_sheet.dart';
 import '../../data/models/job.dart';
 import '../../data/repositories/job_repository.dart';
+import '../../data/services/analytics_service.dart';
+import '../../providers/favorite_provider.dart';
 import '../../providers/job_memo_provider.dart';
 import '../../providers/language_provider.dart';
 import '../home/widgets/job_card.dart';
@@ -37,55 +41,20 @@ class _MemoListScreenState extends ConsumerState<MemoListScreen> {
   }
 
   void _showSortSheet(BuildContext context, dynamic s) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(height: 12),
-            Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppColors.gray100,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            const SizedBox(height: 8),
-            for (final (label, newest) in [
-              (s.sortLatest as String, true),
-              (s.sortOldest as String, false),
-            ])
-              ListTile(
-                title: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: _newestFirst == newest
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    color: _newestFirst == newest
-                        ? AppColors.carrot
-                        : AppColors.gray900,
-                  ),
-                ),
-                trailing: _newestFirst == newest
-                    ? const Icon(Icons.check, size: 20, color: AppColors.carrot)
-                    : null,
-                onTap: () {
-                  setState(() => _newestFirst = newest);
-                  Navigator.pop(ctx);
-                },
-              ),
-            const SizedBox(height: 8),
-          ],
-        ),
-      ),
+    showSortOptionsSheet(
+      context,
+      title: s.sortBy,
+      options: [
+        for (final (label, newest) in [
+          (s.sortLatest as String, true),
+          (s.sortOldest as String, false),
+        ])
+          SortSheetOption(
+            label: label,
+            selected: _newestFirst == newest,
+            onSelect: () => setState(() => _newestFirst = newest),
+          ),
+      ],
     );
   }
 
@@ -172,28 +141,10 @@ class _MemoListScreenState extends ConsumerState<MemoListScreen> {
               ),
             Expanded(
               child: jobIds.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(bottom: 60),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.edit_note,
-                                size: 64, color: Color(0xFFE0E0E0)),
-                            const SizedBox(height: 16),
-                            Text(s.myMemosEmpty,
-                                style: const TextStyle(
-                                    fontSize: 16, color: AppColors.gray400)),
-                            const SizedBox(height: 8),
-                            Text(s.myMemosEmptyDesc,
-                                textAlign: TextAlign.center,
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    height: 1.5,
-                                    color: AppColors.gray300)),
-                          ],
-                        ),
-                      ),
+                  ? EmptyPlaceholder(
+                      icon: Icons.edit_note,
+                      title: s.myMemosEmpty,
+                      subtitle: s.myMemosEmptyDesc,
                     )
                   : FutureBuilder<List<Job>>(
                       // 즐겨찾기와 동일한 ID 묶음 조회 재사용(마감 포함).
@@ -229,6 +180,20 @@ class _MemoListScreenState extends ConsumerState<MemoListScreen> {
                               salaryFallback: s.salaryByCompany,
                               strings: s,
                               expiredLabel: s.expired,
+                              // 하트: 다른 리스트와 동일(카드 하단 왼쪽, 2026-10-10).
+                              isFavorite: ref.watch(isFavoriteProvider(job.id)),
+                              onFavoriteToggle: () {
+                                final fav =
+                                    ref.read(isFavoriteProvider(job.id));
+                                if (fav) {
+                                  analytics.favoriteRemoved(job.id);
+                                } else {
+                                  analytics.favoriteAdded(job.id, 'memos');
+                                }
+                                ref
+                                    .read(favoriteProvider.notifier)
+                                    .toggle(job.id);
+                              },
                               memo: memos[id]?.text,
                               onMemoTap: () =>
                                   editJobMemo(context, ref, job, langCode),
