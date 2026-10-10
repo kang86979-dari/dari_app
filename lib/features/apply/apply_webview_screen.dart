@@ -177,10 +177,19 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
             onPressed: () => Navigator.of(context).pop(), // 즉시 다리 복귀
           ),
           centerTitle: true,
-          // Dari 워드마크 — 탭하면 Dari로 복귀 ("Dari로 이동" 개념)
+          // 타이틀 = 출처 사이트명(2026-10-10). 없으면 기존 Dari 워드마크 폴백.
+          // 탭하면 Dari로 복귀 ("Dari로 이동" 개념 유지).
           title: GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: Image.asset('assets/wordmark.png', height: 20),
+            child: widget.title != null && widget.title!.isNotEmpty
+                ? Text(
+                    widget.title!,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.black),
+                  )
+                : Image.asset('assets/wordmark.png', height: 20),
           ),
           bottom: (_progress > 0 && _progress < 1)
               ? PreferredSize(

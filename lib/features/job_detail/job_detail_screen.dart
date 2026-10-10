@@ -314,7 +314,12 @@ class _DetailBodyState extends State<_DetailBody> {
         // Android 전체 + iOS 쿠키/localStorage 그룹(K-HIRE·FindJob·KoMate·K-Work·
         // TalentLink·JobnShop): 인앱 WebView — 진입 시 언어 사전 세팅(SiteLang) 적용
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
+          builder: (_) => ApplyWebViewScreen(
+            url: url,
+            langCode: widget.langCode,
+            // 상단 타이틀 = 출처 사이트명 (어느 사이트인지 인지, 2026-10-10)
+            title: widget.job.siteName,
+          ),
         ));
       }
     } else {
