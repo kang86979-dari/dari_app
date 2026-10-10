@@ -26,7 +26,6 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBindingObserver {
   bool _pushEnabled = true;
   // 검색어 알림 조건은 공유 프로바이더(searchAlertProvider)에서 watch.
-  bool _recommendEnabled = true;
   bool _loaded = false;
 
   // 테스트 모드 숨김 스위치: 설정 제목 7탭으로 잠금 해제
@@ -52,9 +51,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   }
 
   Future<void> _loadAlertConditions() async {
-    final rec = await pushService.isRecommendEnabled();
-    if (!mounted) return;
-    setState(() => _recommendEnabled = rec);
     ref.read(searchAlertProvider.notifier).refresh();
   }
 
@@ -158,12 +154,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
 
   // 검색어 조건의 토글·삭제는 설정에서 제거 — 조건은 신규 공고 알림의
   // 한 줄 요약으로만 표시(등록·변경·해제는 검색 화면 종 버튼에서, 2026-10-09).
-
-  Future<void> _toggleRecommend(bool v) async {
-    setState(() => _recommendEnabled = v);
-    await pushService.setRecommendEnabled(v);
-    analytics.log('recommend_push_toggle', {'enabled': v});
-  }
 
   // 조건 칩(×삭제) — 검색어 칩=알림 해제(navy) / 필터 칩=홈 필터 해제(carrot).
   Widget _condChip(String label, VoidCallback onRemove, {bool navy = false}) {
@@ -322,15 +312,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                         : const SizedBox(width: 48),
                   ),
                   _alertConditionRow(s),
-                  _SettingsTile(
-                    title: s.settingsRecommendPush,
-                    subtitle: s.settingsRecommendPushDesc,
-                    trailing: Switch(
-                      value: _recommendEnabled,
-                      onChanged: _pushEnabled ? _toggleRecommend : null,
-                      activeColor: AppColors.carrot,
-                    ),
-                  ),
+                  // 추천 공고 토글: 2.1.6 배포에서 제외(2026-10-10) — 발송도
+                  // 크롤러에 보류 전달. 재도입 시 git 히스토리 참조.
 
                   const SizedBox(height: 16),
 
