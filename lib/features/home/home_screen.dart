@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart' show FloatingHeaderSnapConfiguration;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -20,8 +22,6 @@ import '../../providers/favorite_provider.dart';
 import '../../providers/language_provider.dart';
 import '../../providers/test_mode_provider.dart';
 import '../../core/utils/ad_helper.dart';
-import '../../core/utils/region_mapper.dart';
-import '../../core/utils/district_names.dart';
 import '../../data/repositories/job_repository.dart';
 import 'widgets/job_card.dart';
 import 'widgets/skeleton_card.dart';
@@ -31,6 +31,10 @@ import '../../core/constants/ad_config.dart';
 import '../../core/utils/native_ad_controller.dart';
 import '../../core/utils/mrec_ad_controller.dart';
 import '../../data/services/analytics_service.dart';
+import '../filter/filter_chips_row.dart';
+import '../../providers/search_alert_provider.dart';
+import '../settings/widgets/language_sheet.dart';
+import '../account/note_actions.dart';
 import '../../data/services/notice_service.dart';
 import '../../core/navigation.dart';
 import '../../data/services/pending_apply_service.dart';
@@ -39,6 +43,7 @@ import '../../providers/account_provider.dart';
 import '../account/login_signup_sheet.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../data/services/app_open_ad_service.dart';
 import '../../data/services/push_service.dart';
 
@@ -60,6 +65,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   bool _initialLoaded = false;
   FilterState? _lastFilter;
   String? _lastLangCode;
+  // 키워드 등록/해제 시에도 리스트 리셋 — 필터 변경과 동일 취급(2026-10-10).
+  String? _lastAlertKeyword;
+  StreamSubscription<RemoteMessage>? _pushTapSub;
   int _filterGeneration = 0;
   bool _isRefreshing = false;
   bool _showFilterTooltip = false;
@@ -87,6 +95,34 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     _scrollController.addListener(_onScroll);
     // 앱 시작 시 푸시 구독 동기화 (기존 사용자 업데이트 대응)
     _syncPushSubscription();
+    // 앱 진입 기록 — 추천 푸시(19시) "당일 미진입자" 판정용(2026-10-09).
+    pushService.waitForInit().then((_) => pushService.touchLastOpened());
+    // 푸시 탭 딥링크 — 키워드 알림=검색 결과, 추천 공고=상세(2026-10-09).
+    _wirePushTapHandlers();
+  }
+
+  void _wirePushTapHandlers() {
+    FirebaseMessaging.instance.getInitialMessage().then((m) {
+      // 콜드스타트: 빌드 중 네비게이션 방지 — 프레임 이후로 미룸(2026-10-10).
+      if (m == null) return;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _routeFromPush(m.data));
+    });
+    _pushTapSub = FirebaseMessaging.onMessageOpenedApp
+        .listen((m) => _routeFromPush(m.data));
+    // 포그라운드 수신 → 로컬 알림 탭도 동일 딥링크(2026-10-10).
+    pushService.onNotificationTap = _routeFromPush;
+  }
+
+  void _routeFromPush(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final type = data['type'];
+    if (type == 'job' && (data['job_id'] as String?)?.isNotEmpty == true) {
+      context.push('/job/${data['job_id']}');
+    } else if (type == 'search' &&
+        (data['keyword'] as String?)?.isNotEmpty == true) {
+      context.push('/search', extra: data['keyword']);
+    }
+    // 그 외(기본 조건 건수 푸시 등)는 홈 유지.
   }
 
   Future<void> _syncPushSubscription() async {
@@ -133,12 +169,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text(
-            notice.getTitle(langCode),
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-          ),
+        builder: (ctx, setDialogState) => AppDialogShell(
+          title: notice.getTitle(langCode),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -317,6 +349,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         _wasPaused = false;
         _checkPendingPhoneApply();
       }
+      // 앱 복귀 기록 — 추천 푸시 "당일 미진입자" 판정용(시간당 1회 동기화).
+      pushService.touchLastOpened();
       // 광고 클릭 후 복귀: 리스트 위치 유지 (갱신/앱오픈광고 스킵)
       if (AdHelper.consumeAdClicked()) {
         if (kDebugMode) print('🔵 resumed: ad click return, skip refresh');
@@ -342,6 +376,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    // 중복 네비게이션 방지 — 홈 재생성 시 리스너 중복 금지(2026-10-10).
+    _pushTapSub?.cancel();
+    pushService.onNotificationTap = null;
     _scrollController.dispose();
     _adController.disposeAll();
     _mrecController.disposeAll();
@@ -370,7 +407,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final repo = ref.read(jobRepositoryProvider);
       final filter = ref.read(filterStateProvider);
       final langCode = ref.read(languageProvider);
-      final newJobs = await repo.getJobs(filter: filter, page: _currentPage + 1, langCode: langCode);
+      // 키워드 등록 시 첫 페이지(jobListProvider)와 동일 기준으로 로드(2026-10-10).
+      final kw = ref.read(searchAlertProvider)?['keyword'] as String?;
+      final newJobs = (kw != null && kw.isNotEmpty)
+          ? await repo.searchJobs(kw,
+              page: _currentPage + 1,
+              langCode: langCode,
+              sortBy: 'latest',
+              filter: filter)
+          : await repo.getJobs(
+              filter: filter, page: _currentPage + 1, langCode: langCode);
       if (!mounted || gen != _filterGeneration) return;
       analytics.scrollDepth(_currentPage + 1);
       analytics.pageLoaded(_currentPage + 1);
@@ -409,7 +455,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       final repo = ref.read(jobRepositoryProvider);
       final filter = ref.read(filterStateProvider);
       final langCode = ref.read(languageProvider);
-      final newJobs = await repo.getJobs(filter: filter, page: 0, langCode: langCode);
+      // 키워드 등록 시 첫 페이지(jobListProvider)와 동일 기준으로 갱신(2026-10-10).
+      final kw = ref.read(searchAlertProvider)?['keyword'] as String?;
+      final newJobs = (kw != null && kw.isNotEmpty)
+          ? await repo.searchJobs(kw,
+              page: 0, langCode: langCode, sortBy: 'latest', filter: filter)
+          : await repo.getJobs(filter: filter, page: 0, langCode: langCode);
       if (!mounted || gen != _filterGeneration) return;
       setState(() {
         _jobs.clear();
@@ -446,27 +497,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     String currentLang,
     LanguageNotifier notifier,
   ) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (_) => _LanguageBottomSheet(
-        currentLang: currentLang,
-        title: ref.read(stringsProvider).changeLanguage,
-        onSelect: (code) {
-          analytics.languageChanged(currentLang, code);
-          notifier.setLanguage(code);
-          Navigator.pop(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(ref.read(stringsProvider).languageChanged),
-              duration: Duration(seconds: 2),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        },
-      ),
+    showLanguageSheet(
+      context,
+      title: ref.read(stringsProvider).changeLanguage,
+      currentLang: currentLang,
+      onSelect: (code) {
+        analytics.languageChanged(currentLang, code);
+        notifier.setLanguage(code);
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(ref.read(stringsProvider).languageChanged),
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      },
     );
   }
 
@@ -481,19 +527,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         (_lastLangCode != null && _lastLangCode != langCode)) {
       _initialLoaded = false;
       _filterGeneration++;
-      // 홈에서 필터 칩 삭제 시 서버 구독 업데이트
+      // 홈에서 필터 칩 삭제 시 서버 구독 업데이트. 빈 필터도 upsert —
+      // 행 삭제 금지(키워드 알림·추천 푸시가 같은 행 공유, 2026-10-09).
       if (_lastFilter != null && _lastFilter != filter) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (filter.isEmpty) {
-            pushService.deleteSubscription();
-          } else {
-            pushService.upsertSubscription(filter: filter, langCode: langCode);
-          }
+          pushService.upsertSubscription(filter: filter, langCode: langCode);
         });
       }
     }
     _lastFilter = filter;
     _lastLangCode = langCode;
+    // 키워드 등록/해제 시에도 리셋 — 안 하면 jobListProvider(0)가 새 기준으로
+    // 다시 불러와도 누적 리스트(_jobs)가 이전 결과를 그대로 유지(2026-10-10).
+    final alertKeyword =
+        ref.watch(searchAlertProvider)?['keyword'] as String?;
+    if (_lastAlertKeyword != alertKeyword) {
+      if (_initialLoaded) {
+        _initialLoaded = false;
+        _filterGeneration++;
+      }
+      _lastAlertKeyword = alertKeyword;
+    }
+    final langNotifier = ref.read(languageProvider.notifier);
     final s = ref.watch(stringsProvider);
 
     // 다른 화면에서 홈으로 돌아왔을 때 대기 중인 앱 오픈 광고 표시
@@ -684,25 +739,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                       ),
                     ),
                     // 고정 영역 (결과 행 / 필터 있을 땐 선택 칩 포함)
-                    SliverPersistentHeader(
-                      pinned: true,
-                      delegate: _FixedHeaderDelegate(
-                        // 결과 행은 글꼴 확대 시 커지므로 textScaler 반영 (칩 38 고정)
-                        // +20 slack: 오버플로우 방지
-                        height: (filter.isEmpty ? 0.0 : 38.0)
-                            + MediaQuery.textScalerOf(context).scale(20) + 20,
-                        child: Container(
-                          color: Colors.white,
-                          child: Column(
-                            children: [
-                              if (!filter.isEmpty)
-                                _ReadOnlyFilterChips(filter: filter, ref: ref),
-                              _resultRow(s),
-                            ],
+                    Builder(builder: (context) {
+                      // 검색어 알림 칩(남색)을 필터 칩 앞에 — 등록돼 있으면 표시.
+                      final kw =
+                          ref.watch(searchAlertProvider)?['keyword'] as String?;
+                      final leading = <FilterChipData>[
+                        if (kw != null && kw.isNotEmpty)
+                          FilterChipData(kw,
+                              () => ref.read(searchAlertProvider.notifier).clear(),
+                              navy: true),
+                      ];
+                      final hasChips = !filter.isEmpty || leading.isNotEmpty;
+                      return SliverPersistentHeader(
+                        pinned: true,
+                        delegate: _FixedHeaderDelegate(
+                          height: (hasChips ? 38.0 : 0.0) +
+                              MediaQuery.textScalerOf(context).scale(20) +
+                              20,
+                          child: Container(
+                            color: Colors.white,
+                            child: Column(
+                              children: [
+                                if (hasChips)
+                                  ReadOnlyFilterChips(
+                                      filter: filter,
+                                      ref: ref,
+                                      leading: leading),
+                                _resultRow(s),
+                              ],
+                            ),
                           ),
                         ),
-                      ),
-                    ),
+                      );
+                    }),
                     // 공고 목록
                     ..._buildListSlivers(jobsAsync, langCode),
                   ],
@@ -846,7 +915,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               decoration: BoxDecoration(
-                color: AppColors.carrotDark,
+                // 시그니처 색으로 통일(2026-10-10) — carrotDark는 눌림/보조용.
+                color: AppColors.carrot,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
@@ -997,7 +1067,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                 salaryFallback: ref.read(stringsProvider).salaryByCompany,
                 strings: ref.read(stringsProvider),
                 isFavorite: ref.watch(isFavoriteProvider(job.id)),
+                // 메모=서버(job_notes) + 2.1.6 카드 작성 UX 이식(2026-10-10 머지).
                 memo: ref.watch(jobNotesProvider).valueOrNull?[job.id],
+                memoAddLabel: ref.read(stringsProvider).jobMemoAdd,
+                onMemoTap: () => editJobNote(context, ref, job, langCode),
                 applied: ref.watch(appliedJobIdsProvider).contains(job.id),
                 appliedLabel: ref.read(stringsProvider).jobAppliedChip,
                 onTap: () {
@@ -1016,114 +1089,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   }
 }
 
-class _LanguageBottomSheet extends ConsumerWidget {
-  final String currentLang;
-  final String title;
-  final void Function(String code) onSelect;
-
-  const _LanguageBottomSheet({
-    required this.currentLang,
-    required this.title,
-    required this.onSelect,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final languagesAsync = ref.watch(supportedLanguagesProvider);
-    final languages = languagesAsync.valueOrNull ?? [];
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 40,
-          height: 4,
-          margin: const EdgeInsets.only(top: 14, bottom: 4),
-          decoration: BoxDecoration(
-            color: AppColors.gray100,
-            borderRadius: BorderRadius.circular(2),
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 10, 20, 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.black,
-                ),
-              ),
-              GestureDetector(
-                onTap: () => Navigator.pop(context),
-                child: const Text(
-                  '×',
-                  style: TextStyle(fontSize: 24, color: Color(0xFFBBBBBB)),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Divider(height: 1, color: Color(0xFFF0F0F0)),
-        Flexible(
-          child: ListView.builder(
-            shrinkWrap: true,
-            padding: EdgeInsets.only(bottom: MediaQuery.of(context).padding.bottom),
-            itemCount: languages.length,
-            itemBuilder: (context, index) {
-              final lang = languages[index];
-              final isSelected = lang.code == currentLang;
-              return GestureDetector(
-                onTap: () => onSelect(lang.code),
-                child: Container(
-                  color: isSelected ? AppColors.carrotLight : Colors.transparent,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        lang.name,
-                        style: const TextStyle(
-                          fontSize: 17,
-                          fontWeight: FontWeight.w500,
-                          color: AppColors.black,
-                        ),
-                      ),
-                      Container(
-                        width: 22,
-                        height: 22,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected ? AppColors.carrot : Colors.transparent,
-                          border: Border.all(
-                            color: isSelected ? AppColors.carrot : const Color(0xFFDDDDDD),
-                            width: 2,
-                          ),
-                        ),
-                        child: isSelected
-                            ? const Center(
-                                child: CircleAvatar(
-                                  radius: 4,
-                                  backgroundColor: Colors.white,
-                                ),
-                              )
-                            : null,
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
 
 
 class _TotalCount extends ConsumerWidget {
@@ -1251,285 +1216,6 @@ int _adjustedActiveCount(FilterState filter) {
   return count;
 }
 
-class _FilterChipData {
-  final String label;
-  final VoidCallback onRemove;
-  const _FilterChipData(this.label, this.onRemove);
-}
-
-class _ReadOnlyFilterChips extends StatelessWidget {
-  final FilterState filter;
-  final WidgetRef ref;
-
-  const _ReadOnlyFilterChips({required this.filter, required this.ref});
-
-  @override
-  Widget build(BuildContext context) {
-    final notifier = ref.read(filterStateProvider.notifier);
-    final chips = <_FilterChipData>[];
-
-    // 비자 (선택된 경우만 옵션 로드)
-    if (filter.visaIds.isNotEmpty) {
-      final visaOpts = ref.watch(visaOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.visaIds) {
-        final opt = visaOpts.where((o) => o.id == id).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('visa', opt.label);
-          notifier.toggleVisa(id);
-        }));
-      }
-    }
-    // 직종
-    if (filter.categoryIds.isNotEmpty) {
-      final catOpts = ref.watch(categoryOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.categoryIds) {
-        final opt = catOpts.where((o) => o.id == id).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('category', opt.label);
-          notifier.toggleCategory(id);
-        }));
-      }
-    }
-    // 지역: 시/도 전체면 시/도명, 구/군 개별이면 구/군별 칩
-    if (filter.regionIds.isNotEmpty) {
-      // 캐시가 아직 없으면 로드 트리거 (앱 재시작 시)
-      ref.watch(siDoOptionsProvider);
-      final allRegions = JobRepository.allRegionsCacheSync;
-      final lang = ref.watch(languageProvider);
-      if (allRegions != null) {
-        final siDoGroups = <String, List<int>>{};
-        final siDoTotals = <String, int>{};
-        final siDoHasGuGun = <String, bool>{};
-        for (final r in allRegions) {
-          final si = r['si_name'] as String;
-          if (r['gu_name'] != null) {
-            siDoTotals[si] = (siDoTotals[si] ?? 0) + 1;
-            siDoHasGuGun[si] = true;
-          } else {
-            siDoHasGuGun.putIfAbsent(si, () => false);
-          }
-        }
-        for (final id in filter.regionIds) {
-          final r = allRegions.where((e) => e['id'] == id).firstOrNull;
-          if (r != null) {
-            final si = r['si_name'] as String;
-            if (r['gu_name'] != null || !(siDoHasGuGun[si] ?? false)) {
-              siDoGroups.putIfAbsent(si, () => []).add(id);
-            }
-          }
-        }
-        for (final entry in siDoGroups.entries) {
-          final si = entry.key;
-          final ids = entry.value;
-          final hasGuGun = siDoHasGuGun[si] ?? false;
-          final total = hasGuGun ? (siDoTotals[si] ?? 0) : ids.length;
-          if (ids.length >= total) {
-            // 시/도 전체 삭제: gu_name=null 행 포함 모든 ID 제거
-            final allSiDoIds = allRegions
-                .where((r) => r['si_name'] == si)
-                .map((r) => r['id'] as int)
-                .toSet();
-            chips.add(_FilterChipData(
-              RegionMapper.getLocalizedName(si, lang),
-              () { analytics.filterChipRemoved('region', si);
-                final u = Set<int>.from(filter.regionIds); u.removeAll(allSiDoIds); notifier.setRegionIds(u); },
-            ));
-          } else {
-            for (final id in ids) {
-              final r = allRegions.where((e) => e['id'] == id).firstOrNull;
-              if (r != null && r['gu_name'] != null) {
-                final gu = r['gu_name'] as String;
-                final label = lang == 'ko' ? gu : DistrictNames.getLocalizedGuName(gu, si, lang);
-                chips.add(_FilterChipData(label, () {
-                  analytics.filterChipRemoved('region', gu);
-                  notifier.toggleRegionId(id);
-                }));
-              }
-            }
-          }
-        }
-      }
-    }
-    // 급여
-    if (filter.salaryRange != null && filter.salaryRange!.isNotEmpty) {
-      chips.add(_FilterChipData(filter.salaryRange!, () {
-        analytics.filterChipRemoved('salary', filter.salaryRange!);
-        notifier.setSalary(null);
-      }));
-    }
-    // 고용형태
-    if (filter.employmentTypeIds.isNotEmpty) {
-      final etOpts = ref.watch(employmentTypeOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.employmentTypeIds) {
-        final opt = etOpts.where((o) => o.id == id).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('employment_type', opt.label);
-          notifier.toggleEmploymentType(id);
-        }));
-      }
-    }
-    // 급여유형
-    if (filter.salaryTypes.isNotEmpty) {
-      final s = ref.watch(stringsProvider);
-      final typeLabels = {
-        'hourly': s.salaryHourly, 'daily': s.salaryDaily,
-        'weekly': s.salaryWeekly, 'monthly': s.salaryMonthly,
-        'annual': s.salaryAnnual,
-      };
-      for (final code in filter.salaryTypes) {
-        final label = typeLabels[code] ?? code;
-        chips.add(_FilterChipData(label, () {
-          analytics.filterChipRemoved('salary_type', code);
-          notifier.toggleSalaryType(code);
-        }));
-      }
-    }
-    // 근무요일
-    if (filter.workScheduleIds.isNotEmpty) {
-      final wsOpts = ref.watch(workScheduleOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.workScheduleIds) {
-        final opt = wsOpts.where((o) => o.id == id.toString()).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('work_schedule', opt.label);
-          notifier.toggleWorkSchedule(id);
-        }));
-      }
-    }
-    // 성별
-    if (filter.gender != null) {
-      final s = ref.watch(stringsProvider);
-      final label = filter.gender == 'male' ? s.genderMale
-          : filter.gender == 'female' ? s.genderFemale : s.genderAny;
-      chips.add(_FilterChipData(label, () {
-        analytics.filterChipRemoved('gender', filter.gender!);
-        notifier.setGender(null);
-      }));
-    }
-    // 학력
-    if (filter.educations.isNotEmpty) {
-      final s = ref.watch(stringsProvider);
-      for (final code in filter.educations) {
-        chips.add(_FilterChipData(s.educationLabel(code), () {
-          analytics.filterChipRemoved('education', code);
-          notifier.toggleEducation(code);
-        }));
-      }
-    }
-    // 경력
-    if (filter.experiences.isNotEmpty) {
-      final s = ref.watch(stringsProvider);
-      for (final code in filter.experiences) {
-        chips.add(_FilterChipData(s.experienceLabel(code), () {
-          analytics.filterChipRemoved('experience', code);
-          notifier.toggleExperience(code);
-        }));
-      }
-    }
-    // 한국어능력
-    if (filter.koreanLevelIds.isNotEmpty) {
-      final klOpts = ref.watch(koreanLevelOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.koreanLevelIds) {
-        final opt = klOpts.where((o) => o.id == id.toString()).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('korean_level', opt.label);
-          notifier.toggleKoreanLevel(id);
-        }));
-      }
-    }
-    // 복리후생
-    if (filter.benefitIds.isNotEmpty) {
-      final benOpts = ref.watch(benefitOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.benefitIds) {
-        final opt = benOpts.where((o) => o.id == id).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('benefit', opt.label);
-          notifier.toggleBenefit(id);
-        }));
-      }
-    }
-    // 비자지원
-    if (filter.visaSponsorship != null) {
-      final s = ref.watch(stringsProvider);
-      chips.add(_FilterChipData(s.tabVisaSponsorship, () {
-        analytics.filterChipRemoved('visa_sponsorship', '');
-        notifier.setVisaSponsorship(null);
-      }));
-    }
-    // 언어능력
-    if (filter.languageIds.isNotEmpty) {
-      final langOpts = ref.watch(languageOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.languageIds) {
-        final opt = langOpts.where((o) => o.id == id.toString()).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('language', opt.label);
-          notifier.toggleLanguage(id);
-        }));
-      }
-    }
-    // 국가
-    if (filter.countryIds.isNotEmpty) {
-      final countryOpts = ref.watch(countryOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.countryIds) {
-        final opt = countryOpts.where((o) => o.id == id).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('country', opt.label);
-          notifier.toggleCountry(id);
-        }));
-      }
-    }
-    // 출처(사이트)
-    if (filter.siteIds.isNotEmpty) {
-      final siteOpts = ref.watch(siteOptionsProvider).valueOrNull ?? [];
-      for (final id in filter.siteIds) {
-        final opt = siteOpts.where((o) => o.id == id).firstOrNull;
-        if (opt != null) chips.add(_FilterChipData(opt.label, () {
-          analytics.filterChipRemoved('site', opt.label);
-          notifier.toggleSite(id);
-        }));
-      }
-    }
-
-    if (chips.isEmpty) return const SizedBox.shrink();
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 0, 20, 8),
-      child: SizedBox(
-        height: 30,
-        child: ListView.separated(
-          scrollDirection: Axis.horizontal,
-          itemCount: chips.length,
-          separatorBuilder: (_, __) => const SizedBox(width: 6),
-          itemBuilder: (_, i) => GestureDetector(
-            onTap: chips[i].onRemove, // 칩 전체 탭으로 삭제 (X만 누르기 어려운 문제 해결)
-            behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.only(left: 12, right: 8, top: 6, bottom: 6),
-              decoration: BoxDecoration(
-                color: AppColors.carrotLight,
-                borderRadius: BorderRadius.circular(15),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    chips[i].label,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.carrotDark,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.close, size: 14, color: AppColors.carrot),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _BubbleArrowPainter extends CustomPainter {
   @override

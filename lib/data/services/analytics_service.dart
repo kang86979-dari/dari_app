@@ -1,4 +1,5 @@
 import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AnalyticsService {
   static final AnalyticsService _instance = AnalyticsService._();
@@ -143,8 +144,23 @@ class AnalyticsService {
 
   void filterReset() => log('filter_reset');
 
-  void searchExecuted(String query, int resultCount) =>
-      log('search_executed', {'query': query, 'result_count': resultCount});
+  void searchExecuted(String query, int resultCount) {
+    log('search_executed', {'query': query, 'result_count': resultCount});
+    _logSearchToDb(query);
+  }
+
+  /// 검색어 DB 적재 (search_logs, insert-only RLS) — 인기 검색어 집계용
+  /// (2026-10-10). fire-and-forget: 실패해도 앱 영향 없음.
+  void _logSearchToDb(String query) {
+    final q = query.trim();
+    if (q.isEmpty) return;
+    try {
+      Supabase.instance.client
+          .from('search_logs')
+          .insert({'keyword': q, 'lang_code': _langCode})
+          .then((_) {}, onError: (_) {});
+    } catch (_) {}
+  }
 
   void searchResultTap(String jobId, String query, int position) =>
       log('search_result_tap', {'job_id': jobId, 'query': query, 'position': position});

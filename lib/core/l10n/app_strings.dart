@@ -1,4 +1,5 @@
 class AppStrings {
+
   final String locale;
 
   AppStrings._(this.locale);
@@ -3263,39 +3264,24 @@ class AppStrings {
     'mn': 'Орчуулж байна…',
   }, 'Translating…');
 
-  String get disclaimer => _t(
-    {
-      'ko': '본 공고는 외부 사이트에서 수집된 정보입니다.\n채용 관련 문의는 해당 사이트를 이용해 주세요.',
-      'en':
-          'This information is collected from external sites.\nPlease contact the original site for inquiries.',
-      'zh': '本信息来自外部网站。\n招聘相关咨询请联系原网站。',
-      'hi':
-          'यह जानकारी बाहरी साइटों से एकत्रित है।\nपूछताछ के लिए कृपया मूल साइट से संपर्क करें।',
-      'ja': 'この情報は外部サイトから収集されたものです。\n採用に関するお問い合わせは元のサイトをご利用ください。',
-      'th': 'ข้อมูลนี้รวบรวมจากเว็บไซต์ภายนอก\nกรุณาติดต่อเว็บไซต์ต้นทาง',
-      'vi':
-          'Thông tin này được thu thập từ trang web bên ngoài.\nVui lòng liên hệ trang web gốc để biết thêm.',
-      'bn':
-          'এই তথ্য বাহ্যিক সাইট থেকে সংগৃহীত।\nজিজ্ঞাসার জন্য মূল সাইটে যোগাযোগ করুন।',
-      'ru':
-          'Информация собрана с внешних сайтов.\nПо вопросам обращайтесь на оригинальный сайт.',
-      'id':
-          'Informasi ini dikumpulkan dari situs eksternal.\nSilakan hubungi situs asli untuk pertanyaan.',
-      'ne':
-          'यो जानकारी बाह्य साइटहरूबाट संकलित हो।\nसोधपुछको लागि मूल साइटमा सम्पर्क गर्नुहोस्।',
-      'km':
-          'ព័ត៌មាននេះប្រមូលពីគេហទំព័រខាងក្រៅ។\nសូមទាក់ទងគេហទំព័រដើមសម្រាប់សំណួរ។',
-      'my':
-          'ဤအချက်အလက်များကို ပြင်ပဝဘ်ဆိုက်များမှ စုဆောင်းထားသည်။\nစုံစမ်းမေးမြန်းရန် မူရင်းဆိုက်သို့ ဆက်သွယ်ပါ။',
-      'si':
-          'මෙම තොරතුරු බාහිර වෙබ් අඩවි වලින් එකතු කර ඇත.\nවිමසීම් සඳහා මුල් වෙබ් අඩවිය අමතන්න.',
-      'uz':
-          'Bu ma\'lumotlar tashqi saytlardan to\'plangan.\nSavollar uchun asl saytga murojaat qiling.',
-      'mn':
-          'Энэ мэдээлэл гадны сайтаас цуглуулагдсан.\nЛавлагааны асуулт байвал эх сайтруу хандана уу.',
-    },
-    'This information is collected from external sites.\nPlease contact the original site for inquiries.',
-  );
+ String get disclaimer => _t({
+ 'ko': '본 공고는 외부 사이트에서 수집된 정보입니다.\n채용 관련 문의는 해당 사이트를 이용해 주세요.',
+ 'en': 'This information is collected from external sites.\nPlease contact the original site for inquiries.',
+ 'zh': '本信息来自外部网站。\n招聘相关咨询请联系原网站。',
+ 'hi': 'यह जानकारी बाहरी साइटों से एकत्रित है।\nपूछताछ के लिए कृपया मूल साइट से संपर्क करें।',
+ 'ja': 'この情報は外部サイトから収集されたものです。\n採用に関するお問い合わせは元のサイトをご利用ください。',
+ 'th': 'ข้อมูลนี้รวบรวมจากเว็บไซต์ภายนอก\nกรุณาติดต่อเว็บไซต์ต้นทาง',
+ 'vi': 'Thông tin này được thu thập từ trang web bên ngoài.\nVui lòng liên hệ trang web gốc để biết thêm.',
+ 'bn': 'এই তথ্য বাহ্যিক সাইট থেকে সংগৃহীত।\nজিজ্ঞাসার জন্য মূল সাইটে যোগাযোগ করুন।',
+ 'ru': 'Информация собрана с внешних сайтов.\nПо вопросам обращайтесь на оригинальный сайт.',
+ 'id': 'Informasi ini dikumpulkan dari situs eksternal.\nSilakan hubungi situs asli untuk pertanyaan.',
+ 'ne': 'यो जानकारी बाह्य साइटहरूबाट संकलित हो।\nसोधपुछको लागि मूल साइटमा सम्पर्क गर्नुहोस्।',
+ 'km': 'ព័ត៌មាននេះប្រមូលពីគេហទំព័រខាងក្រៅ។\nសូមទាក់ទងគេហទំព័រដើមសម្រាប់សំណួរ។',
+ 'my': 'ဤအချက်အလက်များကို ပြင်ပဝဘ်ဆိုက်များမှ စုဆောင်းထားသည်။\nစုံစမ်းမေးမြန်းရန် မူရင်းဆိုက်သို့ ဆက်သွယ်ပါ။',
+ 'si': 'මෙම තොරතුරු බාහිර වෙබ් අඩවි වලින් එකතු කර ඇත.\nවිමසීම් සඳහා මුල් වෙබ් අඩවිය අමතන්න.',
+ 'uz': 'Bu ma\'lumotlar tashqi saytlardan to\'plangan.\nSavollar uchun asl saytga murojaat qiling.',
+ 'mn': 'Энэ мэдээлэл гадны сайтаас цуглуулагдсан.\nЛавлагааны асуулт байвал эх сайтруу хандана уу.',
+ }, 'This information is collected from external sites.\nPlease contact the original site for inquiries.');
 
   String get apply => _t({
     'ko': '지원하러 가기',
@@ -3797,28 +3783,24 @@ class AppStrings {
   }, 'Translation failed');
 
   // ── Location ──
-  String get locationDeniedMessage => _t(
-    {
-      'ko': '위치 권한 없이도 사용할 수 있어요\n필터에서 지역을 직접 선택할 수 있습니다',
-      'en':
-          'You can use the app without location\nSelect a region in the filter instead',
-      'zh': '不使用定位也可以使用\n可以在筛选中直接选择地区',
-      'hi': 'स्थान के बिना भी उपयोग कर सकते हैं\nफ़िल्टर में क्षेत्र चुनें',
-      'ja': '位置情報なしでも利用できます\nフィルターで地域を選択できます',
-      'th': 'ใช้งานได้โดยไม่ต้องเปิดตำแหน่ง\nเลือกภูมิภาคในตัวกรองแทน',
-      'vi': 'Có thể dùng mà không cần vị trí\nChọn khu vực trong bộ lọc',
-      'bn': 'অবস্থান ছাড়াও ব্যবহার করতে পারবেন\nফিল্টারে এলাকা নির্বাচন করুন',
-      'ru': 'Можно использовать без геолокации\nВыберите регион в фильтре',
-      'id': 'Bisa digunakan tanpa lokasi\nPilih wilayah di filter',
-      'ne': 'स्थान बिना पनि प्रयोग गर्न सकिन्छ\nफिल्टरमा क्षेत्र छान्नुहोस्',
-      'km': 'អាចប្រើដោយមិនចាំបាច់ទីតាំង\nជ្រើសរើសតំបន់នៅក្នុងតម្រង',
-      'my': 'တည်နေရာမလိုဘဲ သုံးနိုင်ပါသည်\nစစ်ထုတ်မှုတွင် ဒေသရွေးချယ်ပါ',
-      'si': 'ස්ථානය නැතිවත් භාවිතා කළ හැක\nපෙරහනෙහි ප්‍රදේශය තෝරන්න',
-      'uz': 'Joylashuvsiz ham foydalanish mumkin\nFilterda hududni tanlang',
-      'mn': 'Байршилгүйгээр ашиглах боломжтой\nШүүлтүүрт бүсийг сонгоно уу',
-    },
-    'You can use the app without location\nSelect a region in the filter instead',
-  );
+ String get locationDeniedMessage => _t({
+       'ko': '위치 권한 없이도 사용할 수 있어요\n필터에서 지역을 직접 선택할 수 있습니다',
+       'en': 'You can use the app without location\nSelect a region in the filter instead',
+       'zh': '不使用定位也可以使用\n可以在筛选中直接选择地区',
+       'hi': 'स्थान के बिना भी उपयोग कर सकते हैं\nफ़िल्टर में क्षेत्र चुनें',
+       'ja': '位置情報なしでも利用できます\nフィルターで地域を選択できます',
+       'th': 'ใช้งานได้โดยไม่ต้องเปิดตำแหน่ง\nเลือกภูมิภาคในตัวกรองแทน',
+       'vi': 'Có thể dùng mà không cần vị trí\nChọn khu vực trong bộ lọc',
+       'bn': 'অবস্থান ছাড়াও ব্যবহার করতে পারবেন\nফিল্টারে এলাকা নির্বাচন করুন',
+       'ru': 'Можно использовать без геолокации\nВыберите регион в фильтре',
+       'id': 'Bisa digunakan tanpa lokasi\nPilih wilayah di filter',
+       'ne': 'स्थान बिना पनि प्रयोग गर्न सकिन्छ\nफिल्टरमा क्षेत्र छान्नुहोस्',
+       'km': 'អាចប្រើដោយមិនចាំបាច់ទីតាំង\nជ្រើសរើសតំបន់នៅក្នុងតម្រង',
+       'my': 'တည်နေရာမလိုဘဲ သုံးနိုင်ပါသည်\nစစ်ထုတ်မှုတွင် ဒေသရွေးချယ်ပါ',
+       'si': 'ස්ථානය නැතිවත් භාවිතා කළ හැක\nපෙරහනෙහි ප්‍රදේශය තෝරන්න',
+       'uz': 'Joylashuvsiz ham foydalanish mumkin\nFilterda hududni tanlang',
+       'mn': 'Байршилгүйгээр ашиглах боломжтой\nШүүлтүүрт бүсийг сонгоно уу',
+     }, 'You can use the app without location\nSelect a region in the filter instead');
 
   String get confirm => _t({
     'ko': '확인',
@@ -5516,23 +5498,83 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
   String get applyHistoryAppliedDate =>
       _t({'ko': '지원일', 'en': 'Applied'}, 'Applied');
   // 공고 메모 (즐겨찾기·지원 내역 공용, 2026-09-26)
-  String get jobMemoTitle => _t({'ko': '메모', 'en': 'Memo'}, 'Memo');
-  String get jobMemoAdd => _t({'ko': '+ 메모 남기기', 'en': '+ Add memo'}, '+ Add memo');
-  String get jobMemoPlaceholder => _t({
-    'ko': '이 공고에 대해 기억할 것을 적어보세요',
-    'en': 'Write anything to remember about this job',
-  }, 'Write anything to remember about this job');
-  String get jobMemoSave => _t({'ko': '저장', 'en': 'Save'}, 'Save');
+ String get jobMemoTitle => _t({
+ 'ko': '메모', 'en': 'Memo', 'zh': '备注', 'hi': 'नोट',
+ 'ja': 'メモ', 'th': 'บันทึก', 'vi': 'Ghi chú', 'bn': 'নোট',
+ 'ru': 'Заметка', 'id': 'Catatan', 'ne': 'टिप्पणी', 'km': 'កំណត់ចំណាំ',
+ 'my': 'မှတ်စု', 'si': 'සටහන', 'uz': 'Eslatma', 'mn': 'Тэмдэглэл',
+ }, 'Memo');
+ String get jobMemoAdd => _t({
+ 'ko': '+ 메모 남기기', 'en': '+ Add memo', 'zh': '+ 添加备注',
+ 'hi': '+ नोट जोड़ें', 'ja': '+ メモを残す', 'th': '+ เพิ่มบันทึก',
+ 'vi': '+ Thêm ghi chú', 'bn': '+ নোট যোগ করুন', 'ru': '+ Добавить заметку',
+ 'id': '+ Tambah catatan', 'ne': '+ टिप्पणी थप्नुहोस्',
+ 'km': '+ បន្ថែមកំណត់ចំណាំ', 'my': '+ မှတ်စုထည့်ရန်',
+ 'si': '+ සටහනක් එක් කරන්න', 'uz': "+ Eslatma qo'shish",
+ 'mn': '+ Тэмдэглэл нэмэх',
+ }, '+ Add memo');
+ String get jobMemoPlaceholder => _t({
+ 'ko': '이 공고에 대해 기억할 것을 적어보세요',
+ 'en': 'Write anything to remember about this job',
+ 'zh': '写下关于这个职位要记住的内容',
+ 'hi': 'इस नौकरी के बारे में याद रखने योग्य बातें लिखें',
+ 'ja': 'この求人について覚えておきたいことを書きましょう',
+ 'th': 'เขียนสิ่งที่ต้องจำเกี่ยวกับงานนี้',
+ 'vi': 'Ghi lại điều cần nhớ về việc làm này',
+ 'bn': 'এই চাকরি সম্পর্কে মনে রাখার কথা লিখুন',
+ 'ru': 'Запишите, что нужно запомнить об этой вакансии',
+ 'id': 'Tulis hal yang perlu diingat tentang lowongan ini',
+ 'ne': 'यो जागिरबारे सम्झनुपर्ने कुरा लेख्नुहोस्',
+ 'km': 'សរសេរអ្វីដែលត្រូវចងចាំអំពីការងារនេះ',
+ 'my': 'ဤအလုပ်အကြောင်း မှတ်ထားလိုသည်များကို ရေးပါ',
+ 'si': 'මෙම රැකියාව ගැන මතක තබා ගත යුතු දේ ලියන්න',
+ 'uz': "Bu ish haqida eslab qolish kerak bo'lgan narsani yozing",
+ 'mn': 'Энэ ажлын талаар санах зүйлээ бичнэ үү',
+ }, 'Write anything to remember about this job');
+ String get jobMemoSave => _t({
+ 'ko': '저장', 'en': 'Save', 'zh': '保存', 'hi': 'सहेजें',
+ 'ja': '保存', 'th': 'บันทึก', 'vi': 'Lưu', 'bn': 'সংরক্ষণ',
+ 'ru': 'Сохранить', 'id': 'Simpan', 'ne': 'सुरक्षित', 'km': 'រក្សាទុក',
+ 'my': 'သိမ်းရန်', 'si': 'සුරකින්න', 'uz': 'Saqlash', 'mn': 'Хадгалах',
+ }, 'Save');
   String get myPageMemos =>
       _t({'ko': '메모 관리', 'en': 'Manage Memos'}, 'Manage Memos');
-  String get myMemosEmpty => _t({
-    'ko': '아직 메모한 공고가 없어요',
-    'en': "You haven't added any memos yet",
-  }, "You haven't added any memos yet");
-  String get myMemosEmptyDesc => _t({
-    'ko': '공고 상세에서 메모를 남기면\n여기에 모여요',
-    'en': 'Memos you write on job postings\nwill be collected here',
-  }, 'Memos you write on job postings\nwill be collected here');
+ String get myMemosEmpty => _t({
+ 'ko': '아직 메모한 공고가 없어요',
+ 'en': "You haven't added any memos yet",
+ 'zh': '还没有添加备注的职位',
+ 'hi': 'अभी तक कोई नोट नहीं जोड़ा गया',
+ 'ja': 'まだメモした求人がありません',
+ 'th': 'ยังไม่มีงานที่บันทึกไว้',
+ 'vi': 'Chưa có việc làm nào được ghi chú',
+ 'bn': 'এখনো কোনো নোট যোগ করা হয়নি',
+ 'ru': 'Вы ещё не добавили заметок',
+ 'id': 'Belum ada catatan yang ditambahkan',
+ 'ne': 'अहिलेसम्म कुनै टिप्पणी थपिएको छैन',
+ 'km': 'មិនទាន់មានកំណត់ចំណាំនៅឡើយ',
+ 'my': 'မှတ်စုထည့်ထားသော အလုပ်မရှိသေးပါ',
+ 'si': 'තවම සටහන් එක් කර නැත',
+ 'uz': "Hali eslatma qo'shilmagan",
+ 'mn': 'Одоогоор тэмдэглэл нэмээгүй байна',
+ }, "You haven't added any memos yet");
+ String get myMemosEmptyDesc => _t({
+ 'ko': '공고에 메모를 남기면\n여기에 모여요',
+ 'en': 'Memos you write on job postings\nwill be collected here',
+ 'zh': '在职位上写的备注\n会集中显示在这里',
+ 'hi': 'नौकरियों पर लिखे नोट्स\nयहां इकट्ठा होंगे',
+ 'ja': '求人に残したメモが\nここに集まります',
+ 'th': 'บันทึกที่เขียนไว้ในงาน\nจะรวมอยู่ที่นี่',
+ 'vi': 'Ghi chú bạn viết trên tin tuyển dụng\nsẽ được gom tại đây',
+ 'bn': 'চাকরিতে লেখা নোটগুলো\nএখানে জমা হবে',
+ 'ru': 'Заметки к вакансиям\nбудут собраны здесь',
+ 'id': 'Catatan yang kamu tulis di lowongan\nakan terkumpul di sini',
+ 'ne': 'जागिरमा लेखेका टिप्पणीहरू\nयहाँ जम्मा हुन्छन्',
+ 'km': 'កំណត់ចំណាំដែលសរសេរលើការងារ\nនឹងប្រមូលផ្តុំនៅទីនេះ',
+ 'my': 'အလုပ်များတွင် ရေးထားသောမှတ်စုများ\nဤနေရာတွင် စုစည်းပါမည်',
+ 'si': 'රැකියාවල ලියූ සටහන්\nමෙහි එකතු වේ',
+ 'uz': "Ish e'lonlariga yozgan eslatmalaringiz\nshu yerda to'planadi",
+ 'mn': 'Ажлын зард бичсэн тэмдэглэлүүд\nэнд цугларна',
+ }, 'Memos you write on job postings\nwill be collected here');
   String get applyHistoryEmptyDesc => _t({
     'ko': '마음에 드는 공고에 지원하면\n여기서 한눈에 관리할 수 있어요',
     'en': 'Apply to jobs you like and\nmanage them all in one place',
@@ -5543,7 +5585,13 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
   // 지원 내역에서는 "내가 지원했던 방법"이라 별도 문자열(2026-09-26).
   String get applyHistoryMethodLabel =>
       _t({'ko': '지원한 방법', 'en': 'Applied via'}, 'Applied via');
-  String get sortOldest => _t({'ko': '오래된순', 'en': 'Oldest'}, 'Oldest');
+ String get sortOldest => _t({
+ 'ko': '오래된순', 'en': 'Oldest', 'zh': '最早优先', 'hi': 'सबसे पुराने',
+ 'ja': '古い順', 'th': 'เก่าสุด', 'vi': 'Cũ nhất', 'bn': 'পুরোনো আগে',
+ 'ru': 'Сначала старые', 'id': 'Terlama', 'ne': 'पुरानो क्रम',
+ 'km': 'ចាស់បំផុត', 'my': 'အဟောင်းဆုံး', 'si': 'පැරණිම',
+ 'uz': 'Eng eskisi', 'mn': 'Хамгийн хуучин',
+ }, 'Oldest');
   String get applyHistoryEmpty => _t({
     'ko': '아직 지원한 공고가 없어요',
     'en': "You haven't applied to any jobs yet",
@@ -8198,8 +8246,471 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'mn': 'Одоогоор хаяг алга. Дээрх товчоор нэмнэ үү.',
   }, 'No address yet. Please add one using the buttons above.');
 
+  
+  // ── 2.1.6 머지: release 브랜치 전용 문자열 (2026-10-10) ──
+ // ── 키워드 알림 (검색어+필터 조합, 2026-10-09) ──
+ // 검색 결과 상단 알림 제안 배너 — {q}=검색어 (2026-10-10)
+ String searchAlertOfferTitle(String q) => _t({
+ 'ko': "'$q' 키워드를 등록할까요? 새 공고 알림도 보내드려요",
+ 'en': "Save '$q' as your keyword? You'll also get new job alerts",
+ 'zh': "将'$q'注册为关键词吗？有新职位也会通知您",
+ 'hi': "'$q' को कीवर्ड के रूप में सहेजें? नई नौकरियों की सूचना भी मिलेगी",
+ 'ja': "'$q'をキーワード登録しますか？新着求人の通知も届きます",
+ 'th': "บันทึก '$q' เป็นคำค้นไหม? จะได้รับแจ้งเตือนงานใหม่ด้วย",
+ 'vi': "Đăng ký '$q' làm từ khóa? Bạn cũng sẽ nhận thông báo việc mới",
+ 'bn': "'$q' কীওয়ার্ড হিসেবে সংরক্ষণ করবেন? নতুন চাকরির বিজ্ঞপ্তিও পাবেন",
+ 'ru': "Сохранить '$q' как ключевое слово? Вы также получите уведомления о новых вакансиях",
+ 'id': "Simpan '$q' sebagai kata kunci? Kamu juga akan dapat notifikasi lowongan baru",
+ 'ne': "'$q' किवर्डको रूपमा दर्ता गर्ने? नयाँ जागिरको सूचना पनि पाउनुहुनेछ",
+ 'km': "ចុះឈ្មោះ '$q' ជាពាក្យគន្លឹះ? នឹងទទួលការជូនដំណឹងការងារថ្មីផងដែរ",
+ 'my': "'$q' ကို keyword အဖြစ် မှတ်ထားမလား? အလုပ်အသစ်အသိပေးချက်လည်း ရပါမည်",
+ 'si': "'$q' මූලපදයක් ලෙස ලියාපදිංචි කරන්නද? නව රැකියා දැනුම්දීම් ද ලැබේ",
+ 'uz': "'$q' kalit so'z sifatida saqlansinmi? Yangi ishlardan ham xabar olasiz",
+ 'mn': "'$q'-г түлхүүр үгээр бүртгэх үү? Шинэ ажлын мэдэгдэл ч авна",
+ }, "Save '$q' as your keyword? You'll also get new job alerts");
+
+ String get searchAlertOfferButton => _t({
+ 'ko': '등록', 'en': 'Add', 'zh': '注册', 'hi': 'जोड़ें',
+ 'ja': '登録', 'th': 'บันทึก', 'vi': 'Đăng ký',
+ 'bn': 'যোগ', 'ru': 'Добавить', 'id': 'Simpan',
+ 'ne': 'दर्ता', 'km': 'ចុះឈ្មោះ', 'my': 'မှတ်ရန်',
+ 'si': 'ලියාපදිංචි', 'uz': 'Saqlash', 'mn': 'Бүртгэх',
+ }, 'Add');
+
+ String get searchAlertChangeButton => _t({
+ 'ko': '키워드 변경', 'en': 'Change keyword', 'zh': '更换关键词', 'hi': 'कीवर्ड बदलें',
+ 'ja': 'キーワード変更', 'th': 'เปลี่ยนคำค้น', 'vi': 'Đổi từ khóa',
+ 'bn': 'কীওয়ার্ড বদলান', 'ru': 'Изменить', 'id': 'Ganti kata kunci',
+ 'ne': 'किवर्ड बदल्नुहोस्', 'km': 'ប្ដូរពាក្យគន្លឹះ', 'my': 'ပြောင်းရန်',
+ 'si': 'වෙනස් කරන්න', 'uz': "O'zgartirish", 'mn': 'Солих',
+ }, 'Change keyword');
+
+ String get searchAlertOffButton => _t({
+ 'ko': '해제', 'en': 'Turn off', 'zh': '取消', 'hi': 'बंद करें',
+ 'ja': '解除', 'th': 'ปิด', 'vi': 'Tắt', 'bn': 'বন্ধ করুন',
+ 'ru': 'Отключить', 'id': 'Matikan', 'ne': 'बन्द गर्नुहोस्', 'km': 'បិទ',
+ 'my': 'ပိတ်ရန်', 'si': 'අක්‍රිය', 'uz': 'O\'chirish', 'mn': 'Унтраах',
+ }, 'Turn off');
+
+ String searchAlertActiveBanner(String q) => _t({
+ 'ko': "'$q' 키워드가 등록되어 있어요",
+ 'en': "'$q' is saved as your keyword",
+ 'zh': "'$q'已注册为关键词",
+ 'hi': "'$q' कीवर्ड के रूप में सहेजा गया है",
+ 'ja': "'$q'がキーワード登録されています",
+ 'th': "บันทึก '$q' เป็นคำค้นแล้ว",
+ 'vi': "'$q' đã được đăng ký làm từ khóa",
+ 'bn': "'$q' কীওয়ার্ড হিসেবে সংরক্ষিত আছে",
+ 'ru': "'$q' сохранено как ключевое слово",
+ 'id': "'$q' sudah tersimpan sebagai kata kunci",
+ 'ne': "'$q' किवर्डको रूपमा दर्ता छ",
+ 'km': "'$q' ត្រូវបានចុះឈ្មោះជាពាក្យគន្លឹះ",
+ 'my': "'$q' ကို keyword အဖြစ် မှတ်ထားပြီး",
+ 'si': "'$q' මූලපදයක් ලෙස ලියාපදිංචි වී ඇත",
+ 'uz': "'$q' kalit so'z sifatida saqlangan",
+ 'mn': "'$q' түлхүүр үгээр бүртгэгдсэн",
+ }, "'$q' is saved as your keyword");
+
+ String get searchAlertOnToast => _t({
+ 'ko': '키워드가 등록됐어요. 새 공고 알림을 보내드려요',
+ 'en': "Keyword saved. You'll get new job alerts",
+ 'zh': '关键词已注册，将通知您新职位',
+ 'hi': 'कीवर्ड सहेजा गया। नई नौकरी की सूचना मिलेगी',
+ 'ja': 'キーワードを登録しました。新着求人をお知らせします',
+ 'th': 'บันทึกคำค้นแล้ว จะแจ้งเตือนงานใหม่',
+ 'vi': 'Đã đăng ký từ khóa. Bạn sẽ nhận thông báo việc mới',
+ 'bn': 'কীওয়ার্ড সংরক্ষিত। নতুন চাকরির বিজ্ঞপ্তি পাবেন',
+ 'ru': 'Ключевое слово сохранено. Вы получите уведомления о новых вакансиях',
+ 'id': 'Kata kunci tersimpan. Kamu akan dapat notifikasi lowongan baru',
+ 'ne': 'किवर्ड दर्ता भयो। नयाँ जागिरको सूचना पाउनुहुनेछ',
+ 'km': 'បានចុះឈ្មោះពាក្យគន្លឹះ។ នឹងជូនដំណឹងការងារថ្មី',
+ 'my': 'Keyword မှတ်ထားပြီး။ အလုပ်အသစ်အသိပေးချက်ရပါမည်',
+ 'si': 'මූලපදය ලියාපදිංචි විය. නව රැකියා දැනුම්දීම් ලැබේ',
+ 'uz': "Kalit so'z saqlandi. Yangi ishlardan xabar olasiz",
+ 'mn': 'Түлхүүр үг бүртгэгдлээ. Шинэ ажлын мэдэгдэл авна',
+ }, "Keyword saved. You'll get new job alerts");
+
+ String get searchAlertOffToast => _t({
+ 'ko': '키워드가 해제됐어요',
+ 'en': 'Keyword removed',
+ 'zh': '已删除关键词',
+ 'hi': 'कीवर्ड हटाया गया',
+ 'ja': 'キーワードを解除しました',
+ 'th': 'ลบคำค้นแล้ว',
+ 'vi': 'Đã xóa từ khóa',
+ 'bn': 'কীওয়ার্ড সরানো হয়েছে',
+ 'ru': 'Ключевое слово удалено',
+ 'id': 'Kata kunci dihapus',
+ 'ne': 'किवर्ड हटाइयो',
+ 'km': 'បានលុបពាក្យគន្លឹះ',
+ 'my': 'Keyword ဖယ်ရှားပြီး',
+ 'si': 'මූලපදය ඉවත් කළා',
+ 'uz': "Kalit so'z o'chirildi",
+ 'mn': 'Түлхүүр үг устгагдлаа',
+ }, 'Keyword removed');
+
+ String get searchAlertReplaceTitle => _t({
+ 'ko': '키워드를 변경할까요?',
+ 'en': 'Change your keyword?',
+ 'zh': '更换关键词吗？',
+ 'hi': 'कीवर्ड बदलें?',
+ 'ja': 'キーワードを変更しますか？',
+ 'th': 'เปลี่ยนคำค้นไหม?',
+ 'vi': 'Đổi từ khóa?',
+ 'bn': 'কীওয়ার্ড বদলাবেন?',
+ 'ru': 'Изменить ключевое слово?',
+ 'id': 'Ganti kata kunci?',
+ 'ne': 'किवर्ड बदल्ने?',
+ 'km': 'ប្ដូរពាក្យគន្លឹះ?',
+ 'my': 'Keyword ပြောင်းမလား?',
+ 'si': 'මූලපදය වෙනස් කරන්නද?',
+ 'uz': "Kalit so'z o'zgartirilsinmi?",
+ 'mn': 'Түлхүүр үг солих уу?',
+ }, 'Change your keyword?');
+
+ String get searchAlertReplaceBody => _t({
+ 'ko': '키워드는 한 번에 1개만 등록할 수 있어요.',
+ 'en': 'Only one keyword can be saved at a time.',
+ 'zh': '一次只能注册1个关键词。',
+ 'hi': 'एक समय में केवल एक कीवर्ड सहेजा जा सकता है।',
+ 'ja': 'キーワードは一度に1件のみ登録できます。',
+ 'th': 'บันทึกคำค้นได้ครั้งละ 1 รายการ',
+ 'vi': 'Mỗi lần chỉ lưu được 1 từ khóa.',
+ 'bn': 'একবারে শুধু ১টি কীওয়ার্ড রাখা যায়।',
+ 'ru': 'Одновременно можно сохранить только одно ключевое слово.',
+ 'id': 'Hanya 1 kata kunci yang bisa disimpan sekaligus.',
+ 'ne': 'एक पटकमा किवर्ड १ वटा मात्र राख्न मिल्छ।',
+ 'km': 'អាចចុះឈ្មោះពាក្យគន្លឹះបានម្ដងមួយប៉ុណ្ណោះ។',
+ 'my': 'တစ်ကြိမ်လျှင် keyword ၁ ခုသာသိမ်းနိုင်သည်။',
+ 'si': 'වරකට මූලපද 1ක් පමණක් ලියාපදිංචි කළ හැක.',
+ 'uz': "Bir vaqtda faqat 1 ta kalit so'z saqlanadi.",
+ 'mn': 'Нэг удаад зөвхөн 1 түлхүүр үг бүртгэгдэнэ.',
+ }, 'Only one keyword can be saved at a time.');
+
+ /// 키워드 교체 본문 템플릿 — {from}/{to} 자리에 색 강조 키워드 삽입.
+ String get searchAlertReplaceTemplate => _t({
+ 'ko': '{from} 대신 {to} 키워드로 알림을 받아요.',
+ 'en': 'Your alert for {from} will be replaced with {to}.',
+ 'zh': '{from} 的提醒将改为 {to}。',
+ 'hi': '{from} का अलर्ट {to} से बदल जाएगा।',
+ 'ja': '{from} の通知が {to} に変わります。',
+ 'th': 'การแจ้งเตือน {from} จะเปลี่ยนเป็น {to}',
+ 'vi': 'Thông báo cho {from} sẽ được thay bằng {to}.',
+ 'bn': '{from} এর সতর্কতা {to} দিয়ে বদলে যাবে।',
+ 'ru': 'Уведомления по {from} будут заменены на {to}.',
+ 'id': 'Notifikasi untuk {from} akan diganti dengan {to}.',
+ 'ne': '{from} को सूचना {to} ले बदलिनेछ।',
+ 'km': 'ការជូនដំណឹង {from} នឹងប្ដូរទៅ {to}។',
+ 'my': '{from} အသိပေးချက်ကို {to} ဖြင့် အစားထိုးပါမည်။',
+ 'si': '{from} දැනුම්දීම {to} ලෙස වෙනස් වේ.',
+ 'uz': "{from} uchun bildirishnoma {to} bilan almashtiriladi.",
+ 'mn': '{from} мэдэгдэл {to} болж солигдоно.',
+ }, 'Your alert for {from} will be replaced with {to}.');
+
+ String get searchAlertReplaceConfirm => _t({
+ 'ko': '변경', 'en': 'Change', 'zh': '更换', 'hi': 'बदलें',
+ 'ja': '変更', 'th': 'เปลี่ยน', 'vi': 'Đổi', 'bn': 'বদলান',
+ 'ru': 'Изменить', 'id': 'Ganti', 'ne': 'बदल्ने', 'km': 'ប្ដូរ',
+ 'my': 'ပြောင်းရန်', 'si': 'වෙනස්', 'uz': "O'zgartirish", 'mn': 'Солих',
+ }, 'Change');
+
+ String get myMemosTitle => _t({
+ 'ko': '내 메모', 'en': 'My Memos', 'zh': '我的备注', 'hi': 'मेरे नोट्स',
+ 'ja': 'マイメモ', 'th': 'บันทึกของฉัน', 'vi': 'Ghi chú của tôi',
+ 'bn': 'আমার নোট', 'ru': 'Мои заметки', 'id': 'Catatan saya',
+ 'ne': 'मेरा टिप्पणीहरू', 'km': 'កំណត់ចំណាំរបស់ខ្ញុំ',
+ 'my': 'ကျွန်ုပ်၏မှတ်စုများ', 'si': 'මගේ සටහන්',
+ 'uz': 'Mening eslatmalarim', 'mn': 'Миний тэмдэглэл',
+ }, 'My Memos');
+
+ String get searchAlertDeleteAsk => _t({
+ 'ko': '키워드 알림을 삭제할까요?',
+ 'en': 'Delete this keyword alert?',
+ 'zh': '要删除关键词提醒吗？',
+ 'hi': 'कीवर्ड अलर्ट हटाएं?',
+ 'ja': 'キーワード通知を削除しますか？',
+ 'th': 'ลบการแจ้งเตือนคำค้นไหม?',
+ 'vi': 'Xóa thông báo từ khóa này?',
+ 'bn': 'কীওয়ার্ড সতর্কতা মুছবেন?',
+ 'ru': 'Удалить оповещение по ключевому слову?',
+ 'id': 'Hapus notifikasi kata kunci ini?',
+ 'ne': 'किवर्ड सूचना हटाउने?',
+ 'km': 'លុបការជូនដំណឹងពាក្យគន្លឹះ?',
+ 'my': 'ကီးဝေါ့အသိပေးချက်ကို ဖျက်မလား?',
+ 'si': 'මූල පද දැනුම්දීම මකන්නද?',
+ 'uz': 'Kalit so\'z bildirishnomasi o\'chirilsinmi?',
+ 'mn': 'Түлхүүр үгийн мэдэгдлийг устгах уу?',
+ }, 'Delete this keyword alert?');
+
+ String get settingsAlertConditions => _t({
+ 'ko': '알림 조건',
+ 'en': 'Alert conditions',
+ 'zh': '提醒条件',
+ 'hi': 'अलर्ट शर्तें',
+ 'ja': '通知条件',
+ 'th': 'เงื่อนไขแจ้งเตือน',
+ 'vi': 'Điều kiện thông báo',
+ 'bn': 'সতর্কতার শর্ত',
+ 'ru': 'Условия оповещений',
+ 'id': 'Kondisi notifikasi',
+ 'ne': 'सूचना सर्तहरू',
+ 'km': 'លក្ខខណ្ឌជូនដំណឹង',
+ 'my': 'အသိပေးချက်အခြေအနေများ',
+ 'si': 'දැනුම්දීම් කොන්දේසි',
+ 'uz': 'Bildirishnoma shartlari',
+ 'mn': 'Мэдэгдлийн нөхцөл',
+ }, 'Alert conditions');
+
+ String get settingsMyFilterAuto => _t({
+ 'ko': '내 필터',
+ 'en': 'My filters',
+ 'zh': '我的筛选',
+ 'hi': 'मेरे फ़िल्टर',
+ 'ja': 'マイフィルター',
+ 'th': 'ตัวกรองของฉัน',
+ 'vi': 'Bộ lọc của tôi',
+ 'bn': 'আমার ফিল্টার',
+ 'ru': 'Мои фильтры',
+ 'id': 'Filter saya',
+ 'ne': 'मेरो फिल्टर',
+ 'km': 'តម្រងរបស់ខ្ញុំ',
+ 'my': 'ကျွန်ုပ်၏စစ်ထုတ်မှု',
+ 'si': 'මගේ පෙරහන්',
+ 'uz': 'Mening filtrlarim',
+ 'mn': 'Миний шүүлтүүр',
+ }, 'My filters');
+
+ String get settingsMyFilterCaption => _t({
+ 'ko': '홈 필터를 바꾸면 자동으로 바뀌어요',
+ 'en': 'Updates automatically with your home filters',
+ 'zh': '随首页筛选自动更新',
+ 'hi': 'होम फ़िल्टर बदलने पर अपने आप बदलता है',
+ 'ja': 'ホームのフィルター変更に合わせて自動更新',
+ 'th': 'อัปเดตอัตโนมัติตามตัวกรองหน้าแรก',
+ 'vi': 'Tự cập nhật theo bộ lọc trang chủ',
+ 'bn': 'হোম ফিল্টার বদলালে স্বয়ংক্রিয়ভাবে বদলায়',
+ 'ru': 'Меняется автоматически с фильтрами на главной',
+ 'id': 'Otomatis mengikuti filter beranda',
+ 'ne': 'होम फिल्टर बदल्दा स्वतः बदलिन्छ',
+ 'km': 'ផ្លាស់ប្តូរដោយស្វ័យប្រវត្តិតាមតម្រងទំព័រដើម',
+ 'my': 'ပင်မစစ်ထုတ်မှုပြောင်းလျှင် အလိုအလျောက်ပြောင်းသည်',
+ 'si': 'මුල් පිටු පෙරහන් සමඟ ස්වයංක්‍රීයව යාවත්කාල වේ',
+ 'uz': 'Bosh sahifa filtri bilan avtomatik yangilanadi',
+ 'mn': 'Нүүр хуудасны шүүлтүүрээр автоматаар шинэчлэгдэнэ',
+ }, 'Updates automatically with your home filters');
+
+ String get settingsMyFilterEmpty => _t({
+ 'ko': '설정된 필터가 없어요',
+ 'en': 'No filters set',
+ 'zh': '未设置筛选',
+ 'hi': 'कोई फ़िल्टर सेट नहीं',
+ 'ja': 'フィルターが設定されていません',
+ 'th': 'ยังไม่ได้ตั้งตัวกรอง',
+ 'vi': 'Chưa đặt bộ lọc',
+ 'bn': 'কোনো ফিল্টার সেট নেই',
+ 'ru': 'Фильтры не заданы',
+ 'id': 'Belum ada filter',
+ 'ne': 'फिल्टर सेट छैन',
+ 'km': 'មិនទាន់កំណត់តម្រង',
+ 'my': 'စစ်ထုတ်မှုမသတ်မှတ်ရသေး',
+ 'si': 'පෙරහන් සකසා නැත',
+ 'uz': 'Filtr o\'rnatilmagan',
+ 'mn': 'Шүүлтүүр тохируулаагүй',
+ }, 'No filters set');
+
+ String get settingsRecommendPush => _t({
+ 'ko': '추천 공고 알림',
+ 'en': 'Recommended job alert',
+ 'zh': '推荐职位提醒',
+ 'hi': 'अनुशंसित नौकरी अलर्ट',
+ 'ja': 'おすすめ求人の通知',
+ 'th': 'แจ้งเตือนงานแนะนำ',
+ 'vi': 'Thông báo việc làm đề xuất',
+ 'bn': 'প্রস্তাবিত চাকরির বিজ্ঞপ্তি',
+ 'ru': 'Рекомендуемые вакансии',
+ 'id': 'Notifikasi lowongan rekomendasi',
+ 'ne': 'सिफारिस जागिर सूचना',
+ 'km': 'ការជូនដំណឹងការងារណែនាំ',
+ 'my': 'အကြံပြုအလုပ် အသိပေးချက်',
+ 'si': 'නිර්දේශිත රැකියා දැනුම්දීම',
+ 'uz': 'Tavsiya etilgan ish bildirishnomasi',
+ 'mn': 'Санал болгох ажлын мэдэгдэл',
+ }, 'Recommended job alert');
+
+ String get settingsRecommendPushDesc => _t({
+ 'ko': '조건에 맞는 상세 공고 1건을 하루 1번 알려드려요',
+ 'en': 'One matching job in detail, once a day',
+ 'zh': '每天推送1条符合条件的职位',
+ 'hi': 'दिन में एक बार एक उपयुक्त नौकरी',
+ 'ja': '条件に合う求人を1日1件お知らせ',
+ 'th': 'แนะนำงานที่ตรงเงื่อนไขวันละ 1 งาน',
+ 'vi': 'Mỗi ngày 1 việc làm phù hợp',
+ 'bn': 'দিনে একবার একটি উপযুক্ত চাকরি',
+ 'ru': 'Одна подходящая вакансия раз в день',
+ 'id': 'Satu lowongan cocok, sekali sehari',
+ 'ne': 'दिनको एकपटक मिल्दो जागिर १ वटा',
+ 'km': 'ការងារសមរម្យ 1 ក្នុងមួយថ្ងៃ',
+ 'my': 'တစ်နေ့တစ်ကြိမ် ကိုက်ညီသောအလုပ် ၁ ခု',
+ 'si': 'දිනකට වරක් ගැළපෙන රැකියාවක්',
+ 'uz': 'Kuniga bir marta mos ish 1 ta',
+ 'mn': 'Өдөрт нэг удаа тохирох ажил 1',
+ }, 'One matching job, once a day');
+
+ // ── 알림 라벨: 필터/알림시간/매일 (2026-10-09) ──
+ String get settingsFilterHead => _t({
+ 'ko': '조건:', 'en': 'Conditions:', 'zh': '条件:', 'hi': 'शर्तें:',
+ 'ja': '条件:', 'th': 'เงื่อนไข:', 'vi': 'Điều kiện:', 'bn': 'শর্ত:',
+ 'ru': 'Условия:', 'id': 'Kondisi:', 'ne': 'सर्त:', 'km': 'លក្ខខណ្ឌ:',
+ 'my': 'အခြေအနေ:', 'si': 'කොන්දේසි:', 'uz': 'Shartlar:', 'mn': 'Нөхцөл:',
+ }, 'Conditions:');
+
+ String get settingsAlertTimeHead => _t({
+ 'ko': '알림시간:', 'en': 'Time:', 'zh': '提醒时间:', 'hi': 'समय:',
+ 'ja': '通知時間:', 'th': 'เวลาแจ้งเตือน:', 'vi': 'Thời gian:', 'bn': 'সময়:',
+ 'ru': 'Время:', 'id': 'Waktu:', 'ne': 'समय:', 'km': 'ម៉ោង:',
+ 'my': 'အချိန်:', 'si': 'වේලාව:', 'uz': 'Vaqt:', 'mn': 'Цаг:',
+ }, 'Time:');
+
+ String get settingsEveryday => _t({
+ 'ko': '매일', 'en': 'Daily', 'zh': '每天', 'hi': 'रोज़',
+ 'ja': '毎日', 'th': 'ทุกวัน', 'vi': 'Hằng ngày', 'bn': 'প্রতিদিন',
+ 'ru': 'Ежедневно', 'id': 'Setiap hari', 'ne': 'दैनिक', 'km': 'រៀងរាល់ថ្ងៃ',
+ 'my': 'နေ့စဉ်', 'si': 'දිනපතා', 'uz': 'Har kuni', 'mn': 'Өдөр бүр',
+ }, 'Daily');
+
+ // ── 신규/추천 공고 알림 안내 (시간 동적, 2026-10-09). {times}=발송시각 ──
+ String newJobAlertsSchedule(String times) => _t({
+ 'ko': '이 조건에 맞는 새 공고를 매일 $times에 알려드려요',
+ 'en': 'We notify you of new jobs matching this, daily at $times',
+ 'zh': '每天$times推送符合此条件的新职位',
+ 'hi': 'इससे मेल खाने वाली नई नौकरियां रोज़ $times पर सूचित करते हैं',
+ 'ja': 'この条件に合う新着求人を毎日$timesにお知らせします',
+ 'th': 'แจ้งงานใหม่ที่ตรงเงื่อนไขนี้ทุกวันเวลา $times',
+ 'vi': 'Thông báo việc mới phù hợp mỗi ngày lúc $times',
+ 'bn': 'এই শর্তে নতুন চাকরি প্রতিদিন $times এ জানাই',
+ 'ru': 'Сообщаем о новых вакансиях по этому условию ежедневно в $times',
+ 'id': 'Kami beri tahu lowongan baru yang cocok setiap hari pukul $times',
+ 'ne': 'यो सर्तमा नयाँ जागिर दैनिक $times मा सूचित गर्छौं',
+ 'km': 'ជូនដំណឹងការងារថ្មីត្រូវនឹងលក្ខខណ្ឌនេះ រៀងរាល់ថ្ងៃនៅ $times',
+ 'my': 'ဤအခြေအနေနှင့်ကိုက်ညီသော အလုပ်သစ်ကို နေ့စဉ် $times တွင် အကြောင်းကြားသည်',
+ 'si': 'මෙම කොන්දේසියට ගැළපෙන අලුත් රැකියා දිනපතා $times ට දැනුම් දෙමු',
+ 'uz': 'Bu shartga mos yangi ishlarni har kuni $times da xabar beramiz',
+ 'mn': 'Энэ нөхцөлд тохирох шинэ ажлыг өдөр бүр $times цагт мэдэгдэнэ',
+ }, 'We notify you of new jobs matching this, daily at $times');
+
+ String get newJobAlertsScheduleNoTime => _t({
+ 'ko': '이 조건에 맞는 새 공고를 매일 알려드려요',
+ 'en': 'We notify you daily of new jobs matching this',
+ 'zh': '每天推送符合此条件的新职位',
+ 'hi': 'इससे मेल खाने वाली नई नौकरियां रोज़ सूचित करते हैं',
+ 'ja': 'この条件に合う新着求人を毎日お知らせします',
+ 'th': 'แจ้งงานใหม่ที่ตรงเงื่อนไขนี้ทุกวัน',
+ 'vi': 'Thông báo việc mới phù hợp mỗi ngày',
+ 'bn': 'এই শর্তে নতুন চাকরি প্রতিদিন জানাই',
+ 'ru': 'Сообщаем о новых вакансиях по этому условию ежедневно',
+ 'id': 'Kami beri tahu lowongan baru yang cocok setiap hari',
+ 'ne': 'यो सर्तमा नयाँ जागिर दैनिक सूचित गर्छौं',
+ 'km': 'ជូនដំណឹងការងារថ្មីត្រូវនឹងលក្ខខណ្ឌនេះ រៀងរាល់ថ្ងៃ',
+ 'my': 'ဤအခြေအនေနှင့်ကိုက်ညီသော အလုပ်သစ်ကို နေ့စဉ် အကြောင်းကြားသည်',
+ 'si': 'මෙම කොන්දේසියට ගැළපෙන අලුත් රැකියා දිනපතා දැනුම් දෙමු',
+ 'uz': 'Bu shartga mos yangi ishlarni har kuni xabar beramiz',
+ 'mn': 'Энэ нөхцөлд тохирох шинэ ажлыг өдөр бүр мэдэгдэнэ',
+ }, 'We notify you daily of new jobs matching this');
+
+ String recommendScheduleAt(String time) => _t({
+ 'ko': '조건에 맞는 공고를 매일 $time에 보내드려요',
+ 'en': 'We send a matching job daily at $time',
+ 'zh': '每天$time推送符合条件的职位',
+ 'hi': 'मेल खाने वाली नौकरी रोज़ $time पर भेजते हैं',
+ 'ja': '条件に合う求人を毎日$timeにお送りします',
+ 'th': 'ส่งงานที่ตรงเงื่อนไขทุกวันเวลา $time',
+ 'vi': 'Gửi việc phù hợp mỗi ngày lúc $time',
+ 'bn': 'উপযুক্ত চাকরি প্রতিদিন $time এ পাঠাই',
+ 'ru': 'Отправляем подходящую вакансию ежедневно в $time',
+ 'id': 'Kami kirim lowongan cocok setiap hari pukul $time',
+ 'ne': 'मिल्ने जागिर दैनिक $time मा पठाउँछौं',
+ 'km': 'ផ្ញើការងារសមស្របរៀងរាល់ថ្ងៃនៅ $time',
+ 'my': 'ကိုက်ညီသောအလုပ်ကို နေ့စဉ် $time တွင် ပို့ပေးသည်',
+ 'si': 'ගැළපෙන රැකියාවක් දිනපතා $time ට එවමු',
+ 'uz': 'Mos ishni har kuni $time da yuboramiz',
+ 'mn': 'Тохирох ажлыг өдөр бүр $time цагт илгээнэ',
+ }, 'We send a matching job daily at $time');
+
+ String get recommendScheduleNoTime => _t({
+ 'ko': '조건에 맞는 공고를 매일 보내드려요',
+ 'en': 'We send a matching job every day',
+ 'zh': '每天推送符合条件的职位',
+ 'hi': 'मेल खाने वाली नौकरी रोज़ भेजते हैं',
+ 'ja': '条件に合う求人を毎日お送りします',
+ 'th': 'ส่งงานที่ตรงเงื่อนไขทุกวัน',
+ 'vi': 'Gửi việc phù hợp mỗi ngày',
+ 'bn': 'উপযুক্ত চাকরি প্রতিদিন পাঠাই',
+ 'ru': 'Отправляем подходящую вакансию каждый день',
+ 'id': 'Kami kirim lowongan cocok setiap hari',
+ 'ne': 'मिल्ने जागिर दैनिक पठाउँछौं',
+ 'km': 'ផ្ញើការងារសមស្របរៀងរាល់ថ្ងៃ',
+ 'my': 'ကိုက်ညီသောအလုပ်ကို နေ့စဉ် ပို့ပေးသည်',
+ 'si': 'ගැළපෙන රැකියාවක් දිනපතා එවමු',
+ 'uz': 'Mos ishni har kuni yuboramiz',
+ 'mn': 'Тохирох ажлыг өдөр бүр илгээнэ',
+ }, 'We send a matching job every day');
+
+ String timeAm(String h) => _t({
+ 'ko': '오전 $h시', 'en': '$h AM', 'zh': '上午$h点', 'hi': 'सुबह $h बजे',
+ 'ja': '午前$h時', 'th': '$h โมงเช้า', 'vi': '$h giờ sáng', 'bn': 'সকাল $hটা',
+ 'ru': '$h утра', 'id': 'pukul $h pagi', 'ne': 'बिहान $h बजे', 'km': 'ម៉ោង $h ព្រឹក',
+ 'my': 'နံနက် $h နာရီ', 'si': 'පෙ.ව. $h', 'uz': 'ertalab $h', 'mn': 'өглөө $h цаг',
+ }, '$h AM');
+
+ String timePm(String h) => _t({
+ 'ko': '오후 $h시', 'en': '$h PM', 'zh': '下午$h点', 'hi': 'दोपहर $h बजे',
+ 'ja': '午後$h時', 'th': '$h โมงเย็น', 'vi': '$h giờ chiều', 'bn': 'বিকাল $hটা',
+ 'ru': '$h дня', 'id': 'pukul $h sore', 'ne': 'दिउँसो $h बजे', 'km': 'ម៉ោង $h រសៀល',
+ 'my': 'ညနေ $h နာရီ', 'si': 'ප.ව. $h', 'uz': 'kechqurun $h', 'mn': 'орой $h цаг',
+ }, '$h PM');
+
+ /// 나가기 팝업 보조 설명 — 적용 안 하면 변경분이 사라짐(2026-10-10).
+ String get filterExitHelper => _t({
+ 'ko': '적용하지 않으면 변경한 필터가 사라져요.',
+ 'en': "If you don't apply, your filter changes will be lost.",
+ 'zh': '如果不应用，更改的筛选条件将丢失。',
+ 'hi': 'लागू न करने पर फ़िल्टर बदलाव खो जाएंगे।',
+ 'ja': '適用しないと変更したフィルターは失われます。',
+ 'th': 'หากไม่ใช้ ตัวกรองที่เปลี่ยนไว้จะหายไป',
+ 'vi': 'Nếu không áp dụng, thay đổi bộ lọc sẽ bị mất.',
+ 'bn': 'প্রয়োগ না করলে ফিল্টারের পরিবর্তন হারিয়ে যাবে।',
+ 'ru': 'Если не применить, изменения фильтра будут потеряны.',
+ 'id': 'Jika tidak diterapkan, perubahan filter akan hilang.',
+ 'ne': 'लागू नगरे फिल्टरका परिवर्तन हराउनेछन्।',
+ 'km': 'បើមិនអនុវត្ត ការផ្លាស់ប្ដូរតម្រងនឹងបាត់បង់។',
+ 'my': 'အသုံးမချပါက ပြောင်းထားသော filter များ ပျောက်သွားပါမည်။',
+ 'si': 'යෙදුවේ නැත්නම් වෙනස් කළ පෙරහන් නැති වේ.',
+ 'uz': "Qo'llamasangiz, filtr o'zgarishlari yo'qoladi.",
+ 'mn': 'Хэрэглэхгүй бол шүүлтүүрийн өөрчлөлт алга болно.',
+ }, "If you don't apply, your filter changes will be lost.");
+
+ String get filterMatchHint => _t({
+ 'ko': '검색어와 관련된 필터예요. 선택하면 더 정확하게 찾을 수 있어요',
+ 'en': 'Filters related to your search. Select to narrow results',
+ 'zh': '与搜索词相关的筛选，选择可更精准查找',
+ 'hi': 'आपकी खोज से जुड़े फ़िल्टर। चुनें तो अधिक सटीक मिलेगा',
+ 'ja': '検索語に関連するフィルターです。選ぶとより正確に探せます',
+ 'th': 'ตัวกรองที่เกี่ยวกับคำค้น เลือกเพื่อค้นแม่นยำขึ้น',
+ 'vi': 'Bộ lọc liên quan đến từ khóa. Chọn để tìm chính xác hơn',
+ 'bn': 'আপনার সার্চের সাথে সম্পর্কিত ফিল্টার। বাছলে আরও নিখুঁত হবে',
+ 'ru': 'Фильтры по вашему запросу. Выберите для точного поиска',
+ 'id': 'Filter terkait pencarianmu. Pilih untuk hasil lebih tepat',
+ 'ne': 'तपाईंको खोजसँग सम्बन्धित फिल्टर। छान्दा थप सटीक हुन्छ',
+ 'km': 'តម្រងទាក់ទងនឹងការស្វែងរក ជ្រើសដើម្បីស្វែងរកកាន់តែត្រឹមត្រូវ',
+ 'my': 'ရှာဖွေမှုနှင့်ဆက်စပ်သော စစ်ထုတ်မှုများ။ ရွေးပါက ပိုတိကျစွာရှာနိုင်သည်',
+ 'si': 'ඔබේ සෙවීමට අදාළ පෙරහන්. තේරුවොත් වඩාත් නිවැරදිව සොයාගත හැක',
+ 'uz': 'Qidiruvingizga oid filtrlar. Tanlab aniqroq qidiring',
+ 'mn': 'Хайлттай холбоотой шүүлтүүр. Сонговол илүү нарийвчлан олно',
+ }, 'Filters related to your search. Select to narrow results');
+
   // ── Helper ──
   String _t(Map<String, String> map, String fallback) {
     return map[_l] ?? map['en'] ?? fallback;
   }
+
 }

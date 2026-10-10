@@ -61,7 +61,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/search',
-        builder: (context, state) => const SearchScreen(),
+        // extra: 푸시 딥링크 등에서 넘기는 초기 검색어 — 진입 즉시 검색 실행.
+        builder: (context, state) =>
+            SearchScreen(initialQuery: state.extra as String?),
       ),
       GoRoute(
         path: '/settings',

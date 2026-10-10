@@ -6,6 +6,7 @@ import '../data/models/job.dart';
 import '../data/models/filter_state.dart';
 import '../data/repositories/job_repository.dart';
 import 'language_provider.dart';
+import 'search_alert_provider.dart';
 import 'test_mode_provider.dart';
 
 final jobRepositoryProvider = Provider<JobRepository>((ref) {
@@ -208,12 +209,18 @@ final jobListProvider = FutureProvider.family<List<Job>, int>((
   final filter = ref.watch(filterStateProvider);
   final langCode = ref.watch(languageProvider);
   final includeTesting = ref.watch(testModeProvider);
-  return repo.getJobs(
-    filter: filter,
-    page: page,
-    langCode: langCode,
-    includeTesting: includeTesting,
-  );
+  // 검색어 알림이 등록돼 있으면 홈 리스트에도 키워드+필터 적용(2026-10-10).
+  // 홈 기본 정렬(최신순)을 유지하기 위해 sortBy=latest.
+  final alertKeyword = ref.watch(searchAlertProvider)?['keyword'] as String?;
+  if (alertKeyword != null && alertKeyword.isNotEmpty) {
+    return repo.searchJobs(alertKeyword,
+        page: page,
+        langCode: langCode,
+        sortBy: 'latest',
+        includeTesting: includeTesting,
+        filter: filter);
+  }
+  return repo.getJobs(filter: filter, page: page, langCode: langCode, includeTesting: includeTesting);
 });
 
 // [DEV] 사이트 목록
@@ -227,11 +234,13 @@ final jobTotalCountProvider = FutureProvider<int>((ref) async {
   final filter = ref.watch(filterStateProvider);
   final langCode = ref.watch(languageProvider);
   final includeTesting = ref.watch(testModeProvider);
-  return repo.getJobCount(
-    filter: filter,
-    langCode: langCode,
-    includeTesting: includeTesting,
-  );
+  // 리스트와 동일: 알림 키워드 있으면 키워드+필터 건수(2026-10-10).
+  final alertKeyword = ref.watch(searchAlertProvider)?['keyword'] as String?;
+  if (alertKeyword != null && alertKeyword.isNotEmpty) {
+    return repo.searchJobsCount(alertKeyword,
+        langCode: langCode, includeTesting: includeTesting, filter: filter);
+  }
+  return repo.getJobCount(filter: filter, langCode: langCode, includeTesting: includeTesting);
 });
 
 final jobDetailProvider = FutureProvider.family<Job?, String>((ref, id) async {

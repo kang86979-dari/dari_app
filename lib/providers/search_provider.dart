@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../data/models/job.dart';
 import '../data/repositories/job_repository.dart';
+import 'job_provider.dart';
 import 'language_provider.dart';
 import 'test_mode_provider.dart';
 
@@ -11,24 +12,33 @@ final searchQueryProvider = StateProvider<String>((ref) => '');
 
 final searchSortProvider = StateProvider<String>((ref) => 'relevance');
 
+// 검색 결과 = 검색어 AND 전역 필터(홈과 공유, 2026-10-09).
+// 필터 변경 시 자동 재검색(watch).
 final searchResultProvider = FutureProvider<List<Job>>((ref) async {
   final query = ref.watch(searchQueryProvider);
   if (query.trim().isEmpty) return [];
 
   final lang = ref.watch(languageProvider);
   final sortBy = ref.watch(searchSortProvider);
+  final filter = ref.watch(filterStateProvider);
   final repo = ref.watch(_searchRepoProvider);
   final includeTesting = ref.watch(testModeProvider);
-  return repo.searchJobs(query, langCode: lang, sortBy: sortBy, includeTesting: includeTesting);
+  return repo.searchJobs(query,
+      langCode: lang,
+      sortBy: sortBy,
+      includeTesting: includeTesting,
+      filter: filter);
 });
 
 final searchTotalCountProvider = FutureProvider<int>((ref) async {
   final query = ref.watch(searchQueryProvider);
   if (query.trim().isEmpty) return 0;
   final lang = ref.watch(languageProvider);
+  final filter = ref.watch(filterStateProvider);
   final repo = ref.watch(_searchRepoProvider);
   final includeTesting = ref.watch(testModeProvider);
-  return repo.searchJobsCount(query, langCode: lang, includeTesting: includeTesting);
+  return repo.searchJobsCount(query,
+      langCode: lang, includeTesting: includeTesting, filter: filter);
 });
 
 final _searchRepoProvider = Provider<JobRepository>((ref) => JobRepository());

@@ -45,7 +45,60 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     _prepareLang();
   }
 
+  /// KoMate: 비로그인 열람 5회 제한(RECRUIT_VIEW_COUNT + httpOnly 서버
+  /// 쿠키)이 넘으면 모든 상세가 "로그인하고 공고 더보기" 모달로 가려짐.
+  /// 라이브 DevTools 검증(2026-10-09): 쿠키 전체 삭제 → 모달 사라지고
+  /// 상세 정상. deleteCookies()는 .saramin.co.kr 부모 도메인 쿠키를 못
+  /// 지워서(A/B안 실패 원인) **만료 과거 덮어쓰기**로 삭제한다.
+  /// 트레이드오프: KoMate 로그인 세션도 매번 초기화(사용자 승인).
+  bool get _isKomate =>
+      Uri.tryParse(widget.url)?.host == 'komate.saramin.co.kr';
+
+  /// 사라민 로그인 여부 — CUST_NO(회원번호) 쿠키 존재로 판별.
+  /// 라이브 확인(2026-10-09): 로그인 시 .saramin.co.kr에 CUST_NO/UID/AUID
+  /// (회원번호)가 생기고 RECRUIT_VIEW_COUNT(열람제한)는 사라짐.
+  Future<bool> _isKomateLoggedIn() async {
+    try {
+      final cookies = await CookieManager.instance()
+          .getCookies(url: WebUri('https://www.saramin.co.kr'));
+      return cookies
+          .any((c) => c.name == 'CUST_NO' && '${c.value}'.isNotEmpty);
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<void> _clearKomateCookies() async {
+    // 로그인 상태면 초기화 생략 — 세션 보존(로그인하면 열람제한 자체가 없음).
+    if (await _isKomateLoggedIn()) return;
+    try {
+      final cm = CookieManager.instance();
+      // 열람 제한 카운트는 **.komate.saramin.co.kr**(점 접두) 도메인 쿠키에
+      // 있음 — 라이브 DevTools 확정(2026-10-09). getCookies가 못 돌려주는
+      // 변형까지 지우려 모든 도메인 변형으로 삭제 시도.
+      final komate = WebUri('https://komate.saramin.co.kr');
+      for (final name in const ['RECRUIT_VIEW_COUNT', 'route', 'nudge_modal_shown']) {
+        for (final domain in const [
+          '.komate.saramin.co.kr',
+          'komate.saramin.co.kr',
+          '.saramin.co.kr',
+        ]) {
+          await cm.deleteCookie(url: komate, name: name, domain: domain, path: '/');
+        }
+        // 도메인 미지정(호스트 전용) 변형도 삭제.
+        await cm.deleteCookie(url: komate, name: name, path: '/');
+      }
+      // 쿠키 초기화로 '첫 방문'이 되면 가입/추천 유도 모달 2종이 매번 뜸 →
+      // 닫기 버튼이 심는 쿠키를 미리 세팅해 억제(라이브 확인: 닫기 시
+      // mobile_modal_recruit_shown / nudge_modal_shown 저장).
+      for (final name in const ['mobile_modal_recruit_shown', 'nudge_modal_shown']) {
+        await cm.setCookie(url: komate, name: name, value: 'true', path: '/');
+      }
+    } catch (_) {}
+  }
+
   Future<void> _prepareLang() async {
+    if (_isKomate) await _clearKomateCookies();
     await SiteLang.presetCookies(widget.url, widget.langCode);
     if (mounted) setState(() => _langReady = true);
   }
@@ -126,10 +179,19 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
             onPressed: () => Navigator.of(context).pop(), // 즉시 다리 복귀
           ),
           centerTitle: true,
-          // Dari 워드마크 — 탭하면 Dari로 복귀 ("Dari로 이동" 개념)
+          // 타이틀 = 출처 사이트명(2026-10-10). 없으면 기존 Dari 워드마크 폴백.
+          // 탭하면 Dari로 복귀 ("Dari로 이동" 개념 유지).
           title: GestureDetector(
             onTap: () => Navigator.of(context).pop(),
-            child: Image.asset('assets/wordmark.png', height: 20),
+            child: widget.title != null && widget.title!.isNotEmpty
+                ? Text(
+                    widget.title!,
+                    style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.black),
+                  )
+                : Image.asset('assets/wordmark.png', height: 20),
           ),
           bottom: (_progress > 0 && _progress < 1)
               ? PreferredSize(
@@ -196,6 +258,8 @@ class _ApplyWebViewScreenState extends State<ApplyWebViewScreen> {
     }
     return InAppWebView(
       initialUrlRequest: URLRequest(url: WebUri(_entryUrl)),
+      // (KoMate storage 초기화 스크립트는 제거 — 덤프 분석 결과 localStorage엔
+      //  추적 데이터뿐, 로그인 대기 상태는 세션 쿠키에 있어 쿠키만 처리)
       initialSettings: InAppWebViewSettings(
         javaScriptEnabled: true,
         javaScriptCanOpenWindowsAutomatically: true,

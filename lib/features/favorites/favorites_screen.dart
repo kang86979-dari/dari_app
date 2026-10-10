@@ -26,6 +26,8 @@ import '../../data/services/analytics_service.dart';
 import '../../core/widgets/sort_sheet.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
+import '../../core/widgets/empty_placeholder.dart';
+import '../../core/widgets/sort_sheet.dart';
 
 enum FavoriteSortType { deadline, added }
 
@@ -171,7 +173,8 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
                       ),
                     ),
                   ),
-                  // 편집 기능 제거(2026-09-26 사용자 확정) — 하트 해제로 충분.
+                  // 편집 버튼 삭제 — 하트 해제로 삭제 가능(2026-10-10).
+                  // 타이틀 중앙 유지용 더미(뒤로가기와 대칭).
                   const SizedBox(width: 40),
                 ],
               ),
@@ -216,25 +219,10 @@ class _FavoritesScreenState extends ConsumerState<FavoritesScreen> {
             // 목록
             Expanded(
               child: jobIds.isEmpty
-                  ? Padding(
-                      padding: const EdgeInsets.only(bottom: 60),
-                      child: Center(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.favorite_border,
-                                size: 64, color: Color(0xFFE0E0E0)),
-                            const SizedBox(height: 16),
-                            Text(s.noFavorites,
-                                style: const TextStyle(
-                                    fontSize: 16, color: AppColors.gray400)),
-                            const SizedBox(height: 8),
-                            Text(s.noFavoritesHint,
-                                style: const TextStyle(
-                                    fontSize: 13, color: AppColors.gray300)),
-                          ],
-                        ),
-                      ),
+                  ? EmptyPlaceholder(
+                      icon: Icons.favorite_border,
+                      title: s.noFavorites,
+                      subtitle: s.noFavoritesHint,
                     )
                   : FutureBuilder<List<Job>>(
                       future: JobRepository().getFavoriteJobs(jobIds),

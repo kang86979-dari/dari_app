@@ -311,7 +311,12 @@ class _DetailBodyState extends ConsumerState<_DetailBody> {
         // Android 전체 + iOS 쿠키/localStorage 그룹(K-HIRE·FindJob·KoMate·K-Work·
         // TalentLink·JobnShop): 인앱 WebView — 진입 시 언어 사전 세팅(SiteLang) 적용
         Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => ApplyWebViewScreen(url: url, langCode: widget.langCode),
+          builder: (_) => ApplyWebViewScreen(
+            url: url,
+            langCode: widget.langCode,
+            // 상단 타이틀 = 출처 사이트명 (어느 사이트인지 인지, 2026-10-10)
+            title: widget.job.siteName,
+          ),
         ));
       }
     } else {
@@ -2647,7 +2652,7 @@ class _DetailBannerAdState extends State<_DetailBannerAd> {
   void initState() {
     super.initState();
     // 진입하자마자 노출하지 않고 ~1.5초 후 로드 — 화면이 먼저 안정적으로
-    // 보이게 하고 광고가 뒤늦게 뜨도록(사용자 요청 2026-10-05).
+    // 보이게 하고 광고가 뒤늦게 뜨도록(사용자 요청 2026-10-05, feature 이식).
     _delayTimer = Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
       _bannerAd = BannerAd(

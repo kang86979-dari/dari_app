@@ -32,6 +32,9 @@ class JobCard extends StatelessWidget {
   /// "지원함" 라벨 (다국어).
   final String? appliedLabel;
 
+  /// 메모 바 우측 휴지통(즉시 삭제) — 메모 리스트 전용(2.1.6 머지).
+  final VoidCallback? onMemoDelete;
+
   const JobCard({
     super.key,
     required this.job,
@@ -48,6 +51,7 @@ class JobCard extends StatelessWidget {
     this.memoAddLabel,
     this.applied = false,
     this.appliedLabel,
+    this.onMemoDelete,
   });
 
   // CJK는 제목이 짧아 16 유지, 번역 언어는 텍스트가 길어져 축소 (2줄 내 표시)
@@ -63,15 +67,15 @@ class JobCard extends StatelessWidget {
     }
     if (s != null) {
       switch (job.salaryType) {
-        case SalaryType.companyRule:
-          return s.salaryByCompany;
         case SalaryType.negotiable:
           return s.salaryNegotiable;
         default:
-          break;
+          // 파싱 불가 원문(예: 제목이 salary에 들어온 오염 데이터)을 그대로
+          // 노출하지 않도록 상세 화면과 동일하게 회사내규로 폴백(2026-10-10).
+          return s.salaryByCompany;
       }
     }
-    return job.salary ?? salaryFallback;
+    return salaryFallback;
   }
 
   static String _formatDeadline(String? expiresAt, String alwaysOpen) {
@@ -101,7 +105,8 @@ class JobCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF0F0F0)),
+          // 테두리 한 단계 진하게 — 카드 구분이 또렷하게(2026-10-09).
+          border: Border.all(color: const Color(0xFFE2E2E2)),
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -274,62 +279,79 @@ class JobCard extends StatelessWidget {
                 ),
               ),
 
-            // 내 메모 미리보기 — 지원 내역 카드와 동일한 노랑 포스트잇 톤(2026-09-26).
-            // onMemoTap이 있으면(즐겨찾기) 탭해서 수정, 없으면 미리보기 전용.
+            // 내 메모 미리보기 — 노랑 포스트잇 톤(feature와 동일, 2026-10-09).
             if (memo != null && memo!.isNotEmpty)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onMemoTap,
                 child: Container(
                   margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  // 아이콘 유무와 무관하게 "+ 메모 남기기" 바와 같은 높이 유지.
+                  constraints: const BoxConstraints(minHeight: 26),
+                  alignment: Alignment.centerLeft,
                   decoration: BoxDecoration(
-                    color: expired
-                        ? AppColors.gray50
-                        : const Color(0xFFFFF8E1),
+                    color: expired ? AppColors.gray50 : const Color(0xFFFFF8E1),
                     borderRadius: BorderRadius.circular(7),
                   ),
-                  // 메모 있을 때 — 아이콘 없이 내용만(2026-10-05).
-                  child: Text(
-                    memo!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: expired
-                          ? AppColors.gray300
-                          : const Color(0xFF6D5B1F),
-                    ),
+                  child: Row(
+                    children: [
+                      // 연필 — 메모 앞쪽, 탭하면 수정 가능함을 알림(2026-10-09).
+                      if (onMemoTap != null)
+                        const Padding(
+                          padding: EdgeInsets.only(right: 6),
+                          child: Icon(Icons.edit_outlined,
+                              size: 14, color: Color(0xFF9A7B24)),
+                        ),
+                      Expanded(
+                        child: Text(
+                          memo!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: expired
+                                ? AppColors.gray300
+                                : const Color(0xFF6D5B1F),
+                          ),
+                        ),
+                      ),
+                      if (onMemoDelete != null)
+                        GestureDetector(
+                          onTap: onMemoDelete,
+                          behavior: HitTestBehavior.opaque,
+                          child: const Padding(
+                            padding: EdgeInsets.only(left: 8),
+                            child: Icon(Icons.delete_outline,
+                                size: 16, color: Color(0xFF9A7B24)),
+                          ),
+                        ),
+                    ],
                   ),
                 ),
               )
-            // 메모 없음 + 작성 진입 허용 화면(즐겨찾기 등): "+ 메모 남기기".
-            // 작성된 메모와 동일한 노란 배경 바 + 글자색으로 통일(2026-10-05).
+            // 메모 없음: "+ 메모 남기기" — 작성 진입(모든 카드 공통).
+            // 메모 있는 바와 구분: 배경 없이 노랑 계열 텍스트만(2026-10-10).
             else if (onMemoTap != null && memoAddLabel != null)
               GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onTap: onMemoTap,
                 child: Container(
                   margin: const EdgeInsets.only(top: 8),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFF8E1),
-                    borderRadius: BorderRadius.circular(7),
-                  ),
-                  // 메모 없음 — "+ 메모 남기기"(문자열에 + 포함, 아이콘 없음).
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                  // 메모 바(아이콘 포함)와 동일 높이(2026-10-09).
+                  constraints: const BoxConstraints(minHeight: 26),
+                  alignment: Alignment.centerLeft,
                   child: Text(
                     memoAddLabel!,
                     style: const TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF9A7B24),
+                      // 배경 없는 상태에서 노랑끼가 보이도록 골든 옐로(2026-10-10).
+                      color: Color(0xFFC9A227),
                     ),
                   ),
                 ),
