@@ -777,7 +777,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                s.searchHint,
+                // 홈 검색 힌트 = 검색 화면과 동일한 기존 문구(2026-10-11).
+                s.searchPlaceholder,
                 style: const TextStyle(fontSize: 14, color: AppColors.gray300),
                 overflow: TextOverflow.ellipsis,
                 maxLines: 1,
