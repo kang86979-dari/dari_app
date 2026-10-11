@@ -7,6 +7,7 @@ import '../../providers/applied_job_provider.dart';
 import '../../providers/favorite_provider.dart';
 import '../../providers/job_note_provider.dart';
 import '../../providers/resume_provider.dart';
+import '../resume/resume_edit_screen.dart';
 import '../resume/resume_manage_screen.dart';
 import 'additional_info_screen.dart';
 import 'apply_history_screen.dart';
@@ -193,11 +194,21 @@ class _MyPageScreenState extends ConsumerState<MyPageScreen> {
                             null || 0 => null,
                             final c => c,
                           },
-                          onTap: () => Navigator.of(context).push(
-                            MaterialPageRoute(
-                              builder: (_) => const ResumeManageScreen(),
-                            ),
-                          ),
+                          // 미작성이면 관리 화면 없이 바로 작성 화면으로(2026-10-11).
+                          onTap: () async {
+                            final resume = await ref
+                                .read(resumeProvider('khire').future);
+                            if (!context.mounted) return;
+                            if (resume == null) {
+                              ResumeEditScreen.show(context, site: 'khire');
+                            } else {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const ResumeManageScreen(),
+                                ),
+                              );
+                            }
+                          },
                         ),
                         _MenuTile(
                           icon: Icons.sms_outlined,

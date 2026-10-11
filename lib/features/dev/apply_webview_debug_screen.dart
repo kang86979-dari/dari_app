@@ -19,9 +19,8 @@ class ApplyWebViewDebugScreen extends StatefulWidget {
 }
 
 class _ApplyWebViewDebugScreenState extends State<ApplyWebViewDebugScreen> {
-  // [TEST] 문자 지원 분석용 — TalkApply 직행(2026-10-04, 주소 selector 확인).
-  static const _startUrl =
-      'https://m.khire.co.kr/person/TalkApply.asp?adid=147311005&inflowtype=TALK';
+  // [TEST] 이력서 수정화면 덤프용 — K-HIRE 홈 직행(2026-10-11).
+  static const _startUrl = 'https://m.khire.co.kr/';
 
   InAppWebViewController? _controller;
   final _urlCtrl = TextEditingController(text: _startUrl);

@@ -3,12 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/constants/colors.dart';
 import '../../core/widgets/app_primary_button.dart';
+import '../../core/widgets/picker_field.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/widgets/app_back_button.dart';
 import '../../data/constants/world_countries.dart';
 import '../../data/models/resume.dart';
 import '../../providers/account_provider.dart';
 import '../../providers/language_provider.dart';
+import '../apply/sms/sms_compose_prefs.dart';
 import '../apply/sms/sms_message_builder.dart' show KoreaStay;
 import 'resume_self_builder.dart';
 
@@ -18,22 +20,35 @@ import 'resume_self_builder.dart';
 class ResumeSelfComposeScreen extends ConsumerStatefulWidget {
   final Map<String, dynamic> initialChips;
   final List<ResumeCareer> careers;
+  // 자동 조립 재료(이력서에서 전달, 2026-10-11): 한국어 수준·TOPIK·자격증.
+  final String koreanNm;
+  final int? topikLevel;
+  final List<ResumeLicense> licenses;
   const ResumeSelfComposeScreen({
     super.key,
     this.initialChips = const {},
     this.careers = const [],
+    this.koreanNm = '',
+    this.topikLevel,
+    this.licenses = const [],
   });
 
   static Future<Map<String, dynamic>?> show(
     BuildContext context, {
     Map<String, dynamic> initialChips = const {},
     List<ResumeCareer> careers = const [],
+    String koreanNm = '',
+    int? topikLevel,
+    List<ResumeLicense> licenses = const [],
   }) {
     return Navigator.of(context).push<Map<String, dynamic>>(
       MaterialPageRoute(
         builder: (_) => ResumeSelfComposeScreen(
           initialChips: initialChips,
           careers: careers,
+          koreanNm: koreanNm,
+          topikLevel: topikLevel,
+          licenses: licenses,
         ),
       ),
     );
@@ -50,6 +65,8 @@ class _ResumeSelfComposeScreenState
   final Set<SelfExp> _exps = {};
   final Set<SelfStrength> _strengths = {};
   SelfResolve? _resolve;
+  SelfMotive? _motive; // 지원 동기(2026-10-11)
+  final Set<SelfCond> _conds = {}; // 근무 조건(2026-10-11)
   String? _customText; // 직접편집본 — 칩 바꾸면 폐기(SMS와 동일 A안)
 
   @override
@@ -66,7 +83,21 @@ class _ResumeSelfComposeScreenState
       if (v != null) _strengths.add(v);
     }
     _resolve = _enumByName(SelfResolve.values, c['resolve'] as String?);
+    _motive = _enumByName(SelfMotive.values, c['motive'] as String?);
+    for (final e in (c['conds'] as List?) ?? const []) {
+      final v = _enumByName(SelfCond.values, e as String?);
+      if (v != null) _conds.add(v);
+    }
     _customText = c['custom'] as String?;
+    // 거주기간: 자소서에 저장값이 없으면 SMS 요약 설정에서 프리필
+    // (같은 KoreaStay enum 공유, 2026-10-11).
+    if (_stay == null) {
+      SmsComposePrefs.load().then((prefs) {
+        if (!mounted || _stay != null) return;
+        final stay = prefs?.koreaStay;
+        if (stay != null) setState(() => _stay = stay);
+      });
+    }
   }
 
   static T? _enumByName<T extends Enum>(List<T> values, String? name) {
@@ -98,6 +129,11 @@ class _ResumeSelfComposeScreenState
       careers: widget.careers,
       strengths: Set.of(_strengths),
       resolve: _resolve,
+      motive: _motive,
+      conds: Set.of(_conds),
+      koreanNm: widget.koreanNm,
+      topikLevel: widget.topikLevel,
+      licenses: widget.licenses,
       now: DateTime.now(),
     );
   }
@@ -109,6 +145,8 @@ class _ResumeSelfComposeScreenState
         'exps': _exps.map((e) => e.name).toList(),
         'strengths': _strengths.map((e) => e.name).toList(),
         if (_resolve != null) 'resolve': _resolve!.name,
+        if (_motive != null) 'motive': _motive!.name,
+        'conds': _conds.map((e) => e.name).toList(),
         if (_customText != null) 'custom': _customText,
       };
 
@@ -133,6 +171,96 @@ class _ResumeSelfComposeScreenState
     if (edited != null && edited.trim().isNotEmpty) {
       setState(() => _customText = edited.trim());
     }
+  }
+
+  // 옵션 라벨 (사용자 언어 — 조립 결과는 한국어).
+  String _expLabel(SelfExp v) {
+    final s = AppStrings.of(ref.read(languageProvider));
+    return switch (v) {
+      SelfExp.firstTime => s.selfExpFirst,
+      SelfExp.restaurant => s.selfExpRestaurant,
+      SelfExp.factory => s.selfExpFactory,
+      SelfExp.construction => s.selfExpConstruction,
+      SelfExp.farm => s.selfExpFarm,
+      SelfExp.logistics => s.selfExpLogistics,
+      SelfExp.cleaning => s.selfExpCleaning,
+      SelfExp.other => s.selfExpOther,
+    };
+  }
+
+  String _strengthLabel(SelfStrength v) {
+    final s = AppStrings.of(ref.read(languageProvider));
+    return switch (v) {
+      SelfStrength.diligent => s.selfStrDiligent,
+      SelfStrength.stamina => s.selfStrStamina,
+      SelfStrength.careful => s.selfStrCareful,
+      SelfStrength.fastLearner => s.selfStrFastLearner,
+      SelfStrength.bright => s.selfStrBright,
+      SelfStrength.punctual => s.selfStrPunctual,
+    };
+  }
+
+  String _motiveLabel(SelfMotive v) {
+    final s = AppStrings.of(ref.read(languageProvider));
+    return switch (v) {
+      SelfMotive.stable => s.selfMotiveStable,
+      SelfMotive.learnSkill => s.selfMotiveLearn,
+      SelfMotive.family => s.selfMotiveFamily,
+      SelfMotive.settle => s.selfMotiveSettle,
+    };
+  }
+
+  String _condLabel(SelfCond v) {
+    final s = AppStrings.of(ref.read(languageProvider));
+    return switch (v) {
+      SelfCond.shiftNight => s.selfCondShiftNight,
+      SelfCond.weekend => s.selfCondWeekend,
+      SelfCond.dormNeeded => s.selfCondDorm,
+    };
+  }
+
+  String _resolveLabel(SelfResolve v) {
+    final s = AppStrings.of(ref.read(languageProvider));
+    return switch (v) {
+      SelfResolve.longTerm => s.selfResLongTerm,
+      SelfResolve.learnHard => s.selfResLearnHard,
+      SelfResolve.startNow => s.selfResStartNow,
+    };
+  }
+
+  // 공용 피커 시트 래퍼 — 선택 결과를 칩 상태에 반영(_onChipChanged).
+  Future<void> _pickOne<T>({
+    required String title,
+    required List<T> options,
+    required String Function(T) labelOf,
+    required T? selected,
+    required void Function(T?) onPicked,
+  }) async {
+    final r = await PickerSheet.pickOne<T>(context,
+        title: title, options: options, labelOf: labelOf, selected: selected);
+    if (r == null) return;
+    _onChipChanged(() => onPicked(r is PickerUnset ? null : r as T));
+  }
+
+  Future<void> _pickMulti<T>({
+    required String title,
+    required List<T> options,
+    required String Function(T) labelOf,
+    required Set<T> selected,
+    required void Function(Set<T>) onPicked,
+    int? max,
+    void Function(Set<T> next, T tapped)? normalize,
+  }) async {
+    final r = await PickerSheet.pickMulti<T>(context,
+        title: title,
+        options: options,
+        labelOf: labelOf,
+        selected: selected,
+        confirmLabel: AppStrings.of(ref.read(languageProvider)).confirm,
+        max: max,
+        normalize: normalize);
+    if (r == null) return;
+    _onChipChanged(() => onPicked(r));
   }
 
   void _save() {
@@ -170,86 +298,120 @@ class _ResumeSelfComposeScreenState
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                 children: [
-                  // 거주 기간
-                  _ChipGroup<KoreaStay>(
+                  // ① 거주 기간 (소개 문단 재료)
+                  PickerField(
                     label: s.smsKoreaStayLabel,
-                    options: const [
-                      KoreaStay.under1y,
-                      KoreaStay.oneToThree,
-                      KoreaStay.overThree,
-                    ],
-                    labelOf: (v) => switch (v) {
+                    value: switch (_stay) {
                       KoreaStay.under1y => s.smsStayUnder1y,
                       KoreaStay.oneToThree => s.smsStayOneToThree,
                       KoreaStay.overThree => s.smsStayOverThree,
+                      null => '',
                     },
-                    isSelected: (v) => _stay == v,
-                    onTap: (v) => _onChipChanged(
-                        () => _stay = _stay == v ? null : v),
-                  ),
-                  // 일 경험 — 경력사항이 있으면 질문 생략(경력으로 문장 생성).
-                  if (widget.careers.isEmpty)
-                    _ChipGroup<SelfExp>(
-                      label: s.selfQExp,
-                      options: SelfExp.values,
+                    hint: s.resumeSelectHint,
+                    onTap: () => _pickOne<KoreaStay>(
+                      title: s.smsKoreaStayLabel,
+                      options: KoreaStay.values,
                       labelOf: (v) => switch (v) {
-                        SelfExp.firstTime => s.selfExpFirst,
-                        SelfExp.restaurant => s.selfExpRestaurant,
-                        SelfExp.factory => s.selfExpFactory,
-                        SelfExp.construction => s.selfExpConstruction,
-                        SelfExp.farm => s.selfExpFarm,
-                        SelfExp.logistics => s.selfExpLogistics,
-                        SelfExp.cleaning => s.selfExpCleaning,
-                        SelfExp.other => s.selfExpOther,
+                        KoreaStay.under1y => s.smsStayUnder1y,
+                        KoreaStay.oneToThree => s.smsStayOneToThree,
+                        KoreaStay.overThree => s.smsStayOverThree,
                       },
-                      isSelected: _exps.contains,
-                      onTap: (v) => _onChipChanged(() {
-                        if (_exps.contains(v)) {
-                          _exps.remove(v);
-                        } else if (v == SelfExp.firstTime) {
-                          _exps
-                            ..clear()
-                            ..add(v); // '처음'은 단독
-                        } else {
-                          _exps
-                            ..remove(SelfExp.firstTime)
-                            ..add(v);
-                        }
-                      }),
+                      selected: _stay,
+                      onPicked: (v) => _stay = v,
                     ),
-                  // 강점 (최대 2)
-                  _ChipGroup<SelfStrength>(
-                    label: s.selfQStrength,
-                    options: SelfStrength.values,
-                    labelOf: (v) => switch (v) {
-                      SelfStrength.diligent => s.selfStrDiligent,
-                      SelfStrength.stamina => s.selfStrStamina,
-                      SelfStrength.careful => s.selfStrCareful,
-                      SelfStrength.fastLearner => s.selfStrFastLearner,
-                      SelfStrength.bright => s.selfStrBright,
-                      SelfStrength.punctual => s.selfStrPunctual,
-                    },
-                    isSelected: _strengths.contains,
-                    onTap: (v) => _onChipChanged(() {
-                      if (_strengths.contains(v)) {
-                        _strengths.remove(v);
-                      } else if (_strengths.length < 2) {
-                        _strengths.add(v);
-                      }
-                    }),
                   ),
-                  // 각오
-                  _ChipGroup<SelfResolve>(
+                  // ② 일 경험 — 경력사항 있으면 생략(경력으로 문장 생성).
+                  if (widget.careers.isEmpty)
+                    PickerField(
+                      label: s.selfQExp,
+                      value: SelfExp.values
+                          .where(_exps.contains)
+                          .map(_expLabel)
+                          .join(', '),
+                      hint: s.resumeSelectHint,
+                      onTap: () => _pickMulti<SelfExp>(
+                        title: s.selfQExp,
+                        options: SelfExp.values,
+                        labelOf: _expLabel,
+                        selected: _exps,
+                        normalize: (next, tapped) {
+                          // '처음'은 단독 선택.
+                          if (tapped == SelfExp.firstTime &&
+                              next.contains(SelfExp.firstTime)) {
+                            next
+                              ..clear()
+                              ..add(SelfExp.firstTime);
+                          } else if (next.length > 1) {
+                            next.remove(SelfExp.firstTime);
+                          }
+                        },
+                        onPicked: (v) => _exps
+                          ..clear()
+                          ..addAll(v),
+                      ),
+                    ),
+                  // ③ 강점 (최대 2)
+                  PickerField(
+                    label: s.selfQStrength,
+                    value: SelfStrength.values
+                        .where(_strengths.contains)
+                        .map(_strengthLabel)
+                        .join(', '),
+                    hint: s.resumeSelectHint,
+                    onTap: () => _pickMulti<SelfStrength>(
+                      title: s.selfQStrength,
+                      options: SelfStrength.values,
+                      labelOf: _strengthLabel,
+                      selected: _strengths,
+                      max: 2,
+                      onPicked: (v) => _strengths
+                        ..clear()
+                        ..addAll(v),
+                    ),
+                  ),
+                  // ④ 지원 동기 (2026-10-11 신규 — 자소서 3문단)
+                  PickerField(
+                    label: s.selfQMotive,
+                    value: _motive == null ? '' : _motiveLabel(_motive!),
+                    hint: s.resumeSelectHint,
+                    onTap: () => _pickOne<SelfMotive>(
+                      title: s.selfQMotive,
+                      options: SelfMotive.values,
+                      labelOf: _motiveLabel,
+                      selected: _motive,
+                      onPicked: (v) => _motive = v,
+                    ),
+                  ),
+                  // ⑤ 근무 조건 (2026-10-11 신규 — 외국인 채용 가치)
+                  PickerField(
+                    label: s.selfQCond,
+                    value: SelfCond.values
+                        .where(_conds.contains)
+                        .map(_condLabel)
+                        .join(', '),
+                    hint: s.resumeSelectHint,
+                    onTap: () => _pickMulti<SelfCond>(
+                      title: s.selfQCond,
+                      options: SelfCond.values,
+                      labelOf: _condLabel,
+                      selected: _conds,
+                      onPicked: (v) => _conds
+                        ..clear()
+                        ..addAll(v),
+                    ),
+                  ),
+                  // ⑥ 각오
+                  PickerField(
                     label: s.selfQResolve,
-                    options: SelfResolve.values,
-                    labelOf: (v) => switch (v) {
-                      SelfResolve.longTerm => s.selfResLongTerm,
-                      SelfResolve.learnHard => s.selfResLearnHard,
-                      SelfResolve.startNow => s.selfResStartNow,
-                    },
-                    isSelected: (v) => _resolve == v,
-                    onTap: (v) => _onChipChanged(
-                        () => _resolve = _resolve == v ? null : v),
+                    value: _resolve == null ? '' : _resolveLabel(_resolve!),
+                    hint: s.resumeSelectHint,
+                    onTap: () => _pickOne<SelfResolve>(
+                      title: s.selfQResolve,
+                      options: SelfResolve.values,
+                      labelOf: _resolveLabel,
+                      selected: _resolve,
+                      onPicked: (v) => _resolve = v,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   // 미리보기 (한국어 전송본) + 직접편집
@@ -316,72 +478,6 @@ class _ResumeSelfComposeScreenState
 }
 
 /// 질문 라벨 + 칩 묶음 (필터 칩 스타일 — SMS 화면과 통일).
-class _ChipGroup<T> extends StatelessWidget {
-  final String label;
-  final List<T> options;
-  final String Function(T) labelOf;
-  final bool Function(T) isSelected;
-  final void Function(T) onTap;
-  const _ChipGroup({
-    super.key,
-    required this.label,
-    required this.options,
-    required this.labelOf,
-    required this.isSelected,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 22),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.w700,
-              color: AppColors.black,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: options.map((o) {
-              final on = isSelected(o);
-              return GestureDetector(
-                onTap: () => onTap(o),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 14, vertical: 9),
-                  decoration: BoxDecoration(
-                    color: on ? AppColors.carrotLight : AppColors.gray50,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: on ? AppColors.carrot : AppColors.gray100,
-                    ),
-                  ),
-                  child: Text(
-                    labelOf(o),
-                    style: TextStyle(
-                      color: on ? AppColors.carrotDark : AppColors.gray500,
-                      fontSize: 13,
-                      fontWeight: on ? FontWeight.w700 : FontWeight.w500,
-                    ),
-                  ),
-                ),
-              );
-            }).toList(),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 /// 직접편집 — 별도 라우트(화면 내 모드전환 금지: iOS 스와이프백 보존).
 class _SelfTextEditScreen extends StatefulWidget {
   final String initial;
@@ -470,3 +566,4 @@ class _SelfTextEditScreenState extends State<_SelfTextEditScreen> {
     );
   }
 }
+

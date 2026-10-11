@@ -32,6 +32,11 @@ class AppPrimaryButton extends StatelessWidget {
           foregroundColor: Colors.white,
           disabledForegroundColor: Colors.white,
           elevation: 0,
+          // 기본 세로 패딩/탭타깃이 한글 받침을 세로로 잘라냄(이력서 작성하기
+          // '성' 받침 잘림, 2026-10-11) → 패딩 제거 + 탭타깃 축소.
+          // apply_confirm_dialog(2026-10-05)와 동일 처방.
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(14),
           ),

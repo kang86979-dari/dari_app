@@ -5,6 +5,8 @@ import 'dart:convert';
 /// 사이트 중립 포맷으로 1회 저장 → 주입 시에만 사이트별 코드/필드로 매핑
 /// (K-HIRE lasteducd/jobkind 등). 한 번 입력 → 전 사이트 재사용이 핵심 가치.
 /// 코드값은 K-HIRE 코드표(assets/khire_resume)를 기준으로 보관한다.
+const Object _unset = Object();
+
 class Resume {
   final String? id; // Dari resumes.id (서버)
   final String site; // 대상 사이트 (현재 'khire')
@@ -36,6 +38,7 @@ class Resume {
 
   // 한국어 능력
   final String? koreanLevelCd; // korean_level.json cd
+  final int? topikLevel; // TOPIK 급수 1~6 (null=없음, 선택 입력 2026-10-11)
 
   // 선택 입력
   final List<ResumeLicense> licenses;
@@ -77,6 +80,7 @@ class Resume {
     this.payCd,
     this.pay = 0,
     this.koreanLevelCd,
+    this.topikLevel,
     this.licenses = const [],
     this.foreignLangs = const [],
     this.skills = const [],
@@ -123,6 +127,7 @@ class Resume {
     String? payCd,
     int? pay,
     String? koreanLevelCd,
+    Object? topikLevel = _unset, // null로 지우기 허용(선택 입력)
     List<ResumeLicense>? licenses,
     List<ResumeForeignLang>? foreignLangs,
     List<ResumeSkill>? skills,
@@ -151,6 +156,8 @@ class Resume {
       payCd: payCd ?? this.payCd,
       pay: pay ?? this.pay,
       koreanLevelCd: koreanLevelCd ?? this.koreanLevelCd,
+      topikLevel:
+          identical(topikLevel, _unset) ? this.topikLevel : topikLevel as int?,
       licenses: licenses ?? this.licenses,
       foreignLangs: foreignLangs ?? this.foreignLangs,
       skills: skills ?? this.skills,
@@ -180,6 +187,7 @@ class Resume {
         'pay_cd': payCd,
         'pay': pay,
         'korean_level_cd': koreanLevelCd,
+        'topik_level': topikLevel,
         'licenses': licenses.map((e) => e.toJson()).toList(),
         'foreign_langs': foreignLangs.map((e) => e.toJson()).toList(),
         'skills': skills.map((e) => e.toJson()).toList(),
@@ -215,6 +223,7 @@ class Resume {
       payCd: data['pay_cd'] as String?,
       pay: (data['pay'] as num?)?.toInt() ?? 0,
       koreanLevelCd: data['korean_level_cd'] as String?,
+      topikLevel: (data['topik_level'] as num?)?.toInt(),
       licenses: parse('licenses', ResumeLicense.fromJson),
       foreignLangs: parse('foreign_langs', ResumeForeignLang.fromJson),
       skills: parse('skills', ResumeSkill.fromJson),

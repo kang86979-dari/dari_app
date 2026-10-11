@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/constants/colors.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/widgets/info_row.dart';
 import '../../../core/widgets/app_back_button.dart';
+import '../../../core/widgets/app_bar_text_action.dart';
+import '../../../core/widgets/picker_field.dart';
 import '../../../data/models/job.dart';
 import '../../../providers/account_provider.dart';
 import '../../../providers/language_provider.dart';
@@ -295,19 +296,15 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
                 fontWeight: FontWeight.w700,
                 color: AppColors.black)),
         actions: [
-          TextButton(
-            // 별도 라우트 push — 저장/스와이프백 모두 요약본으로 복귀.
-            onPressed: () async {
+          AppBarTextAction(
+            label: s.smsEditOnKhire,
+            onTap: () async {
               await Navigator.of(context).push(MaterialPageRoute(
                 builder: (_) =>
                     SmsPrepareScreen(job: widget.job, startInEdit: true),
               ));
               _loadSavedPrefs(); // 수정 저장분 반영
             },
-            style: TextButton.styleFrom(foregroundColor: AppColors.carrot),
-            child: Text(s.smsEditOnKhire,
-                style: const TextStyle(
-                    fontSize: 15, fontWeight: FontWeight.w700)),
           ),
         ],
       ),
@@ -595,91 +592,80 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
     final postingSchedule = widget.job?.getWorkSchedule(lang) ?? '';
     final postingTime = widget.job?.displayWorkTime ?? '';
     return [
-      _ChipGroup(
+      PickerField(
         label: s.smsKoreanLevelLabel,
-        chips: [
-          _chip(s.smsKoreanFluent, _korean == KoreanLevel.fluent,
-              () => _setKorean(KoreanLevel.fluent)),
-          _chip(s.smsKoreanConversational, _korean == KoreanLevel.conversational,
-              () => _setKorean(KoreanLevel.conversational)),
-          _chip(s.smsKoreanBasic, _korean == KoreanLevel.basic,
-              () => _setKorean(KoreanLevel.basic)),
-          _chip(s.smsKoreanLearning, _korean == KoreanLevel.learning,
-              () => _setKorean(KoreanLevel.learning)),
-        ],
+        value: _koreanText(s) ?? '',
+        hint: s.resumeSelectHint,
+        onTap: () async {
+          final r = await PickerSheet.pickOne<KoreanLevel>(context,
+              title: s.smsKoreanLevelLabel,
+              options: KoreanLevel.values,
+              labelOf: (v) => _koreanLabel(s, v),
+              selected: _korean);
+          if (r != null) _setKorean(r is PickerUnset ? _korean! : r as KoreanLevel);
+          // 재선택(해제)도 _setKorean 토글로 동일 처리.
+        },
       ),
-      _ChipGroup(
+      PickerField(
         label: s.smsExperienceLabel,
-        chips: [
-          _chip(s.smsExpNone, _exp == ExperienceLevel.none,
-              () => _setExp(ExperienceLevel.none)),
-          _chip(s.smsExpUnder1y, _exp == ExperienceLevel.under1y,
-              () => _setExp(ExperienceLevel.under1y)),
-          _chip(s.smsExpOneToThree, _exp == ExperienceLevel.oneToThree,
-              () => _setExp(ExperienceLevel.oneToThree)),
-          _chip(s.smsExpOverThree, _exp == ExperienceLevel.overThree,
-              () => _setExp(ExperienceLevel.overThree)),
-        ],
+        value: _expText(s) ?? '',
+        hint: s.resumeSelectHint,
+        onTap: () async {
+          final r = await PickerSheet.pickOne<ExperienceLevel>(context,
+              title: s.smsExperienceLabel,
+              options: ExperienceLevel.values,
+              labelOf: (v) => _expLabel(s, v),
+              selected: _exp);
+          if (r != null) _setExp(r is PickerUnset ? _exp! : r as ExperienceLevel);
+        },
       ),
-      _ChipGroup(
+      PickerField(
         label: s.smsKoreaStayLabel,
         optionalLabel: s.smsOptional,
-        chips: [
-          _chip(s.smsStayUnder1y, _koreaStay == KoreaStay.under1y,
-              () => _setKoreaStay(KoreaStay.under1y)),
-          _chip(s.smsStayOneToThree, _koreaStay == KoreaStay.oneToThree,
-              () => _setKoreaStay(KoreaStay.oneToThree)),
-          _chip(s.smsStayOverThree, _koreaStay == KoreaStay.overThree,
-              () => _setKoreaStay(KoreaStay.overThree)),
-        ],
+        value: _stayText(s) ?? '',
+        hint: s.resumeSelectHint,
+        onTap: () async {
+          final r = await PickerSheet.pickOne<KoreaStay>(context,
+              title: s.smsKoreaStayLabel,
+              options: KoreaStay.values,
+              labelOf: (v) => _stayLabel(s, v),
+              selected: _koreaStay);
+          if (r != null) {
+            _setKoreaStay(r is PickerUnset ? _koreaStay! : r as KoreaStay);
+          }
+        },
       ),
-      _ChipGroup(
+      PickerField(
         label: s.smsWorkDaysLabel,
         postingInfo: postingSchedule.isNotEmpty
             ? '${s.smsPostingLabel} · $postingSchedule'
             : null,
-        chips: [
-          for (final w in Weekday.values)
-            _chip(_weekdayLabel(s, w), !_daysNego && !_daysMatch && _days.contains(w),
-                () => _toggleDay(w)),
-          _chip(s.smsMatchPosting, _daysMatch, _toggleDaysMatch),
-          _chip(s.smsNegotiable, _daysNego, _toggleDaysNego),
-        ],
+        value: _daysText(s) ?? '',
+        hint: s.resumeSelectHint,
+        onTap: _pickDays,
       ),
-      _ChipGroup(
+      PickerField(
         label: s.smsWorkTimeLabel,
         postingInfo: postingTime.isNotEmpty
             ? '${s.smsPostingLabel} · $postingTime'
             : null,
-        chips: [
-          _chip(s.smsTimeMorning,
-              !_timesNego && !_timesMatch && _times.contains(DayPart.morning),
-              () => _toggleTime(DayPart.morning)),
-          _chip(s.smsTimeAfternoon,
-              !_timesNego && !_timesMatch && _times.contains(DayPart.afternoon),
-              () => _toggleTime(DayPart.afternoon)),
-          _chip(s.smsTimeEvening,
-              !_timesNego && !_timesMatch && _times.contains(DayPart.evening),
-              () => _toggleTime(DayPart.evening)),
-          _chip(s.smsTimeNight,
-              !_timesNego && !_timesMatch && _times.contains(DayPart.night),
-              () => _toggleTime(DayPart.night)),
-          _chip(s.smsMatchPosting, _timesMatch, _toggleTimesMatch),
-          _chip(s.smsNegotiable, _timesNego, _toggleTimesNego),
-        ],
+        value: _timesText(s) ?? '',
+        hint: s.resumeSelectHint,
+        onTap: _pickTimes,
       ),
-      _ChipGroup(
+      PickerField(
         label: s.smsStartDateLabel,
-        chips: [
-          _chip(s.smsStartImmediate, _start == StartDate.immediate,
-              () => _setStart(StartDate.immediate)),
-          _chip(s.smsStartWithinWeek, _start == StartDate.withinWeek,
-              () => _setStart(StartDate.withinWeek)),
-          _chip(s.smsNegotiable, _start == StartDate.negotiable,
-              () => _setStart(StartDate.negotiable)),
-        ],
+        value: _startText(s) ?? '',
+        hint: s.resumeSelectHint,
+        onTap: () async {
+          final r = await PickerSheet.pickOne<StartDate>(context,
+              title: s.smsStartDateLabel,
+              options: StartDate.values,
+              labelOf: (v) => _startLabel(s, v),
+              selected: _start);
+          if (r != null) _setStart(r is PickerUnset ? _start! : r as StartDate);
+        },
       ),
-      // 학생 여부(선택) — 맨 마지막. 체크 시에만 재학/휴학 선택 노출.
       _StudentSection(
         label: s.smsStudentLabel,
         optionalLabel: s.smsOptional,
@@ -692,6 +678,108 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
       ),
     ];
   }
+
+  // 요일/시간 복수 선택 — 요일/시간대 + '공고맞춤'·'협의'(배타) 한 시트에서.
+  Future<void> _pickDays() async {
+    final s = AppStrings.of(ref.read(languageProvider));
+    final opts = <_DayToken>[
+      ...Weekday.values.map(_DayToken.day),
+      const _DayToken.match(),
+      const _DayToken.nego(),
+    ];
+    final cur = <_DayToken>{
+      if (_daysMatch) const _DayToken.match()
+      else if (_daysNego) const _DayToken.nego()
+      else ..._days.map(_DayToken.day),
+    };
+    final r = await PickerSheet.pickMulti<_DayToken>(context,
+        title: s.smsWorkDaysLabel,
+        options: opts,
+        labelOf: (t) => t.label(s, _weekdayLabel),
+        selected: cur,
+        confirmLabel: s.confirm,
+        normalize: _normalizeDayTokens);
+    if (r == null) return;
+    setState(() {
+      _onChipTouched();
+      _daysMatch = r.any((t) => t.isMatch);
+      _daysNego = r.any((t) => t.isNego);
+      _days
+        ..clear()
+        ..addAll(r.where((t) => t.day != null).map((t) => t.day!));
+      if (_daysMatch || _daysNego) _days.clear();
+    });
+  }
+
+  Future<void> _pickTimes() async {
+    final s = AppStrings.of(ref.read(languageProvider));
+    final opts = <_TimeToken>[
+      ...DayPart.values.map(_TimeToken.part),
+      const _TimeToken.match(),
+      const _TimeToken.nego(),
+    ];
+    final cur = <_TimeToken>{
+      if (_timesMatch) const _TimeToken.match()
+      else if (_timesNego) const _TimeToken.nego()
+      else ..._times.map(_TimeToken.part),
+    };
+    final r = await PickerSheet.pickMulti<_TimeToken>(context,
+        title: s.smsWorkTimeLabel,
+        options: opts,
+        labelOf: (t) => t.label(s, _dayPartText),
+        selected: cur,
+        confirmLabel: s.confirm,
+        normalize: _normalizeTimeTokens);
+    if (r == null) return;
+    setState(() {
+      _onChipTouched();
+      _timesMatch = r.any((t) => t.isMatch);
+      _timesNego = r.any((t) => t.isNego);
+      _times
+        ..clear()
+        ..addAll(r.where((t) => t.part != null).map((t) => t.part!));
+      if (_timesMatch || _timesNego) _times.clear();
+    });
+  }
+
+  static void _normalizeDayTokens(Set<_DayToken> next, _DayToken tapped) {
+    if (tapped.isMatch || tapped.isNego) {
+      next..clear()..add(tapped);
+    } else {
+      next.removeWhere((t) => t.isMatch || t.isNego);
+    }
+  }
+
+  static void _normalizeTimeTokens(Set<_TimeToken> next, _TimeToken tapped) {
+    if (tapped.isMatch || tapped.isNego) {
+      next..clear()..add(tapped);
+    } else {
+      next.removeWhere((t) => t.isMatch || t.isNego);
+    }
+  }
+
+  String _koreanLabel(AppStrings s, KoreanLevel v) => switch (v) {
+        KoreanLevel.fluent => s.smsKoreanFluent,
+        KoreanLevel.conversational => s.smsKoreanConversational,
+        KoreanLevel.basic => s.smsKoreanBasic,
+        KoreanLevel.learning => s.smsKoreanLearning,
+      };
+  String _expLabel(AppStrings s, ExperienceLevel v) => switch (v) {
+        ExperienceLevel.none => s.smsExpNone,
+        ExperienceLevel.under1y => s.smsExpUnder1y,
+        ExperienceLevel.oneToThree => s.smsExpOneToThree,
+        ExperienceLevel.overThree => s.smsExpOverThree,
+      };
+  String _stayLabel(AppStrings s, KoreaStay v) => switch (v) {
+        KoreaStay.under1y => s.smsStayUnder1y,
+        KoreaStay.oneToThree => s.smsStayOneToThree,
+        KoreaStay.overThree => s.smsStayOverThree,
+      };
+  String _startLabel(AppStrings s, StartDate v) => switch (v) {
+        StartDate.immediate => s.smsStartImmediate,
+        StartDate.withinWeek => s.smsStartWithinWeek,
+        StartDate.negotiable => s.smsNegotiable,
+      };
 
   String _weekdayLabel(AppStrings s, Weekday w) {
     switch (w) {
@@ -711,9 +799,6 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
         return s.smsSun;
     }
   }
-
-  Widget _chip(String label, bool selected, VoidCallback onTap) =>
-      _SelectChip(label: label, selected: selected, onTap: onTap);
 
   void _setKorean(KoreanLevel v) => setState(() {
         _onChipTouched();
@@ -741,67 +826,6 @@ class _SmsPrepareScreenState extends ConsumerState<SmsPrepareScreen> {
         _start = _start == v ? null : v;
       });
 
-  void _toggleDay(Weekday w) {
-    setState(() {
-      _onChipTouched();
-      _daysNego = false;
-      _daysMatch = false;
-      _days.contains(w) ? _days.remove(w) : _days.add(w);
-    });
-  }
-
-  void _toggleDaysNego() {
-    setState(() {
-      _onChipTouched();
-      _daysNego = !_daysNego;
-      if (_daysNego) {
-        _days.clear();
-        _daysMatch = false;
-      }
-    });
-  }
-
-  void _toggleDaysMatch() {
-    setState(() {
-      _onChipTouched();
-      _daysMatch = !_daysMatch;
-      if (_daysMatch) {
-        _days.clear();
-        _daysNego = false;
-      }
-    });
-  }
-
-  void _toggleTime(DayPart p) {
-    setState(() {
-      _onChipTouched();
-      _timesNego = false;
-      _timesMatch = false;
-      _times.contains(p) ? _times.remove(p) : _times.add(p);
-    });
-  }
-
-  void _toggleTimesNego() {
-    setState(() {
-      _onChipTouched();
-      _timesNego = !_timesNego;
-      if (_timesNego) {
-        _times.clear();
-        _timesMatch = false;
-      }
-    });
-  }
-
-  void _toggleTimesMatch() {
-    setState(() {
-      _onChipTouched();
-      _timesMatch = !_timesMatch;
-      if (_timesMatch) {
-        _times.clear();
-        _timesNego = false;
-      }
-    });
-  }
 }
 
 /// 미리보기 직접 편집 전용 화면 — 별도 라우트(스와이프백=취소), 하단 "저장".
@@ -958,103 +982,17 @@ class _StudentSection extends StatelessWidget {
           ),
           if (checked) ...[
             const SizedBox(height: 10),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              _SelectChip(
-                  label: enrolledLabel,
-                  selected: status == StudentStatus.enrolled,
-                  onTap: () => onSelect(StudentStatus.enrolled)),
-              _SelectChip(
-                  label: onLeaveLabel,
-                  selected: status == StudentStatus.onLeave,
-                  onTap: () => onSelect(StudentStatus.onLeave)),
-            ]),
+            _StudentOption(
+                label: enrolledLabel,
+                selected: status == StudentStatus.enrolled,
+                onTap: () => onSelect(StudentStatus.enrolled)),
+            const SizedBox(height: 8),
+            _StudentOption(
+                label: onLeaveLabel,
+                selected: status == StudentStatus.onLeave,
+                onTap: () => onSelect(StudentStatus.onLeave)),
           ],
         ],
-      ),
-    );
-  }
-}
-
-class _ChipGroup extends StatelessWidget {
-  final String label;
-  final String? postingInfo;
-  final String? optionalLabel; // "(선택)" 등 — 필수 아님 표시
-  final List<Widget> chips;
-  const _ChipGroup(
-      {required this.label,
-      this.postingInfo,
-      this.optionalLabel,
-      required this.chips});
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 18),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.gray900)),
-              if (optionalLabel != null) ...[
-                const SizedBox(width: 6),
-                Text(optionalLabel!,
-                    style: const TextStyle(
-                        fontSize: 12, color: AppColors.gray400)),
-              ],
-              if (postingInfo != null) ...[
-                const SizedBox(width: 8),
-                Flexible(
-                  child: Text(postingInfo!,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                          fontSize: 12, color: AppColors.gray400)),
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          Wrap(spacing: 8, runSpacing: 8, children: chips),
-        ],
-      ),
-    );
-  }
-}
-
-class _SelectChip extends StatelessWidget {
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-  const _SelectChip(
-      {required this.label, required this.selected, required this.onTap});
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        HapticFeedback.selectionClick();
-        onTap();
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          // 필터 화면 칩과 동일 — 선택 시 연주황(carrotLight), 테두리 없음.
-          color: selected ? AppColors.carrotLight : Colors.white,
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: selected ? Colors.transparent : AppColors.gray100,
-            width: 1.5,
-          ),
-        ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 13,
-                fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-                color: selected ? AppColors.carrotDark : AppColors.gray600)),
       ),
     );
   }
@@ -1167,4 +1105,80 @@ class _BottomBar extends StatelessWidget {
       ),
     );
   }
+}
+
+/// 학생 재학/휴학 선택 행 — 새 리스트 선택 톤과 동일(2026-10-11).
+class _StudentOption extends StatelessWidget {
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+  const _StudentOption(
+      {required this.label, required this.selected, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: selected ? AppColors.carrotLight : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? Colors.transparent : AppColors.gray100,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(label,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight:
+                          selected ? FontWeight.w600 : FontWeight.w500,
+                      color: selected
+                          ? AppColors.carrotDark
+                          : AppColors.gray600)),
+            ),
+            if (selected)
+              const Icon(Icons.check_rounded, size: 18, color: AppColors.carrot),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DayToken {
+  final Weekday? day;
+  final bool isMatch;
+  final bool isNego;
+  const _DayToken.day(this.day) : isMatch = false, isNego = false;
+  const _DayToken.match() : day = null, isMatch = true, isNego = false;
+  const _DayToken.nego() : day = null, isMatch = false, isNego = true;
+  String label(AppStrings s, String Function(AppStrings, Weekday) wd) =>
+      day != null ? wd(s, day!) : (isMatch ? s.smsMatchPosting : s.smsNegotiable);
+  @override
+  bool operator ==(Object o) =>
+      o is _DayToken && o.day == day && o.isMatch == isMatch && o.isNego == isNego;
+  @override
+  int get hashCode => Object.hash(day, isMatch, isNego);
+}
+
+class _TimeToken {
+  final DayPart? part;
+  final bool isMatch;
+  final bool isNego;
+  const _TimeToken.part(this.part) : isMatch = false, isNego = false;
+  const _TimeToken.match() : part = null, isMatch = true, isNego = false;
+  const _TimeToken.nego() : part = null, isMatch = false, isNego = true;
+  String label(AppStrings s, String Function(AppStrings, DayPart) dp) =>
+      part != null ? dp(s, part!) : (isMatch ? s.smsMatchPosting : s.smsNegotiable);
+  @override
+  bool operator ==(Object o) =>
+      o is _TimeToken && o.part == part && o.isMatch == isMatch && o.isNego == isNego;
+  @override
+  int get hashCode => Object.hash(part, isMatch, isNego);
 }

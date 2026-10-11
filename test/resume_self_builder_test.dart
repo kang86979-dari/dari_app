@@ -9,24 +9,55 @@ void main() {
   final now = DateTime(2026, 10, 9);
 
   group('ResumeSelfBuilder', () {
-    test('전체 선택 — 국적·비자·거주·경험·강점·각오', () {
+    test('전체 선택 — 4문단 구조(소개/경력강점/동기/포부)', () {
       final text = ResumeSelfBuilder.build(ResumeSelfInput(
         nationalityKo: '방글라데시',
         visaCode: 'E-9',
         stay: KoreaStay.overThree,
+        koreanNm: '일상 회화 가능',
+        topikLevel: 4,
         exps: {SelfExp.factory, SelfExp.restaurant},
         strengths: {SelfStrength.diligent, SelfStrength.stamina},
+        motive: SelfMotive.stable,
+        conds: {SelfCond.shiftNight},
         resolve: SelfResolve.longTerm,
         now: now,
       ));
+      // ① 소개: 국적·비자·거주·한국어(+TOPIK) 한 문단
       expect(text, contains('안녕하세요. 저는 방글라데시에서 왔고 E-9 비자를 가지고 있습니다.'));
       expect(text, contains('3년이 넘었습니다'));
+      expect(text, contains('한국어는 일상 회화 가능 수준이며, TOPIK 4급 자격이 있습니다.'));
+      // ② 경력·강점
       expect(text, contains('일한 경험이 있습니다'));
       expect(text, contains('맡은 일은 끝까지 성실하게 해냅니다.'));
       expect(text, contains('체력에 자신이 있습니다.'));
+      // ③ 지원 동기
+      expect(text, contains('안정적인 일자리에서 꾸준히 일하고 싶어 지원했습니다.'));
+      // ④ 입사 후 포부: 근무조건 + 각오 + 맺음
+      expect(text, contains('교대·야간 근무도 가능합니다.'));
       expect(text, contains('한곳에서 오래 일하고 싶습니다.'));
       expect(text, contains('기회를 주시면 성실히 일하겠습니다. 감사합니다.'));
       expect(text.split('\n').length, 4); // 문단 4개
+    });
+
+    test('동기 없으면 해당 문단 생략', () {
+      final text = ResumeSelfBuilder.build(ResumeSelfInput(
+        nationalityKo: '방글라데시',
+        visaCode: 'E-9',
+        strengths: {SelfStrength.diligent},
+        resolve: SelfResolve.longTerm,
+        now: now,
+      ));
+      // ①소개 ②강점 ④포부 — 동기 없음 → 3문단
+      expect(text.split('\n').length, 3);
+    });
+
+    test('자격증 자동 포함 (경력강점 문단)', () {
+      final text = ResumeSelfBuilder.build(ResumeSelfInput(
+        licenses: const [ResumeLicense(name: '지게차운전기능사')],
+        now: now,
+      ));
+      expect(text, contains('지게차운전기능사 자격증이 있습니다.'));
     });
 
     test('아무것도 없음 — 인사+맺음만', () {

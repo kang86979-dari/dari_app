@@ -5,6 +5,7 @@ import '../../core/constants/colors.dart';
 import '../../core/widgets/app_primary_button.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/widgets/app_back_button.dart';
+import '../../core/widgets/app_bar_text_action.dart';
 import '../../core/widgets/info_row.dart';
 import '../../data/models/resume.dart';
 import '../../data/services/khire_resume_codes.dart';
@@ -21,13 +22,19 @@ import 'resume_edit_screen.dart';
 ///  - 미작성  : 안내 + 빈 상태 + [이력서 작성하기]
 ///  - 작성중  : 요약(빈 항목 '미입력') + 미완성 배너 + [이어서 작성하기]
 ///  - 작성완료: 요약 + 우상단 '수정하기'(회원정보 요약과 동일 패턴)
-class ResumeManageScreen extends ConsumerWidget {
+class ResumeManageScreen extends ConsumerStatefulWidget {
   const ResumeManageScreen({super.key});
 
+  @override
+  ConsumerState<ResumeManageScreen> createState() =>
+      _ResumeManageScreenState();
+}
+
+class _ResumeManageScreenState extends ConsumerState<ResumeManageScreen> {
   static const _site = 'khire';
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final lang = ref.watch(languageProvider);
     final s = AppStrings.of(lang);
     final resumeAsync = ref.watch(resumeProvider(_site));
@@ -59,14 +66,9 @@ class ResumeManageScreen extends ConsumerWidget {
         actions: [
           // 작성본이 있을 때만 — 회원정보 요약과 동일한 텍스트 버튼(통일).
           if (resume != null)
-            TextButton(
-              onPressed: () => ResumeEditScreen.show(context, site: _site),
-              style: TextButton.styleFrom(foregroundColor: AppColors.carrot),
-              child: Text(
-                s.smsEditOnKhire,
-                style:
-                    const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-              ),
+            AppBarTextAction(
+              label: s.smsEditOnKhire,
+              onTap: () => ResumeEditScreen.show(context, site: _site),
             ),
         ],
       ),
@@ -105,13 +107,20 @@ class ResumeManageScreen extends ConsumerWidget {
   }
 }
 
-/// 공통 상단 안내 박스 — "한 번만 작성하면 자동 입력".
-class _IntroBox extends StatelessWidget {
-  final String text;
-  const _IntroBox(this.text);
+/// 공통 상단 안내 박스 — 목록형(자동입력 + 한국어 작성, 2026-10-11).
+/// 작성 화면(resume_edit)에서도 동일하게 사용.
+class ResumeIntroBox extends StatelessWidget {
+  final List<String> lines;
+  const ResumeIntroBox(this.lines, {super.key});
 
   @override
   Widget build(BuildContext context) {
+    const style = TextStyle(
+      fontSize: 13.5,
+      height: 1.5,
+      fontWeight: FontWeight.w600,
+      color: AppColors.carrotDark,
+    );
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -119,14 +128,20 @@ class _IntroBox extends StatelessWidget {
         color: AppColors.carrotLight,
         borderRadius: BorderRadius.circular(12),
       ),
-      child: Text(
-        text,
-        style: const TextStyle(
-          fontSize: 13.5,
-          height: 1.5,
-          fontWeight: FontWeight.w600,
-          color: AppColors.carrotDark,
-        ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < lines.length; i++) ...[
+            if (i > 0) const SizedBox(height: 6),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text('•  ', style: style),
+                Expanded(child: Text(lines[i], style: style)),
+              ],
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -141,32 +156,37 @@ class _EmptyBody extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+          child: ResumeIntroBox([s.resumeManageIntro, s.resumeIntroKorean]),
+        ),
+        // 빈 상태: 고정 여백(80) 대신 남은 공간 세로 중앙 정렬(2026-10-11).
         Expanded(
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-            children: [
-              _IntroBox(s.resumeManageIntro),
-              const SizedBox(height: 80),
-              const Icon(Icons.description_outlined,
-                  size: 52, color: AppColors.gray200),
-              const SizedBox(height: 14),
-              Text(
-                s.resumeEmptyTitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.gray500,
+          child: Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.description_outlined,
+                    size: 52, color: AppColors.gray200),
+                const SizedBox(height: 14),
+                Text(
+                  s.resumeEmptyTitle,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.gray500,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                s.resumeEmptyDesc,
-                textAlign: TextAlign.center,
-                style:
-                    const TextStyle(fontSize: 13.5, color: AppColors.gray300),
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  s.resumeEmptyDesc,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      fontSize: 13.5, color: AppColors.gray300),
+                ),
+              ],
+            ),
           ),
         ),
         Padding(
@@ -265,7 +285,7 @@ class _SummaryBody extends StatelessWidget {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
             children: [
-              _IntroBox(s.resumeManageIntro),
+              ResumeIntroBox([s.resumeManageIntro, s.resumeIntroKorean]),
               if (!complete) ...[
                 const SizedBox(height: 10),
                 Container(

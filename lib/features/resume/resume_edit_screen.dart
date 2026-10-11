@@ -15,6 +15,7 @@ import '../../providers/language_provider.dart';
 import '../../providers/resume_provider.dart';
 import '../apply/address/address_input_screen.dart';
 import 'khire_code_labels.dart';
+import 'resume_manage_screen.dart';
 import 'resume_self_compose_screen.dart';
 import 'widgets/resume_section.dart';
 import 'widgets/resume_pickers.dart';
@@ -65,6 +66,7 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
   final List<String> _employmentCds = [];
   String? _payCd;
   String? _koreanLevelCd;
+  int? _topikLevel; // TOPIK 급수(선택, 2026-10-11)
   // 선택 입력
   final List<ResumeLicense> _licenses = [];
   final List<ResumeForeignLang> _foreignLangs = [];
@@ -109,6 +111,7 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
       _employmentCds.addAll(existing.employmentCds);
       _payCd = existing.payCd;
       _koreanLevelCd = existing.koreanLevelCd;
+      _topikLevel = existing.topikLevel;
       _licenses.addAll(existing.licenses);
       _foreignLangs.addAll(existing.foreignLangs);
     } else {
@@ -142,6 +145,7 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
       employmentCds: List.of(_employmentCds),
       payCd: _payCd,
       koreanLevelCd: _koreanLevelCd,
+      topikLevel: _topikLevel,
       licenses: List.of(_licenses),
       foreignLangs: List.of(_foreignLangs),
     );
@@ -288,6 +292,24 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
     if (cd != null) setState(() => _koreanLevelCd = cd);
   }
 
+  Future<void> _pickTopik() async {
+    final lang = ref.read(languageProvider);
+    final s = AppStrings.of(lang);
+    final items = [
+      CodeItem('0', s.resumeTopikNone),
+      for (var i = 1; i <= 6; i++) CodeItem('$i', 'TOPIK $i급'),
+    ];
+    final cd = await ResumePickers.pickCode(
+      context,
+      title: s.resumeTopikHint,
+      items: items,
+      selected: _topikLevel == null ? '0' : '${_topikLevel}',
+    );
+    if (cd != null) {
+      setState(() => _topikLevel = cd == '0' ? null : int.parse(cd));
+    }
+  }
+
   // 코드 → 사용자 언어 표시명 (주입은 한국어 원본, 표시만 번역 — 2026-10-09).
   String? _nameOf(List<CodeItem> items, String? cd) {
     if (cd == null) return null;
@@ -326,10 +348,17 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
   }
 
   Future<void> _openSelfCompose() async {
+    String koreanNm = '';
+    for (final c in _codes.koreanLevel) {
+      if (c.cd == _koreanLevelCd) koreanNm = c.nm;
+    }
     final r = await ResumeSelfComposeScreen.show(
       context,
       initialChips: _selfChips,
       careers: _careerType == 'exp' ? List.of(_careers) : const [],
+      koreanNm: koreanNm,
+      topikLevel: _topikLevel,
+      licenses: List.of(_licenses),
     );
     if (r != null && mounted) {
       setState(() {
@@ -590,15 +619,15 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
                 child: ListView(
                   padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
                   children: [
+                    // 안내 — 관리 화면과 동일 목록형(자동입력+한국어 작성),
+                    // 온라인 지원 진입 경로에도 노출(2026-10-11).
+                    ResumeIntroBox([s.resumeManageIntro, s.resumeIntroKorean]),
+                    const SizedBox(height: 20),
+
                     // 제목 — K-HIRE 25자 제한, 기본 문구 자동 입력(편집 가능).
                     ResumeSection(title: s.resumeTitleLabel, required: true),
                     _textField(_titleCtrl, s.resumeTitleHint,
                         maxLines: 1, maxLength: _kTitleMax),
-                    const SizedBox(height: 24),
-
-                    // 자기소개서 — 칩 질문으로 조립(만들기 버튼), 키패드 없음.
-                    ResumeSection(title: s.resumeSelfLabel, required: true),
-                    _selfRow(s),
                     const SizedBox(height: 24),
 
                     // 최종학력
@@ -703,6 +732,15 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
                       hint: s.resumeSelectHint,
                       onTap: _pickKorean,
                     ),
+                    const SizedBox(height: 10),
+                    // TOPIK 급수(선택) — 있으면 자소서에 자동 포함(2026-10-11).
+                    ResumePickerRow(
+                      value: _topikLevel == null
+                          ? ''
+                          : 'TOPIK ${_topikLevel}급',
+                      hint: s.resumeTopikHint,
+                      onTap: _pickTopik,
+                    ),
                     const SizedBox(height: 28),
 
                     // 주소 — 회원정보와 공유. K-HIRE 온라인 지원 폼(거주지)
@@ -731,6 +769,12 @@ class _ResumeEditScreenState extends ConsumerState<ResumeEditScreen> {
                           onRemove: () =>
                               setState(() => _licenses.removeAt(e.key)),
                         )),
+                    const SizedBox(height: 28),
+
+                    // 자기소개서 — 다른 항목(국적·비자·한국어·경력·자격증)을
+                    // 재료로 자동 조립하므로 **맨 마지막**(2026-10-11).
+                    ResumeSection(title: s.resumeSelfLabel, required: true),
+                    _selfRow(s),
                   ],
                 ),
               ),

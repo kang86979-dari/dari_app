@@ -24,13 +24,24 @@ enum SelfStrength { diligent, stamina, careful, fastLearner, bright, punctual }
 /// 각오 (단일).
 enum SelfResolve { longTerm, learnHard, startNow }
 
+/// 지원 동기 (단일, 2026-10-11 — 자소서 4문단 구조의 ③).
+enum SelfMotive { stable, learnSkill, family, settle }
+
+/// 근무 조건 (복수, 2026-10-11 — ④ 포부에 포함. 외국인 채용에서 가치 큼).
+enum SelfCond { shiftNight, weekend, dormNeeded }
+
 class ResumeSelfInput {
   final String nationalityKo; // 한국어 국적명 (없으면 '')
   final String visaCode; // 예: E-9 (없으면 '')
   final KoreaStay? stay;
+  final String koreanNm; // 한국어 수준 nm(사이트 원본 한국어, 이력서에서 자동)
+  final int? topikLevel; // TOPIK 급수(이력서에서 자동, null=없음)
   final Set<SelfExp> exps; // careers 없을 때만 사용
   final List<ResumeCareer> careers; // 있으면 exps 대신 경력 문장
+  final List<ResumeLicense> licenses; // 이력서 자격증(자동, 최대 2건 문장화)
   final Set<SelfStrength> strengths;
+  final SelfMotive? motive;
+  final Set<SelfCond> conds;
   final SelfResolve? resolve;
   final DateTime now; // 재직중 개월 계산용(테스트 주입)
 
@@ -38,9 +49,14 @@ class ResumeSelfInput {
     this.nationalityKo = '',
     this.visaCode = '',
     this.stay,
+    this.koreanNm = '',
+    this.topikLevel,
     this.exps = const {},
     this.careers = const [],
+    this.licenses = const [],
     this.strengths = const {},
+    this.motive,
+    this.conds = const {},
     this.resolve,
     required this.now,
   });
@@ -67,6 +83,19 @@ class ResumeSelfBuilder {
     SelfStrength.punctual: '시간 약속을 잘 지킵니다.',
   };
 
+  static const _motiveKo = {
+    SelfMotive.stable: '안정적인 일자리에서 꾸준히 일하고 싶어 지원했습니다.',
+    SelfMotive.learnSkill: '기술을 배우며 성장하고 싶어 지원했습니다.',
+    SelfMotive.family: '가족을 부양하기 위해 열심히 일하고 싶습니다.',
+    SelfMotive.settle: '한국에 오래 정착하며 일하고 싶습니다.',
+  };
+
+  static const _condKo = {
+    SelfCond.shiftNight: '교대·야간 근무도 가능합니다.',
+    SelfCond.weekend: '주말 근무도 가능합니다.',
+    SelfCond.dormNeeded: '기숙사 제공이 가능한 곳이면 더욱 좋습니다.',
+  };
+
   static const _resolveKo = {
     SelfResolve.longTerm: '한곳에서 오래 일하고 싶습니다.',
     SelfResolve.learnHard: '열심히 배우며 최선을 다하겠습니다.',
@@ -84,29 +113,38 @@ class ResumeSelfBuilder {
   }
 
   static String build(ResumeSelfInput i) {
+    // 한국 자소서 4문단 구조(2026-10-11):
+    // ①소개(국적·비자·거주·한국어) ②경력·강점(+자격증) ③지원 동기 ④입사 후 포부.
     final paragraphs = <String>[];
 
-    // ① 인사 + 소개 (국적·비자는 프로필에서 자동).
+    // ── ① 소개 — 전부 프로필/이력서 데이터 자동.
     final intro = <String>['안녕하세요.'];
     if (i.nationalityKo.isNotEmpty && i.visaCode.isNotEmpty) {
       intro.add('저는 ${i.nationalityKo}에서 왔고 ${i.visaCode} 비자를 가지고 있습니다.');
     } else if (i.nationalityKo.isNotEmpty) {
       intro.add('저는 ${i.nationalityKo}에서 온 구직자입니다.');
     }
-    paragraphs.add(intro.join(' '));
-
-    // ② 거주 기간 + 일 경험.
-    final body = <String>[];
     switch (i.stay) {
       case KoreaStay.under1y:
-        body.add('한국에 온 지 1년이 안 됐지만 빠르게 적응하고 있습니다.');
+        intro.add('한국에 온 지 1년이 안 됐지만 빠르게 적응하고 있습니다.');
       case KoreaStay.oneToThree:
-        body.add('한국에 거주한 지 1~3년 됐습니다.');
+        intro.add('한국에 거주한 지 1~3년 됐습니다.');
       case KoreaStay.overThree:
-        body.add('한국에 거주한 지 3년이 넘었습니다.');
+        intro.add('한국에 거주한 지 3년이 넘었습니다.');
       case null:
         break;
     }
+    if (i.koreanNm.isNotEmpty && i.topikLevel != null) {
+      intro.add('한국어는 ${i.koreanNm} 수준이며, TOPIK ${i.topikLevel}급 자격이 있습니다.');
+    } else if (i.koreanNm.isNotEmpty) {
+      intro.add('한국어는 ${i.koreanNm} 수준입니다.');
+    } else if (i.topikLevel != null) {
+      intro.add('TOPIK ${i.topikLevel}급 자격이 있습니다.');
+    }
+    paragraphs.add(intro.join(' '));
+
+    // ── ② 경력 및 강점 (+자격증 자동).
+    final body = <String>[];
     if (i.careers.isNotEmpty) {
       // 경력 최대 2건 문장화.
       for (final c in i.careers.take(2)) {
@@ -132,17 +170,22 @@ class ResumeSelfBuilder {
         body.add('한국에서 일한 경험이 있습니다.');
       }
     }
+    for (final l in i.licenses.take(2)) {
+      if (l.name.isNotEmpty) body.add('${l.name} 자격증이 있습니다.');
+    }
+    body.addAll(i.strengths.take(2).map((s) => _strengthKo[s]!));
     if (body.isNotEmpty) paragraphs.add(body.join(' '));
 
-    // ③ 강점 + 각오.
-    final will = <String>[
-      ...i.strengths.take(2).map((s) => _strengthKo[s]!),
-      if (i.resolve != null) _resolveKo[i.resolve]!,
-    ];
-    if (will.isNotEmpty) paragraphs.add(will.join(' '));
+    // ── ③ 지원 동기.
+    if (i.motive != null) paragraphs.add(_motiveKo[i.motive]!);
 
-    // ④ 맺음.
-    paragraphs.add('기회를 주시면 성실히 일하겠습니다. 감사합니다.');
+    // ── ④ 입사 후 포부 (근무 조건 + 각오 + 맺음).
+    final will = <String>[
+      ...SelfCond.values.where(i.conds.contains).map((c) => _condKo[c]!),
+      if (i.resolve != null) _resolveKo[i.resolve]!,
+      '기회를 주시면 성실히 일하겠습니다. 감사합니다.',
+    ];
+    paragraphs.add(will.join(' '));
 
     return paragraphs.join('\n');
   }

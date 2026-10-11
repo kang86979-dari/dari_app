@@ -7912,6 +7912,134 @@ You may refuse to consent to this third-party sharing. Refusing means applying m
     'uz': 'Rezyumeni bir marta yozish kifoya. Ariza topshirganda avtomatik to\'ldiriladi.',
     'mn': 'Анкетыг нэг л удаа бичихэд хангалттай. Өргөдөл гаргахад автоматаар бөглөгдөнө.',
   }, 'You only need to write your resume once. It is filled in automatically when you apply.');
+  /// 이력서는 한국어로 작성됨 안내(서술형) — 안내 박스 2번째 줄(2026-10-11).
+  String get resumeIntroKorean => _t({
+    'ko': '이력서는 한국어로 작성돼요.',
+    'en': 'Your resume is written in Korean.',
+    'zh': '简历将以韩语生成。',
+    'hi': 'आपका रिज़्यूमे कोरियाई भाषा में बनाया जाता है।',
+    'ja': '履歴書は韓国語で作成されます。',
+    'th': 'เรซูเม่จะถูกเขียนเป็นภาษาเกาหลี',
+    'vi': 'Hồ sơ sẽ được viết bằng tiếng Hàn.',
+    'bn': 'জীবনবৃত্তান্ত কোরিয়ান ভাষায় তৈরি হয়।',
+    'ru': 'Резюме составляется на корейском языке.',
+    'id': 'Resume dibuat dalam bahasa Korea.',
+    'ne': 'बायोडाटा कोरियाली भाषामा तयार हुन्छ।',
+    'km': 'ប្រវត្តិរូបត្រូវបានសរសេរជាភាសាកូរ៉េ។',
+    'my': 'ကိုယ်ရေးမှတ်တမ်းကို ကိုရီးယားဘာသာဖြင့် ရေးသားပေးပါသည်။',
+    'si': 'ජීවදත්ත පත්‍රය කොරියානු භාෂාවෙන් සකස් වේ.',
+    'uz': "Rezyume koreys tilida yoziladi.",
+    'mn': 'Анкет солонгос хэлээр бичигдэнэ.',
+  }, 'Your resume is written in Korean.');
+  /// TOPIK 급수 선택 피커 라벨/힌트 (2026-10-11).
+  String get resumeTopikHint => _t({
+    'ko': 'TOPIK 급수 (선택)', 'en': 'TOPIK level (optional)',
+    'zh': 'TOPIK 等级（可选）', 'hi': 'TOPIK स्तर (वैकल्पिक)',
+    'ja': 'TOPIK 級（任意）', 'th': 'ระดับ TOPIK (ไม่บังคับ)',
+    'vi': 'Cấp TOPIK (tùy chọn)', 'bn': 'TOPIK স্তর (ঐচ্ছিক)',
+    'ru': 'Уровень TOPIK (необязательно)', 'id': 'Level TOPIK (opsional)',
+    'ne': 'TOPIK स्तर (वैकल्पिक)', 'km': 'កម្រិត TOPIK (ជាជម្រើស)',
+    'my': 'TOPIK အဆင့် (ရွေးချယ်နိုင်)', 'si': 'TOPIK මට්ටම (විකල්ප)',
+    'uz': 'TOPIK darajasi (ixtiyoriy)', 'mn': 'TOPIK түвшин (сонголт)',
+  }, 'TOPIK level (optional)');
+  /// 자소서 ③지원 동기 질문·옵션 (2026-10-11).
+  String get selfQMotive => _t({
+    'ko': '왜 일하고 싶나요?', 'en': 'Why do you want to work?',
+    'zh': '为什么想工作？', 'hi': 'आप काम क्यों करना चाहते हैं?',
+    'ja': 'なぜ働きたいですか？', 'th': 'ทำไมถึงอยากทำงาน?',
+    'vi': 'Vì sao bạn muốn làm việc?', 'bn': 'কেন কাজ করতে চান?',
+    'ru': 'Почему вы хотите работать?', 'id': 'Mengapa ingin bekerja?',
+    'ne': 'किन काम गर्न चाहनुहुन्छ?', 'km': 'ហេតុអ្វីចង់ធ្វើការ?',
+    'my': 'ဘာကြောင့် အလုပ်လုပ်ချင်သလဲ?', 'si': 'ඇයි වැඩ කරන්න ඕන?',
+    'uz': 'Nega ishlamoqchisiz?', 'mn': 'Яагаад ажиллахыг хүсэж байна?',
+  }, 'Why do you want to work?');
+  String get selfMotiveStable => _t({
+    'ko': '안정적인 일자리를 원해요', 'en': 'I want a stable job',
+    'zh': '想要稳定的工作', 'hi': 'स्थिर नौकरी चाहता/चाहती हूं',
+    'ja': '安定した仕事がほしい', 'th': 'อยากได้งานที่มั่นคง',
+    'vi': 'Muốn công việc ổn định', 'bn': 'স্থায়ী চাকরি চাই',
+    'ru': 'Хочу стабильную работу', 'id': 'Ingin pekerjaan stabil',
+    'ne': 'स्थिर जागिर चाहन्छु', 'km': 'ចង់បានការងារស្ថិរភាព',
+    'my': 'တည်ငြိမ်သောအလုပ်လိုချင်', 'si': 'ස්ථාවර රැකියාවක් ඕන',
+    'uz': 'Barqaror ish istayman', 'mn': 'Тогтвортой ажил хүсэж байна',
+  }, 'I want a stable job');
+  String get selfMotiveLearn => _t({
+    'ko': '기술을 배우고 싶어요', 'en': 'I want to learn skills',
+    'zh': '想学习技术', 'hi': 'कौशल सीखना चाहता/चाहती हूं',
+    'ja': '技術を学びたい', 'th': 'อยากเรียนรู้ทักษะ',
+    'vi': 'Muốn học kỹ năng', 'bn': 'দক্ষতা শিখতে চাই',
+    'ru': 'Хочу освоить навыки', 'id': 'Ingin belajar keterampilan',
+    'ne': 'सीप सिक्न चाहन्छु', 'km': 'ចង់រៀនជំនាញ',
+    'my': 'ကျွမ်းကျင်မှုသင်ယူချင်', 'si': 'කුසලතා ඉගෙන ගන්න ඕන',
+    'uz': "Hunar o'rganmoqchiman", 'mn': 'Ур чадвар сурахыг хүсэж байна',
+  }, 'I want to learn skills');
+  String get selfMotiveFamily => _t({
+    'ko': '가족을 부양해야 해요', 'en': 'I need to support my family',
+    'zh': '需要养家', 'hi': 'परिवार का भरण-पोषण करना है',
+    'ja': '家族を養うため', 'th': 'ต้องเลี้ยงดูครอบครัว',
+    'vi': 'Cần nuôi gia đình', 'bn': 'পরিবারের ভরণপোষণ করতে হবে',
+    'ru': 'Нужно содержать семью', 'id': 'Harus menafkahi keluarga',
+    'ne': 'परिवार पाल्नुपर्छ', 'km': 'ត្រូវផ្គត់ផ្គង់គ្រួសារ',
+    'my': 'မိသားစုကို ထောက်ပံ့ရမည်', 'si': 'පවුල නඩත්තු කරන්න ඕන',
+    'uz': 'Oilamni boqishim kerak', 'mn': 'Гэр бүлээ тэжээх хэрэгтэй',
+  }, 'I need to support my family');
+  String get selfMotiveSettle => _t({
+    'ko': '한국에 오래 정착하고 싶어요', 'en': 'I want to settle in Korea long-term',
+    'zh': '想长期定居韩国', 'hi': 'कोरिया में लंबे समय तक बसना चाहता/चाहती हूं',
+    'ja': '韓国に長く定住したい', 'th': 'อยากตั้งถิ่นฐานในเกาหลีระยะยาว',
+    'vi': 'Muốn định cư lâu dài ở Hàn Quốc', 'bn': 'কোরিয়ায় দীর্ঘদিন থাকতে চাই',
+    'ru': 'Хочу надолго обосноваться в Корее', 'id': 'Ingin menetap lama di Korea',
+    'ne': 'कोरियामा लामो समय बस्न चाहन्छु', 'km': 'ចង់តាំងទីលំនៅយូរនៅកូរ៉េ',
+    'my': 'ကိုရီးယားတွင် ကြာရှည်အခြေချလို', 'si': 'කොරියාවේ දිගු කල් පදිංචි වෙන්න ඕන',
+    'uz': 'Koreyada uzoq yashamoqchiman', 'mn': 'Солонгост удаан суурьшихыг хүсэж байна',
+  }, 'I want to settle in Korea long-term');
+  /// 자소서 ④근무 조건 질문·옵션 (2026-10-11).
+  String get selfQCond => _t({
+    'ko': '가능한 근무 조건은? (복수 선택)', 'en': 'Work conditions you can accept (multiple)',
+    'zh': '可接受的工作条件（可多选）', 'hi': 'कौन सी कार्य स्थितियां संभव हैं? (एकाधिक)',
+    'ja': '可能な勤務条件は？（複数選択）', 'th': 'เงื่อนไขการทำงานที่รับได้ (เลือกได้หลายข้อ)',
+    'vi': 'Điều kiện làm việc chấp nhận được (chọn nhiều)', 'bn': 'সম্ভাব্য কাজের শর্ত (একাধিক)',
+    'ru': 'Подходящие условия работы (несколько)', 'id': 'Kondisi kerja yang bisa diterima (boleh banyak)',
+    'ne': 'सम्भव कामका सर्तहरू (बहु)', 'km': 'លក្ខខណ្ឌការងារដែលអាចទទួលបាន (ច្រើន)',
+    'my': 'လက်ခံနိုင်သော အလုပ်အခြေအနေ (အများရွေးနိုင်)', 'si': 'හැකි සේවා කොන්දේසි (කිහිපයක්)',
+    'uz': "Qabul qila oladigan ish shartlari (bir nechta)", 'mn': 'Боломжит ажлын нөхцөл (олон сонголт)',
+  }, 'Work conditions you can accept (multiple)');
+  String get selfCondShiftNight => _t({
+    'ko': '교대·야간 근무 가능', 'en': 'Shift/night work OK',
+    'zh': '可倒班·夜班', 'hi': 'शिफ्ट/रात की पाली संभव',
+    'ja': '交代・夜勤可能', 'th': 'ทำงานเป็นกะ/กลางคืนได้',
+    'vi': 'Làm ca/đêm được', 'bn': 'শিফট/রাতের কাজ সম্ভব',
+    'ru': 'Смены/ночные — могу', 'id': 'Bisa kerja shift/malam',
+    'ne': 'सिफ्ट/रात काम सम्भव', 'km': 'អាចធ្វើវេន/យប់',
+    'my': 'အလှည့်ကျ/ညအလုပ် ရနိုင်', 'si': 'මාරු/රාත්‍රී වැඩ හැකියි',
+    'uz': 'Smenali/tungi ish mumkin', 'mn': 'Ээлж/шөнийн ажил боломжтой',
+  }, 'Shift/night work OK');
+  String get selfCondWeekend => _t({
+    'ko': '주말 근무 가능', 'en': 'Weekend work OK',
+    'zh': '可周末工作', 'hi': 'सप्ताहांत काम संभव',
+    'ja': '週末勤務可能', 'th': 'ทำงานวันหยุดสุดสัปดาห์ได้',
+    'vi': 'Làm cuối tuần được', 'bn': 'সাপ্তাহিক ছুটিতে কাজ সম্ভব',
+    'ru': 'Выходные — могу', 'id': 'Bisa kerja akhir pekan',
+    'ne': 'सप्ताहन्त काम सम्भव', 'km': 'អាចធ្វើការចុងសប្តាហ៍',
+    'my': 'စနေ-တနင်္ဂနွေ အလုပ်ရနိုင်', 'si': 'සති අන්ත වැඩ හැකියි',
+    'uz': 'Dam olish kunlari ishlash mumkin', 'mn': 'Амралтын өдөр ажиллах боломжтой',
+  }, 'Weekend work OK');
+  String get selfCondDorm => _t({
+    'ko': '기숙사 필요', 'en': 'Need dormitory',
+    'zh': '需要宿舍', 'hi': 'छात्रावास चाहिए',
+    'ja': '寮が必要', 'th': 'ต้องการหอพัก',
+    'vi': 'Cần ký túc xá', 'bn': 'ডরমিটরি প্রয়োজন',
+    'ru': 'Нужно общежитие', 'id': 'Butuh asrama',
+    'ne': 'छात्रावास चाहिन्छ', 'km': 'ត្រូវការអន្តេវាសិកដ្ឋាន',
+    'my': 'အိပ်ဆောင်လိုအပ်', 'si': 'නේවාසිකාගාරය ඕන',
+    'uz': 'Yotoqxona kerak', 'mn': 'Дотуур байр хэрэгтэй',
+  }, 'Need dormitory');
+  String get resumeTopikNone => _t({
+    'ko': '없음', 'en': 'None', 'zh': '无', 'hi': 'नहीं है',
+    'ja': 'なし', 'th': 'ไม่มี', 'vi': 'Không có', 'bn': 'নেই',
+    'ru': 'Нет', 'id': 'Tidak ada', 'ne': 'छैन', 'km': 'គ្មាន',
+    'my': 'မရှိ', 'si': 'නැත', 'uz': "Yo'q", 'mn': 'Байхгүй',
+  }, 'None');
   String get resumeEmptyTitle => _t({
     'ko': '아직 이력서가 없어요',
     'en': 'No resume yet',
