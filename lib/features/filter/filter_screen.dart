@@ -486,10 +486,11 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
   // SingleChildScrollView: 전체 섹션을 항상 빌드 — 탭 점프/스크롤 스파이가
   // GlobalKey 위치를 언제나 계산할 수 있어야 함 (ListView는 화면 밖 미빌드)
   Widget _body(FilterState filter, dynamic s, String langCode) => Container(
-        color: const Color(0xFFF2F3F5),
+        // 홈과 통일: 흰 배경 + 그림자 카드(진한 회색 배경 제거, 2026-10-11).
+        color: Colors.white,
         child: SingleChildScrollView(
           controller: _scroll,
-          padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
           child: Column(
             children: [
               for (final k in _kGroups)
@@ -499,13 +500,18 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                   margin: const EdgeInsets.only(bottom: 12),
                   padding: const EdgeInsets.fromLTRB(16, 6, 16, 16),
                   decoration: BoxDecoration(
+                    // JobCard와 동일한 깊이 위계(radius12 + 미세 그림자).
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
+                    borderRadius: BorderRadius.circular(12),
                     boxShadow: const [
                       BoxShadow(
-                          color: Color(0x0A000000),
-                          blurRadius: 8,
-                          offset: Offset(0, 2)),
+                          color: Color(0x0F14161B),
+                          blurRadius: 3,
+                          offset: Offset(0, 1)),
+                      BoxShadow(
+                          color: Color(0x0D14161B),
+                          blurRadius: 14,
+                          offset: Offset(0, 4)),
                     ],
                   ),
                   child: k == _kRegion
@@ -923,7 +929,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
               style: OutlinedButton.styleFrom(
                 side: const BorderSide(color: _T.line),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14)),
+                    borderRadius: BorderRadius.circular(12)),
                 padding: const EdgeInsets.symmetric(horizontal: 18),
                 foregroundColor: _T.text,
                 disabledForegroundColor: _T.muted,
@@ -942,7 +948,7 @@ class _FilterScreenState extends ConsumerState<FilterScreen> {
                 style: FilledButton.styleFrom(
                   backgroundColor: _T.orange,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 // 건수 복구(2026-10-10) — 검색 화면에서 필터 진입을 없애
                 // "결과보기=필터만 적용 건수"로 의미가 하나로 고정됨.
@@ -1097,14 +1103,14 @@ class _Chip extends StatelessWidget {
       button: true,
       child: Material(
         color: selected ? AppColors.carrotLight : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(8),
               // 선택 시 테두리 없음 (홈 칩과 동일) — 크기 유지 위해 투명 보더
               border: Border.all(
                 color: selected ? Colors.transparent : AppColors.gray100,
@@ -1174,11 +1180,11 @@ class _MoreChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(8),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(8),
             border: Border.all(color: AppColors.gray100, width: 1.5),
           ),
           child: Row(
@@ -1205,10 +1211,10 @@ class _RemovableChip extends StatelessWidget {
   // 홈 화면 필터 칩과 동일 스타일 (테두리 없음)
   Widget build(BuildContext context) => Material(
         color: navy ? AppColors.navyLight : AppColors.carrotLight,
-        borderRadius: BorderRadius.circular(15),
+        borderRadius: BorderRadius.circular(8),
         child: InkWell(
           onTap: onRemove,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(8),
           child: Container(
             padding:
                 const EdgeInsets.only(left: 12, right: 6, top: 6, bottom: 6),
@@ -1244,14 +1250,12 @@ class _SheetRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) => InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        // 리스트 선택 = 가벼운 체크(흰 행+구분선). 박스/배경 강조는 칩 전용
+        // 이라 리스트엔 쓰지 않음 — 다중 선택 시 "주황 벽" 방지(2026-10-11).
         child: Container(
-          height: 48,
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          decoration: BoxDecoration(
-            color: selected ? _T.orangeSoft : Colors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: selected ? _T.orange : _T.line),
+          padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 13),
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFF2F2F2))),
           ),
           child: Row(
             children: [
@@ -1270,7 +1274,7 @@ class _SheetRow extends StatelessWidget {
                     ? const Icon(Icons.check, size: 14, color: Colors.white)
                     : null,
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(label,
                     overflow: TextOverflow.ellipsis,
@@ -1278,9 +1282,7 @@ class _SheetRow extends StatelessWidget {
                         fontSize: 15,
                         fontWeight:
                             selected ? FontWeight.w700 : FontWeight.w500,
-                        color: selected
-                            ? AppColors.carrotDark
-                            : _T.text)),
+                        color: _T.text)),
               ),
             ],
           ),
@@ -1320,13 +1322,24 @@ class _SidoSheet extends StatelessWidget {
       constraints: BoxConstraints(maxHeight: maxH),
       decoration: const BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(22)),
+        // 공용 시트와 통일: 모달 라운드 16(2026-10-11).
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
+          // 상단 드래그 핸들 — 언어·정렬 시트와 통일.
+          const SizedBox(height: 10),
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: _T.line, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(10, 12, 18, 12),
+            padding: const EdgeInsets.fromLTRB(10, 8, 18, 12),
             child: Row(
               children: [
                 IconButton(
@@ -1348,50 +1361,11 @@ class _SidoSheet extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(18, 0, 18, 14),
-            child: InkWell(
+            padding: const EdgeInsets.fromLTRB(18, 0, 18, 4),
+            child: _SheetRow(
+              label: allLabel,
+              selected: isAll,
               onTap: onAll,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                height: 48,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                decoration: BoxDecoration(
-                  color: isAll ? _T.orangeSoft : Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: isAll ? _T.orange : _T.line),
-                ),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 20,
-                      height: 20,
-                      decoration: BoxDecoration(
-                        color: isAll ? _T.orange : Colors.white,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                            color: isAll
-                                ? _T.orange
-                                : const Color(0xFFD6D2CB),
-                            width: 1.5),
-                      ),
-                      child: isAll
-                          ? const Icon(Icons.check,
-                              size: 14, color: Colors.white)
-                          : null,
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Text(allLabel,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: isAll ? AppColors.carrotDark : _T.text)),
-                    ),
-                  ],
-                ),
-              ),
             ),
           ),
           Flexible(
@@ -1413,13 +1387,10 @@ class _SidoSheet extends StatelessWidget {
                   Column(
                     children: [
                       for (final g in gus)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
-                          child: _SheetRow(
-                            label: g.label,
-                            selected: isAll || pickedIds.contains(g.id),
-                            onTap: () => onToggleGu(g.id),
-                          ),
+                        _SheetRow(
+                          label: g.label,
+                          selected: isAll || pickedIds.contains(g.id),
+                          onTap: () => onToggleGu(g.id),
                         ),
                     ],
                   ),
@@ -1442,7 +1413,7 @@ class _SidoSheet extends StatelessWidget {
                 style: FilledButton.styleFrom(
                   backgroundColor: _T.navy,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14)),
+                      borderRadius: BorderRadius.circular(12)),
                 ),
                 child: Text(applyLabel,
                     overflow: TextOverflow.ellipsis,

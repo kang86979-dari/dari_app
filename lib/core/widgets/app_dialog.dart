@@ -87,7 +87,8 @@ class AppDialogShell extends StatelessWidget {
     return AlertDialog(
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      // radius 3단계 통일: 모달/다이얼로그 = 16(2026-10-11).
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       // 너비: 내용 길이와 무관하게 일정(2026-10-10).
       insetPadding: const EdgeInsets.symmetric(horizontal: 24),
       titlePadding: const EdgeInsets.fromLTRB(24, 26, 24, 0),
@@ -134,11 +135,16 @@ class AppDialogAction extends StatelessWidget {
       ),
       child: Text(
         label,
-        maxLines: 1,
+        // 긴 번역(독일어 등) 대비 — 2줄 허용 + 말줄임(2026-10-11).
+        // AlertDialog actions는 OverflowBar라 넘치면 자동 세로 배치됨.
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
         style: TextStyle(
           fontSize: 16.5,
           color: color,
           fontWeight: FontWeight.w700,
+          height: 1.2,
         ),
       ),
     );

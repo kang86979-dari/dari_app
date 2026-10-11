@@ -88,12 +88,17 @@ class _LocationSelectScreenState extends ConsumerState<LocationSelectScreen> {
                       icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.black),
                       onPressed: () => context.pop(),
                     ),
-                    Text(
-                      s.locationSelectTitle,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.black,
+                    // 긴 번역 대비 — Expanded + 말줄임(2026-10-11).
+                    Expanded(
+                      child: Text(
+                        s.locationSelectTitle,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                        ),
                       ),
                     ),
                   ],
@@ -111,7 +116,7 @@ class _LocationSelectScreenState extends ConsumerState<LocationSelectScreen> {
                       padding: const EdgeInsets.symmetric(vertical: 17),
                       decoration: BoxDecoration(
                         color: AppColors.carrot,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         s.getStarted,

@@ -45,12 +45,17 @@ class _VisaSelectScreenState extends ConsumerState<VisaSelectScreen> {
                       icon: const Icon(Icons.arrow_back_ios, size: 20, color: AppColors.black),
                       onPressed: () => context.pop(),
                     ),
-                    Text(
-                      s.selectVisa,
-                      style: const TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.black,
+                    // 긴 번역 대비 — Expanded + 말줄임(2026-10-11).
+                    Expanded(
+                      child: Text(
+                        s.selectVisa,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.black,
+                        ),
                       ),
                     ),
                   ],
@@ -105,10 +110,6 @@ class _VisaSelectScreenState extends ConsumerState<VisaSelectScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              if (showFire) ...[
-                                const Text('🔥', style: TextStyle(fontSize: 13)),
-                                const SizedBox(width: 4),
-                              ],
                               Text(
                                 opt.label,
                                 style: TextStyle(
@@ -128,21 +129,44 @@ class _VisaSelectScreenState extends ConsumerState<VisaSelectScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // 인기 비자 상단
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: Wrap(
+                          // 인기 비자 그룹
+                          if (popular.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Text(s.visaPopular,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.gray400)),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 20),
+                              child: Wrap(
+                                spacing: 10,
+                                runSpacing: 10,
+                                children: popular
+                                    .map((opt) => buildChip(opt))
+                                    .toList(),
+                              ),
+                            ),
+                          ],
+                          // 전체 비자 그룹
+                          if (rest.isNotEmpty) ...[
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: Text(s.visaAll,
+                                  style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: AppColors.gray400)),
+                            ),
+                            Wrap(
                               spacing: 10,
                               runSpacing: 10,
-                              children: popular.map((opt) => buildChip(opt, showFire: true)).toList(),
+                              children:
+                                  rest.map((opt) => buildChip(opt)).toList(),
                             ),
-                          ),
-                          // 나머지 한 덩어리
-                          Wrap(
-                            spacing: 10,
-                            runSpacing: 10,
-                            children: rest.map((opt) => buildChip(opt)).toList(),
-                          ),
+                          ],
                         ],
                       ),
                     );
@@ -183,7 +207,7 @@ class _VisaSelectScreenState extends ConsumerState<VisaSelectScreen> {
                           decoration: BoxDecoration(
                             color: _selectedIds.isNotEmpty ? AppColors.carrot : Colors.transparent,
                             border: _selectedIds.isEmpty ? Border.all(color: AppColors.carrot) : null,
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             _selectedIds.isNotEmpty ? s.next : s.skip,

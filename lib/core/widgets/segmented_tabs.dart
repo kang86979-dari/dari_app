@@ -44,30 +44,26 @@ class SegmentedTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 샌드 트레이 + 흰 알약 탭(드래프트 .seg, 2026-10-11).
     return Container(
-      color: _trackBg,
-      child: Column(
+      margin: const EdgeInsets.fromLTRB(16, 10, 16, 10),
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: _trackBg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(8, 8, 8, 0),
-            child: SizedBox(
-              height: 46,
-              child: Row(
-                children: [
-                  for (var i = 0; i < tabs.length; i++) ...[
-                    Expanded(
-                      child: _Tab(
-                        item: tabs[i],
-                        isActive: tabs[i].key == active,
-                        onTap: () => onChange(tabs[i].key),
-                      ),
-                    ),
-                    if (i < tabs.length - 1) const SizedBox(width: 4),
-                  ],
-                ],
+          for (var i = 0; i < tabs.length; i++) ...[
+            Expanded(
+              child: _Tab(
+                item: tabs[i],
+                isActive: tabs[i].key == active,
+                onTap: () => onChange(tabs[i].key),
               ),
             ),
-          ),
+            if (i < tabs.length - 1) const SizedBox(width: 4),
+          ],
         ],
       ),
     );
@@ -85,21 +81,23 @@ class _Tab extends StatelessWidget {
     required this.onTap,
   });
 
-  static const _lineColor = Color(0xFFE9E6E0);
-  static const _navy = Color(0xFF0E2461);
+  static const _ink = Color(0xFF14161B);
   static const _muted = Color(0xFF8B8B95);
-  static const _orange = Color(0xFFF26B1F);
-  static const _pillOff = Color(0xFFE9E6E0);
+  static const _orange = Color(0xFFFF6F0F); // 브랜드 carrot
+  static const _pillOff = Color(0xFFE2E0DB);
 
   @override
   Widget build(BuildContext context) {
     final label = Text(
       item.label,
+      // 긴 번역 대비 — 반폭 탭 안에서 말줄임(2026-10-11).
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
       style: TextStyle(
         fontSize: 15,
         height: 1.2,
         fontWeight: isActive ? FontWeight.w700 : FontWeight.w500,
-        color: isActive ? _navy : _muted,
+        color: isActive ? _ink : _muted,
         letterSpacing: -0.15,
       ),
     );
@@ -112,7 +110,7 @@ class _Tab extends StatelessWidget {
                 const EdgeInsets.symmetric(horizontal: 6, vertical: 0),
             decoration: BoxDecoration(
               color: isActive ? _orange : _pillOff,
-              borderRadius: BorderRadius.circular(99),
+              borderRadius: BorderRadius.circular(8),
             ),
             alignment: Alignment.center,
             child: Text(
@@ -126,70 +124,43 @@ class _Tab extends StatelessWidget {
             ),
           );
 
-    final content = Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        label,
-        if (pill != null) ...[
-          const SizedBox(width: 6),
-          pill,
-        ],
-      ],
-    );
-
-    final tabCard = Material(
-      color: isActive ? Colors.white : Colors.transparent,
-      // 상단만 둥글게 — 콘텐츠와 이어지는 카드 느낌
-      borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: isActive ? Colors.white : Colors.transparent,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(12)),
-          // 활성 탭만 상/좌/우 1px 테두리
-          border: isActive
-              ? const Border(
-                  top: BorderSide(color: _lineColor),
-                  left: BorderSide(color: _lineColor),
-                  right: BorderSide(color: _lineColor),
-                )
-              : null,
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Semantics(
+        button: true,
+        selected: isActive,
+        label: item.count != null
+            ? '${item.label} ${item.count}개'
+            : item.label,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            // 활성 = 흰 알약 + 미세 그림자, 비활성 = 투명(샌드 트레이 위).
+            color: isActive ? Colors.white : Colors.transparent,
+            borderRadius: BorderRadius.circular(9),
+            boxShadow: isActive
+                ? const [
+                    BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 3,
+                        offset: Offset(0, 1)),
+                  ]
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Flexible(child: label),
+              if (pill != null) ...[
+                const SizedBox(width: 6),
+                pill,
+              ],
+            ],
+          ),
         ),
-        child: InkWell(
-          onTap: onTap,
-          borderRadius:
-              const BorderRadius.vertical(top: Radius.circular(12)),
-          splashColor:
-              isActive ? Colors.transparent : const Color(0x14000000),
-          highlightColor:
-              isActive ? Colors.transparent : const Color(0x0A000000),
-          child: Center(child: content),
-        ),
-      ),
-    );
-
-    return Semantics(
-      button: true,
-      selected: isActive,
-      label: item.count != null
-          ? '${item.label} ${item.count}개'
-          : item.label,
-      // 활성 탭이 아래쪽 1px 라인을 가리도록 1px 만큼 아래로 튀어나오게.
-      // Stack의 clipBehavior: Clip.none + Positioned(bottom: -1)로 처리.
-      child: Stack(
-        clipBehavior: Clip.none,
-        children: [
-          tabCard,
-          if (isActive)
-            const Positioned(
-              left: 0,
-              right: 0,
-              bottom: -1,
-              height: 1,
-              child: ColoredBox(color: Colors.white),
-            ),
-        ],
       ),
     );
   }

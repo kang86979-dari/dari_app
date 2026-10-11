@@ -19,7 +19,9 @@ import '../../core/widgets/error_retry.dart';
 import '../../core/utils/filter_matcher.dart';
 import '../../core/utils/region_mapper.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/empty_placeholder.dart';
+import '../../core/widgets/fixed_header_delegate.dart';
 import '../../core/widgets/sort_sheet.dart';
 import '../../providers/search_alert_provider.dart';
 import '../filter/filter_chips_row.dart';
@@ -126,17 +128,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           GestureDetector(
             onTap: () => _onBellTap(s),
             behavior: HitTestBehavior.opaque,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-              decoration: BoxDecoration(
-                color: active ? Colors.transparent : AppColors.carrot,
-                borderRadius: BorderRadius.circular(8),
-                border: active ? Border.all(color: AppColors.carrot) : null,
-              ),
+            // 꽉찬 버튼 → 텍스트형(드래프트, 2026-10-11). 활성=해제(회색), 그 외=carrot.
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 4),
               child: Text(
                 active
                     ? s.searchAlertOffButton
@@ -144,9 +142,9 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         ? s.searchAlertChangeButton
                         : s.searchAlertOfferButton,
                 style: TextStyle(
-                  fontSize: 12.5,
+                  fontSize: 13,
                   fontWeight: FontWeight.w700,
-                  color: active ? AppColors.carrot : Colors.white,
+                  color: active ? AppColors.gray400 : AppColors.carrot,
                 ),
               ),
             ),
@@ -187,10 +185,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     if (_alertMatchesCurrent) {
       await alertNotifier.clear();
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(s.searchAlertOffToast),
-        behavior: SnackBarBehavior.floating,
-      ));
+      showAppToast(context, s.searchAlertOffToast,
+          icon: Icons.notifications_off_outlined);
       return;
     }
     // 다른 키워드가 등록돼 있으면 변경 확인(1개만 등록).
@@ -222,10 +218,8 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
     analytics.log('search_alert_saved', {'keyword': keyword});
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(s.searchAlertOnToast),
-      behavior: SnackBarBehavior.floating,
-    ));
+    showAppToast(context, s.searchAlertOnToast,
+        icon: Icons.notifications_active_outlined);
   }
 
   @override
@@ -610,137 +604,149 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
 
         final totalMatchCount = _filterMatches.fold<int>(0, (sum, g) => sum + g.options.length);
 
-        return Column(
-          children: [
-            // 탭 바 (필터 매칭이 있을 때만)
+        // 탭 바 위젯 (결과/추천 공통)
+        Widget tabBar(String active) => SegmentedTabs(
+              tabs: [
+                // 로드된 페이지 수(20)가 전체 건수처럼 보여 혼동 — Total에 이미
+                // 표시되므로 탭 숫자는 제거(2026-10-09).
+                SegmentedTabItem(key: 'results', label: s.searchResultsTab),
+                SegmentedTabItem(
+                    key: 'filter', label: s.filterMatchTab, count: totalMatchCount),
+              ],
+              active: active,
+              onChange: (k) =>
+                  setState(() => _activeTab = k == 'results' ? 0 : 1),
+            );
+
+        // 필터 추천 탭 — 탭 고정 + 추천 폼.
+        if (_activeTab == 1 && hasFilterMatches) {
+          return Column(
+            children: [
+              tabBar('filter'),
+              Expanded(child: _buildFilterRecommendations(s)),
+            ],
+          );
+        }
+
+        // 결과 탭 — 홈 패턴: 탭=floating(스크롤 다운 숨김/업 복귀),
+        // 전체건수+필터칩=pinned(항상 고정), 리스트=스크롤(2026-10-11).
+        final ts = MediaQuery.textScalerOf(context);
+        final filter = ref.watch(filterStateProvider);
+        final hasChips = !filter.isEmpty;
+        const n = AdConfig.listAdInterval;
+        final listCount =
+            1 + _searchJobs.length + (_searchJobs.length ~/ n);
+
+        return CustomScrollView(
+          controller: _scrollController,
+          slivers: [
+            // 탭 = floating
             if (hasFilterMatches)
-              SegmentedTabs(
-                tabs: [
-                  // 로드된 페이지 수(20)가 전체 건수처럼 보여 혼동 — Total에 이미
-                  // 표시되므로 탭 숫자는 제거(2026-10-09).
-                  SegmentedTabItem(key: 'results', label: s.searchResultsTab),
-                  SegmentedTabItem(key: 'filter', label: s.filterMatchTab, count: totalMatchCount),
-                ],
-                active: _activeTab == 0 ? 'results' : 'filter',
-                onChange: (k) => setState(() => _activeTab = k == 'results' ? 0 : 1),
+              SliverPersistentHeader(
+                floating: true,
+                delegate: FixedHeaderDelegate(
+                  height: 46 + ts.scale(14) * 1.35,
+                  child: Container(color: Colors.white, child: tabBar('results')),
+                ),
               ),
-
-            // 필터 추천 탭
-            if (_activeTab == 1 && hasFilterMatches)
-              Expanded(child: _buildFilterRecommendations(s))
-            else ...[
-
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  RichText(
-                    text: TextSpan(
-                      style: const TextStyle(fontSize: 14, color: AppColors.gray400),
-                      children: [
-                        TextSpan(text: s.totalPrefix),
-                        TextSpan(
-                          text: ref.watch(searchTotalCountProvider).when(
-                            data: (count) => NumberFormat.decimalPattern(ref.watch(languageProvider)).format(count),
-                            loading: () => '...',
-                            error: (_, __) => NumberFormat.decimalPattern(ref.watch(languageProvider)).format(_searchJobs.length),
-                          ),
-                          style: const TextStyle(
-                            color: AppColors.carrot,
-                            fontWeight: FontWeight.w700,
-                          ),
+            // 전체 건수 + 정렬 + 필터칩 = pinned
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: FixedHeaderDelegate(
+                height: (hasChips ? 38.0 : 0.0) + 28 + ts.scale(14) * 1.35,
+                child: Container(
+                  color: Colors.white,
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 10, 20, 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            RichText(
+                              text: TextSpan(
+                                style: const TextStyle(
+                                    fontSize: 14, color: AppColors.gray400),
+                                children: [
+                                  TextSpan(text: s.totalPrefix),
+                                  TextSpan(
+                                    text: ref
+                                        .watch(searchTotalCountProvider)
+                                        .when(
+                                          data: (count) =>
+                                              NumberFormat.decimalPattern(
+                                                      ref.watch(languageProvider))
+                                                  .format(count),
+                                          loading: () => '...',
+                                          error: (_, __) =>
+                                              NumberFormat.decimalPattern(
+                                                      ref.watch(languageProvider))
+                                                  .format(_searchJobs.length),
+                                        ),
+                                    style: const TextStyle(
+                                      color: AppColors.carrot,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  TextSpan(text: s.totalSuffix),
+                                ],
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () => _showSortSheet(context, s),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: AppColors.gray50,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(_sortLabel(s),
+                                        style: const TextStyle(
+                                            fontSize: 13,
+                                            color: AppColors.gray600)),
+                                    const SizedBox(width: 4),
+                                    const Icon(Icons.keyboard_arrow_down,
+                                        size: 16, color: AppColors.gray400),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                        TextSpan(text: s.totalSuffix),
-                      ],
-                    ),
-                  ),
-                  // 종 버튼 제거(2026-10-10) — 알림 등록은 결과 상단 제안
-                  // 배너(문장)로 유도. 필터 버튼도 제거(조정은 홈에서만).
-                  GestureDetector(
-                    onTap: () => _showSortSheet(context, s),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: AppColors.gray50,
-                        borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(_sortLabel(s),
-                              style: const TextStyle(
-                                  fontSize: 13, color: AppColors.gray600)),
-                          const SizedBox(width: 4),
-                          const Icon(Icons.keyboard_arrow_down,
-                              size: 16, color: AppColors.gray400),
-                        ],
-                      ),
-                    ),
+                      if (hasChips)
+                        ReadOnlyFilterChips(filter: filter, ref: ref),
+                    ],
                   ),
-                ],
+                ),
               ),
             ),
-            // 적용된 필터 칩 (홈과 동일 위젯, 탭=삭제) — 2026-10-09.
-            if (!ref.watch(filterStateProvider).isEmpty)
-              ReadOnlyFilterChips(
-                  filter: ref.watch(filterStateProvider), ref: ref),
-            Expanded(
-              child: Builder(builder: (context) {
-                // 알림 배너를 리스트 첫 항목(헤더)으로 넣어 스크롤 시 함께
-                // 올라가게 함(2026-10-10). header=배너 유무.
-                final showBanner = _searchJobs.isNotEmpty;
-                final header = showBanner ? 1 : 0;
-                return ListView.builder(
-                controller: _scrollController,
-                padding: const EdgeInsets.only(bottom: 20),
-                itemCount: header +
-                    1 +
-                    _searchJobs.length +
-                    (_searchJobs.length ~/ AdConfig.listAdInterval) +
-                    (_isLoadingMore ? 1 : 0),
-                itemBuilder: (context, rawIndex) {
-                  // 헤더(배너) 먼저.
-                  if (showBanner && rawIndex == 0) return _alertOfferBanner(s);
-                  final index = rawIndex - header;
-                  const n = AdConfig.listAdInterval;
-                  final total = 1 +
-                      _searchJobs.length +
-                      (_searchJobs.length ~/ n) +
-                      (_isLoadingMore ? 1 : 0);
-
-                  // 로딩 인디케이터 (마지막)
-                  if (_isLoadingMore && index == total - 1) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 16),
-                      child: Center(
-                          child:
-                              CircularProgressIndicator(color: AppColors.carrot)),
-                    );
-                  }
-
-                  // 최상단도 네이티브. slot -1로 인-리스트 슬롯과 키 분리.
+            // 알림 제안 배너 — 리스트와 함께 스크롤.
+            if (_searchJobs.isNotEmpty)
+              SliverToBoxAdapter(child: _alertOfferBanner(s)),
+            SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  // 최상단 네이티브 (slot -1).
                   if (index == 0) {
                     return NativeAdCard(controller: _adController, slot: -1);
                   }
-
                   final a = index - 1;
-                  final cycle = a ~/ (n + 1); // (공고 N개 + 광고 1개) 반복 단위
+                  final cycle = a ~/ (n + 1);
                   final pos = a % (n + 1);
-
-                  // 각 주기 마지막(pos==n) = 광고 슬롯 (cycle 짝수=MREC, 홀수=small)
                   if (pos == n) {
                     return cycle.isEven
                         ? MrecAdCard(controller: _mrecController, slot: cycle)
                         : NativeAdCard(controller: _adController, slot: cycle);
                   }
-
                   final jobIndex = cycle * n + pos;
                   if (jobIndex >= _searchJobs.length) {
                     return const SizedBox.shrink();
                   }
-
                   final job = _searchJobs[jobIndex];
                   final query = ref.read(searchQueryProvider);
                   return JobCard(
@@ -766,18 +772,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                       }
                       ref.read(favoriteProvider.notifier).toggle(job.id);
                       final s = ref.read(stringsProvider);
-                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                        content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-                        duration: const Duration(seconds: 1),
-                        behavior: SnackBarBehavior.floating,
-                      ));
+                      showAppToast(context,
+                          isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg,
+                          icon:
+                              isFav ? Icons.favorite_border : Icons.favorite);
                     },
                   );
                 },
-              );
-              }),
+                childCount: listCount,
+              ),
             ),
-            ], // ...[  닫기
+            if (_isLoadingMore)
+              const SliverToBoxAdapter(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Center(
+                      child:
+                          CircularProgressIndicator(color: AppColors.carrot)),
+                ),
+              ),
+            const SliverToBoxAdapter(child: SizedBox(height: 20)),
           ],
         );
       },

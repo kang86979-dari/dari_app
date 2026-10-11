@@ -30,4 +30,16 @@ class AppColors {
   static const Color navy = Color(0xFF003478);
   static const Color navyLight = Color(0xFFE8EEF7);
   static const Color navyDark = Color(0xFF002255);
+
+  // ── 새 디자인(v2) 토큰 — 색 역할 분리로 "온통 주황" 해소 ──
+  // 보조색(Teal): 정보·링크·선택 상태. carrot은 "지금 누를 것"에만.
+  static const Color teal = Color(0xFF0E7C66);
+  static const Color tealLight = Color(0xFFE6F2EF);
+  // 섹션 배경(Sand, 아이보리) + 테두리(Line)
+  static const Color sand = Color(0xFFFAF7F2);
+  static const Color line = Color(0xFFECE9E4);
+  // 메모(Gold)
+  static const Color gold = Color(0xFFC9A227);
+  static const Color goldBg = Color(0xFFFFF8E1);
+  static const Color goldInk = Color(0xFF9A7B24);
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../core/constants/colors.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../core/utils/native_ad_controller.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/widgets/empty_placeholder.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/widgets/offline_banner.dart';
@@ -197,9 +198,11 @@ class _MemoListScreenState extends ConsumerState<MemoListScreen> {
                               memo: memos[id]?.text,
                               onMemoTap: () =>
                                   editJobMemo(context, ref, job, langCode),
-                              onMemoDelete: () => ref
-                                  .read(jobMemoProvider.notifier)
-                                  .remove(id),
+                              onMemoDelete: () {
+                                ref.read(jobMemoProvider.notifier).remove(id);
+                                showAppToast(context, s.jobMemoDeletedToast,
+                                    icon: Icons.delete_outline);
+                              },
                               onTap: () => context.push('/job/${job.id}'),
                             );
                           },

@@ -91,9 +91,13 @@ class JobCard extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          // 테두리 한 단계 진하게 — 카드 구분이 또렷하게(2026-10-09).
-          border: Border.all(color: const Color(0xFFE2E2E2)),
+          // 새 디자인(v2): radius 3단계 중 카드=12, 위계는 테두리 대신 미세
+          // 그림자(주요 콘텐츠). 메뉴·설정은 테두리로 보조 위계 유지.
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: const [
+            BoxShadow(color: Color(0x0F14161B), blurRadius: 3, offset: Offset(0, 1)),
+            BoxShadow(color: Color(0x0D14161B), blurRadius: 14, offset: Offset(0, 4)),
+          ],
         ),
         child: Stack(
           clipBehavior: Clip.none,
@@ -169,8 +173,9 @@ class JobCard extends StatelessWidget {
                         padding: const EdgeInsets.only(right: 6),
                         child: _Tag(
                           label: v.code == 'ANY' ? (strings?.visaGroupAny ?? 'Any visa') : v.code,
-                          bgColor: AppColors.tagBlue,
-                          textColor: AppColors.tagBlueTxt,
+                          // 비자 = navy 역할(색 역할분리, 2026-10-11).
+                          bgColor: AppColors.navyLight,
+                          textColor: AppColors.navy,
                         ),
                       )),
                   if (job.visas.length > 2)
@@ -202,9 +207,10 @@ class JobCard extends StatelessWidget {
                     ),
                   if (job.getEmploymentType(langCode).isNotEmpty)
                     _Tag(
+                      // 고용형태 = teal 역할(정보 보조색, 2026-10-11).
                       label: job.getEmploymentType(langCode),
-                      bgColor: AppColors.tagGreen,
-                      textColor: AppColors.tagGreenTxt,
+                      bgColor: AppColors.tealLight,
+                      textColor: AppColors.teal,
                     ),
                 ],
               ),
@@ -234,7 +240,9 @@ class JobCard extends StatelessWidget {
                     expired ? expiredLabel! : _formatDeadline(job.expiresAt, alwaysOpen),
                     style: TextStyle(
                       fontSize: 13,
-                      color: expired ? const Color(0xFFE53935) : AppColors.gray300,
+                      // 너무 옅어 안 보이던 마감일/상시를 또렷하게(2026-10-11).
+                      fontWeight: FontWeight.w500,
+                      color: expired ? const Color(0xFFE53935) : AppColors.gray600,
                     ),
                   ),
                   Expanded(
@@ -389,7 +397,7 @@ class _Tag extends StatelessWidget {
     return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
         decoration: BoxDecoration(
-          color: bgColor, borderRadius: BorderRadius.circular(10)),
+          color: bgColor, borderRadius: BorderRadius.circular(8)),
         child: Text(label,
             style: TextStyle(
                 fontSize: 12, fontWeight: FontWeight.w500, color: textColor)),

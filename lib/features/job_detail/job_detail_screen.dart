@@ -16,6 +16,7 @@ import '../../core/constants/apply_method_style.dart';
 import '../memo/job_memo_section.dart';
 import '../../core/constants/colors.dart';
 import '../../core/widgets/app_primary_button.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../core/l10n/app_strings.dart';
 import '../../core/l10n/l10n_provider.dart';
 import '../../data/models/job.dart';
@@ -108,11 +109,9 @@ class JobDetailScreen extends ConsumerWidget {
                   analytics.favoriteAdded(job.id, 'detail');
                 }
                 ref.read(favoriteProvider.notifier).toggle(job.id);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                  content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-                  duration: const Duration(seconds: 1),
-                  behavior: SnackBarBehavior.floating,
-                ));
+                showAppToast(
+                    context, isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg,
+                    icon: isFav ? Icons.favorite_border : Icons.favorite);
               },
             );
           },
@@ -527,15 +526,16 @@ class _DetailBodyState extends State<_DetailBody> {
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 10, vertical: 4),
                                     decoration: BoxDecoration(
-                                      color: AppColors.tagBlue,
-                                      borderRadius: BorderRadius.circular(10),
+                                      // 비자 = navy 역할색 — 카드 비자 태그와 통일(2026-10-11).
+                                      color: AppColors.navyLight,
+                                      borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
                                         v.code == 'ANY' ? s.visaGroupAny : v.code,
                                         style: const TextStyle(
                                             fontSize: 12,
                                             fontWeight: FontWeight.w600,
-                                            color: AppColors.tagBlueTxt)),
+                                            color: AppColors.navy)),
                                   ))
                               .toList(),
                         ),
@@ -739,12 +739,18 @@ class _InfoRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.gray300)),
-          const SizedBox(width: 16),
+          // 라벨: 다국어 길이 편차 대응 — 폭 제약(64~120) + 2줄 허용(2026-10-11).
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 64, maxWidth: 120),
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray300),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(value,
                 style: TextStyle(
@@ -799,12 +805,17 @@ class _AddressRow extends StatelessWidget {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(label,
-                  style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                      color: AppColors.gray300)),
-              const SizedBox(width: 16),
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 64, maxWidth: 120),
+                child: Text(label,
+                    style: const TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: AppColors.gray300),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   address.isEmpty ? '-' : address,
@@ -827,9 +838,11 @@ class _AddressRow extends StatelessWidget {
               child: GestureDetector(
                 onTap: onToggle,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: AppColors.carrot.withValues(alpha: 0.1),
+                    // 번역 토글 = 링크성 액션 → teal 역할색(2026-10-11).
+                    color: AppColors.tealLight,
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
@@ -837,7 +850,7 @@ class _AddressRow extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: AppColors.carrot,
+                      color: AppColors.teal,
                     ),
                   ),
                 ),
@@ -883,13 +896,18 @@ class _ApplyMethodsRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text('$label(${renderable.length})',
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.gray300)),
-          const SizedBox(width: 16),
-          // 칩은 항상 1줄. 적으면 우측 정렬(테이블 값과 일관), 많으면 왼쪽부터 가로 스크롤.
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 64, maxWidth: 120),
+            child: Text('$label(${renderable.length})',
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray300),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 12),
+          // 칩은 항상 1줄. 값 우측정렬과 일관되게 우측 정렬, 많으면 가로 스크롤.
           Expanded(
             child: LayoutBuilder(
               builder: (context, constraints) => SingleChildScrollView(
@@ -961,12 +979,17 @@ class _SourceRow extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.gray300)),
-          const SizedBox(width: 16),
+          ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 64, maxWidth: 120),
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.gray300),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis),
+          ),
+          const SizedBox(width: 12),
           Expanded(
             child: Align(
               alignment: Alignment.centerRight,
@@ -977,9 +1000,10 @@ class _SourceRow extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.black,
+                    // 출처 링크 = teal 역할색, 비링크면 먹색(2026-10-11).
+                    color: url != null ? AppColors.teal : AppColors.black,
                     decoration: url != null ? TextDecoration.underline : null,
-                    decorationColor: AppColors.black,
+                    decorationColor: AppColors.teal,
                   ),
                 ),
               ),

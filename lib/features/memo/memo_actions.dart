@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/l10n/l10n_provider.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../data/models/job.dart';
 import '../../providers/job_memo_provider.dart';
 import 'job_memo_sheet.dart';
@@ -29,4 +30,11 @@ Future<void> editJobMemo(
         title: job.getTitle(langCode),
         company: job.getDisplayCompany(langCode),
       );
+  if (!context.mounted) return;
+  // 빈 문자열 = 삭제 / 그 외 = 저장·수정.
+  if (result.isEmpty) {
+    showAppToast(context, s.jobMemoDeletedToast, icon: Icons.delete_outline);
+  } else {
+    showAppToast(context, s.jobMemoSavedToast, icon: Icons.edit_note);
+  }
 }

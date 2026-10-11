@@ -35,6 +35,7 @@ import '../../data/services/notice_service.dart';
 import '../../core/widgets/offline_banner.dart';
 import '../../core/widgets/error_retry.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_toast.dart';
 import '../../data/services/app_open_ad_service.dart';
 import '../../data/services/push_service.dart';
 
@@ -427,13 +428,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         analytics.languageChanged(currentLang, code);
         notifier.setLanguage(code);
         Navigator.pop(context);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(ref.read(stringsProvider).languageChanged),
-            duration: const Duration(seconds: 2),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
+        showAppToast(context, ref.read(stringsProvider).languageChanged,
+            icon: Icons.language);
       },
     );
   }
@@ -754,8 +750,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     // 검색바 박스: padding 13*2 + max(아이콘 18, 텍스트 14)
     final searchBox = 26 + maxD(18.0, lh(14));
     if (filterEmpty) {
-      final chip = 8 + lh(12);                       // 칩 padding v4*2 + 텍스트 12
-      final filterBar = 20 + maxD(24.0, chip) + 10;  // 컨테이너 v10*2 + 하단여백 10
+      final chip = 10 + lh(12);                      // 칩 padding v4*2 + 테두리 1*2 + 텍스트 12
+      final filterBar = 25 + maxD(26.0, chip) + 10;  // 컨테이너 v11*2 + 테두리 1.5*2 + 하단여백 10
       return (searchBox + 8) + filterBar + slack;    // 검색바 하단여백 8 + 필터바
     }
     return searchBox + 10 + slack;                    // Row 하단여백 10
@@ -770,9 +766,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
       },
       child: Container(
         padding: const EdgeInsets.all(13),
+        alignment: Alignment.centerLeft,
         decoration: BoxDecoration(
           color: AppColors.gray50,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(12),
         ),
         child: Row(
           children: [
@@ -801,8 +798,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
         child: GestureDetector(
           onTap: () => context.push('/filter'),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
             decoration: BoxDecoration(
+              // 필터는 앱의 핵심 행동 = 유일한 볼드 요소(Frontend Design:
+              // one bold element). 필터 활성 버튼과 톤 통일 → 솔리드 carrot,
+              // 안의 칩은 활성 버튼 흰 뱃지와 동일한 흰색 채움(2026-10-11).
               color: AppColors.carrot,
               borderRadius: BorderRadius.circular(12),
             ),
@@ -824,10 +824,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
 
                 return Row(
                   children: [
-                    const Icon(Icons.tune, size: 15, color: Colors.white70),
+                    const Icon(Icons.tune, size: 15, color: Colors.white),
                     const SizedBox(width: 8),
                     Text('${s.filter}:',
-                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white70)),
+                      style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.white)),
                     const SizedBox(width: 8),
                     _FilterShortcutChip(label: s.tabVisa, onTap: () => context.push('/filter?tab=0')),
                     const SizedBox(width: 6),
@@ -852,7 +852,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
   Widget _searchWithFilterButton(dynamic s, FilterState filter) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-      child: Row(
+      // 검색창과 필터 버튼 높이 정렬(2026-10-11) — IntrinsicHeight+stretch.
+      child: IntrinsicHeight(
+        child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(child: _searchGrayBox(s)),
           const SizedBox(width: 10),
@@ -860,12 +863,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             onTap: () => context.push('/filter'),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 // 시그니처 색으로 통일(2026-10-10) — carrotDark는 눌림/보조용.
                 color: AppColors.carrot,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(12),
               ),
               child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.tune, size: 16, color: Colors.white),
                   const SizedBox(width: 6),
@@ -888,6 +893,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
             ),
           ),
         ],
+      ),
       ),
     );
   }
@@ -1029,11 +1035,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
                   }
                   ref.read(favoriteProvider.notifier).toggle(job.id);
                   final s = ref.read(stringsProvider);
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    content: Text(isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg),
-                    duration: const Duration(seconds: 1),
-                    behavior: SnackBarBehavior.floating,
-                  ));
+                  showAppToast(
+                      context, isFav ? s.favoriteRemovedMsg : s.favoriteAddedMsg,
+                      icon: isFav ? Icons.favorite_border : Icons.favorite);
                 },
               );
             },
@@ -1203,7 +1207,8 @@ class _FilterShortcutChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
         decoration: BoxDecoration(
-          color: Colors.white.withValues(alpha: 0.2),
+          // 흰색 채움 칩 — 활성 버튼의 흰 카운트 뱃지와 동일 톤(2026-10-11).
+          color: Colors.white,
           borderRadius: BorderRadius.circular(8),
         ),
         child: Text(
@@ -1211,7 +1216,7 @@ class _FilterShortcutChip extends StatelessWidget {
           style: const TextStyle(
             fontSize: 12,
             fontWeight: FontWeight.w600,
-            color: Colors.white,
+            color: AppColors.carrotDark,
           ),
         ),
       ),

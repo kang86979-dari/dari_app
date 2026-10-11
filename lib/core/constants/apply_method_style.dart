@@ -5,9 +5,9 @@ import 'colors.dart';
 /// 공고 상세 지원방법 칩 / 지원하기 바텀시트 / 지원 내역 카드가 모두 이걸
 /// 참조해서 화면 간 색·아이콘이 어긋나지 않게 함.
 ///
-/// 색 배정(사용자 확정): 사이트 지원 계열(online/homepage/simple)=파랑,
-/// 전화=초록, 메시지 계열(sms/chat)=남색, 이메일=보라(주황은 브랜드 색이라
-/// 제외), 방문/기타=회색.
+/// 색 배정(새 디자인 역할색, 2026-10-11): 온라인 지원 계열
+/// (online/homepage/simple)+전화 = teal(정보·링크), 메시지·이메일
+/// (sms/chat/email) = navy, 방문/기타 = gray. 주황은 브랜드 주행동 전용이라 제외.
 class ApplyMethodStyle {
   final IconData icon;
   final Color bg;
@@ -24,23 +24,23 @@ class ApplyMethodStyle {
   static const Map<String, ApplyMethodStyle> _byCode = {
     'online': ApplyMethodStyle(
       Icons.computer_outlined,
-      AppColors.tagBlue,
-      AppColors.tagBlueTxt,
+      AppColors.tealLight,
+      AppColors.teal,
     ),
     'homepage': ApplyMethodStyle(
       Icons.language,
-      AppColors.tagBlue,
-      AppColors.tagBlueTxt,
+      AppColors.tealLight,
+      AppColors.teal,
     ),
     'simple': ApplyMethodStyle(
       Icons.flash_on,
-      AppColors.tagBlue,
-      AppColors.tagBlueTxt,
+      AppColors.tealLight,
+      AppColors.teal,
     ),
     'phone': ApplyMethodStyle(
       Icons.phone_outlined,
-      AppColors.tagGreen,
-      AppColors.tagGreenTxt,
+      AppColors.tealLight,
+      AppColors.teal,
     ),
     'sms': ApplyMethodStyle(
       Icons.sms_outlined,
@@ -54,8 +54,8 @@ class ApplyMethodStyle {
     ),
     'email': ApplyMethodStyle(
       Icons.email_outlined,
-      AppColors.tagPurple,
-      AppColors.tagPurpleTxt,
+      AppColors.navyLight,
+      AppColors.navy,
     ),
     'visit': ApplyMethodStyle(
       Icons.place_outlined,

@@ -7,11 +7,13 @@ import '../../core/l10n/l10n_provider.dart';
 import '../../providers/language_provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_settings/app_settings.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import '../../data/services/analytics_service.dart';
 import '../../data/services/push_service.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/test_mode_provider.dart';
 import '../../core/widgets/app_dialog.dart';
+import '../../core/widgets/app_toast.dart';
 import '../filter/filter_chips_row.dart';
 import '../../providers/search_alert_provider.dart';
 import 'widgets/language_sheet.dart';
@@ -32,13 +34,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
   int _versionTapCount = 0;
   bool _testUnlocked = false;
 
+  // 하단 버전 표기 (새 디자인, 2026-10-11)
+  String _version = '';
+
   void _onVersionTap() {
     _versionTapCount++;
     if (_versionTapCount >= 7 && !_testUnlocked) {
       setState(() => _testUnlocked = true);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('테스트 모드 잠금 해제됨'), duration: Duration(seconds: 1)),
-      );
+      showAppToast(context, '테스트 모드 잠금 해제됨', icon: Icons.lock_open);
     }
   }
 
@@ -48,6 +51,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     WidgetsBinding.instance.addObserver(this);
     _loadPushSetting();
     _loadAlertConditions();
+    PackageInfo.fromPlatform().then((info) {
+      if (mounted) setState(() => _version = info.version);
+    });
   }
 
   Future<void> _loadAlertConditions() async {
@@ -98,12 +104,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     // 토글 횟수 제한
     if (!await pushService.canToggle()) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: Text(ref.read(languageProvider) == 'ko'
-            ? '오늘 변경 횟수를 초과했습니다. 내일 다시 시도해주세요.'
-            : 'Daily limit reached. Please try again tomorrow.'),
-        behavior: SnackBarBehavior.floating,
-      ));
+      showAppToast(
+          context,
+          ref.read(languageProvider) == 'ko'
+              ? '오늘 변경 횟수를 초과했습니다. 내일 다시 시도해주세요.'
+              : 'Daily limit reached. Please try again tomorrow.',
+          icon: Icons.info_outline);
       return;
     }
 
@@ -168,7 +174,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
         padding: const EdgeInsets.only(left: 10, right: 6, top: 5, bottom: 5),
         decoration: BoxDecoration(
           color: bg,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(8),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -184,12 +190,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
     );
   }
 
-  // 신규 공고 알림: 조건(칩)·알림시간 — 토글과 같은 블록(구분선 없음).
-  // 조건 = 검색어 칩(등록된 경우) + 홈 필터 칩. 각 × 로 개별 삭제.
-  Widget _alertConditionRow(dynamic s) {
-    // 검색어 칩(등록된 알림, 공유 프로바이더) — × 시 해제. 남색 칩으로 구분.
+  // 신규 공고 알림 조건 — 알림 타일 footer로 들어감(설명 아래, 2026-10-11).
+  // 조건 = 검색어 칩(등록된 경우, navy) + 홈 필터 칩(carrot). 각 × 개별 삭제.
+  // 라벨+칩을 한 Wrap에 담아 자연스럽게 흐르게(외톨이 라벨/공백 제거).
+  Widget _condRow(dynamic s) {
     final keyword = ref.watch(searchAlertProvider)?['keyword'] as String?;
-    // 필터 칩(현재 홈 필터, 실시간) — × 시 홈 필터에서 해제.
     final filterChips = buildFilterChipData(ref.watch(filterStateProvider), ref);
 
     final chips = <Widget>[
@@ -199,33 +204,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
             navy: true),
       for (final c in filterChips) _condChip(c.label, c.onRemove),
     ];
+    if (chips.isEmpty) return const SizedBox.shrink();
 
-    // 칩 없으면 구분선만 (토글 행과 다음 블록 분리) — 알림시간 표시는
-    // 제거(2026-10-10, 굳이 보여줄 필요 없음).
-    if (chips.isEmpty) {
-      return Container(height: 1, color: const Color(0xFFF5F5F5));
-    }
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(32, 0, 20, 14),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: Color(0xFFF5F5F5))),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    // 타일(토글 행) 아래, 카드 내부. 토글/아이콘은 위 타일에 그대로 두고
+    // 조건은 아래로 분리 — 라벨+칩 한 Wrap에 담아 자연스럽게(2026-10-11).
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(14, 0, 14, 14),
+      child: Wrap(
+        spacing: 6,
+        runSpacing: 6,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
-          // 칩(높이 ~26)의 첫 줄과 세로 중앙을 맞추기 위한 보정(2026-10-10).
-          Padding(
-            padding: const EdgeInsets.only(top: 4),
-            child: Text('·  ${s.settingsFilterHead}  ',
-                style: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                    color: AppColors.gray400)),
-          ),
-          Expanded(
-            child: Wrap(spacing: 6, runSpacing: 6, children: chips),
-          ),
+          Text(s.settingsFilterHead,
+              style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w500,
+                  color: AppColors.gray400)),
+          ...chips,
         ],
       ),
     );
@@ -294,62 +289,89 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
 
             Expanded(
               child: ListView(
-                // 상단 16 — 첫 섹션 위 여백을 다른 섹션(SizedBox16+헤더8=24)과
-                // 맞춤(16+헤더8=24, 2026-10-09).
+                // 새 디자인(2026-10-11): 섹션 = 테두리 카드(보조 위계) +
+                // 역할색 아이콘(알림=carrot / 언어=teal) + 하단 버전 표기.
                 padding: const EdgeInsets.only(top: 16, bottom: 8),
                 children: [
-                  _SectionHeader(title: s.notifications),
-                  _SettingsTile(
-                    title: s.newJobAlerts,
-                    subtitle: s.newJobAlertsDesc,
-                    showDivider: false,
-                    trailing: _loaded
-                        ? Switch(
-                            value: _pushEnabled,
-                            onChanged: _togglePush,
-                            activeColor: AppColors.carrot,
-                          )
-                        : const SizedBox(width: 48),
+                  // 언어 섹션 — 외국인 사용자 1순위라 최상단(2026-10-11).
+                  _SectionHeader(title: s.language),
+                  _SectionCard(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.language,
+                        iconBg: AppColors.tealLight,
+                        iconColor: AppColors.teal,
+                        title: s.appLanguage,
+                        showDivider: false,
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              nativeLanguageName(langCode),
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: AppColors.gray400,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            const Icon(Icons.chevron_right,
+                                size: 20, color: AppColors.gray300),
+                          ],
+                        ),
+                        onTap: _showLanguageSheet,
+                      ),
+                    ],
                   ),
-                  _alertConditionRow(s),
-                  // 추천 공고 토글: 2.1.6 배포에서 제외(2026-10-10) — 발송도
-                  // 크롤러에 보류 전달. 재도입 시 git 히스토리 참조.
 
                   const SizedBox(height: 16),
 
-                  // 언어 섹션
-                  _SectionHeader(title: s.language),
-                  _SettingsTile(
-                    title: s.appLanguage,
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          nativeLanguageName(langCode),
-                          style: const TextStyle(
-                            fontSize: 14,
-                            color: AppColors.gray400,
-                          ),
-                        ),
-                        const SizedBox(width: 4),
-                        const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
-                      ],
-                    ),
-                    onTap: _showLanguageSheet,
+                  // 알림 섹션 — 조건 칩은 알림 타일 안(설명 아래)에 footer로 포함.
+                  _SectionHeader(title: s.notifications),
+                  _SectionCard(
+                    children: [
+                      _SettingsTile(
+                        icon: Icons.notifications_outlined,
+                        iconBg: AppColors.carrotLight,
+                        iconColor: AppColors.carrot,
+                        title: s.newJobAlerts,
+                        subtitle: s.newJobAlertsDesc,
+                        showDivider: false,
+                        trailing: _loaded
+                            ? Switch(
+                                value: _pushEnabled,
+                                onChanged: _togglePush,
+                                activeColor: AppColors.carrot,
+                              )
+                            : const SizedBox(width: 48),
+                      ),
+                      // 조건 칩 — 타일 아래 카드 내부 별도 행(드래프트 condrow).
+                      _condRow(s),
+                    ],
                   ),
+                  // 추천 공고 토글: 2.1.6 배포에서 제외(2026-10-10) — 발송도
+                  // 크롤러에 보류 전달. 재도입 시 git 히스토리 참조.
 
                   // 테스트 모드 토글 (제목 7탭으로 잠금해제됐거나 이미 ON일 때만 노출)
                   if (_testUnlocked || testMode) ...[
                     const SizedBox(height: 16),
                     _SectionHeader(title: 'TEST'),
-                    _SettingsTile(
-                      title: '테스트 모드',
-                      subtitle: 'testing 사이트(JobnShop) 포함 표시',
-                      trailing: Switch(
-                        value: testMode,
-                        onChanged: (v) => ref.read(testModeProvider.notifier).set(v),
-                        activeColor: AppColors.carrot,
-                      ),
+                    _SectionCard(
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.science_outlined,
+                          iconBg: AppColors.gray50,
+                          iconColor: AppColors.gray600,
+                          title: '테스트 모드',
+                          subtitle: 'testing 사이트(JobnShop) 포함 표시',
+                          showDivider: false,
+                          trailing: Switch(
+                            value: testMode,
+                            onChanged: (v) =>
+                                ref.read(testModeProvider.notifier).set(v),
+                            activeColor: AppColors.carrot,
+                          ),
+                        ),
+                      ],
                     ),
                   ],
 
@@ -357,13 +379,35 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with WidgetsBin
                   if (kDebugMode) ...[
                     const SizedBox(height: 16),
                     _SectionHeader(title: 'DEV'),
-                    _SettingsTile(
-                      title: 'Apply WebView 분석',
-                      subtitle: 'K-HIRE 로그인/폼 HTML 덤프 도구',
-                      trailing: const Icon(Icons.chevron_right, size: 20, color: AppColors.gray300),
-                      onTap: () => context.push('/dev/apply-webview'),
+                    _SectionCard(
+                      children: [
+                        _SettingsTile(
+                          icon: Icons.bug_report_outlined,
+                          iconBg: AppColors.gray50,
+                          iconColor: AppColors.gray600,
+                          title: 'Apply WebView 분석',
+                          subtitle: 'K-HIRE 로그인/폼 HTML 덤프 도구',
+                          showDivider: false,
+                          trailing: const Icon(Icons.chevron_right,
+                              size: 20, color: AppColors.gray300),
+                          onTap: () => context.push('/dev/apply-webview'),
+                        ),
+                      ],
                     ),
                   ],
+
+                  // 하단 버전
+                  if (_version.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 28),
+                      child: Center(
+                        child: Text(
+                          'Dari $_version',
+                          style: const TextStyle(
+                              fontSize: 12, color: AppColors.gray300),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             ),
@@ -395,12 +439,44 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
+/// 설정 섹션 카드 — 테두리 rounded 컨테이너(보조 위계, 2026-10-11 새 디자인).
+class _SectionCard extends StatelessWidget {
+  final List<Widget> children;
+  const _SectionCard({required this.children});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        // 홈 카드와 통일: 테두리 대신 미세 그림자(2026-10-11).
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: const [
+          BoxShadow(
+              color: Color(0x0F14161B), blurRadius: 3, offset: Offset(0, 1)),
+          BoxShadow(
+              color: Color(0x0D14161B), blurRadius: 14, offset: Offset(0, 4)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: children,
+      ),
+    );
+  }
+}
+
 class _SettingsTile extends StatelessWidget {
   final String title;
   final String? subtitle;
   final Widget? trailing;
   final VoidCallback? onTap;
   final bool showDivider;
+  // 역할색 아이콘 칩(알림=carrot / 언어=teal 등).
+  final IconData? icon;
+  final Color? iconBg;
+  final Color? iconColor;
 
   const _SettingsTile({
     required this.title,
@@ -408,6 +484,9 @@ class _SettingsTile extends StatelessWidget {
     this.trailing,
     this.onTap,
     this.showDivider = true,
+    this.icon,
+    this.iconBg,
+    this.iconColor,
   });
 
   @override
@@ -416,26 +495,39 @@ class _SettingsTile extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.fromLTRB(20, 14, 20, showDivider ? 14 : 6),
+        padding: const EdgeInsets.fromLTRB(14, 14, 16, 14),
         decoration: BoxDecoration(
           border: showDivider
-              ? const Border(
-                  bottom: BorderSide(color: Color(0xFFF5F5F5)))
+              ? const Border(bottom: BorderSide(color: Color(0xFFF5F5F5)))
               : null,
         ),
         child: Row(
-          // trailing(토글·값)을 제목 줄에 맞춤 — 설명이 길어도 안 쳐짐(통일).
-          crossAxisAlignment: CrossAxisAlignment.start,
+          // 아이콘·제목·trailing(토글·값) 전부 세로 중앙 정렬(2026-10-11).
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
+            if (icon != null) ...[
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: iconBg ?? AppColors.gray50,
+                  borderRadius: BorderRadius.circular(9),
+                ),
+                alignment: Alignment.center,
+                child: Icon(icon, size: 18, color: iconColor ?? AppColors.gray600),
+              ),
+              const SizedBox(width: 12),
+            ],
             Expanded(
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
                     style: const TextStyle(
                       fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontWeight: FontWeight.w600,
                       color: AppColors.black,
                     ),
                   ),

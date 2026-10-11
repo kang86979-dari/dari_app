@@ -130,7 +130,7 @@ class LanguageSelectScreen extends ConsumerWidget {
                       padding: const EdgeInsets.symmetric(vertical: 17),
                       decoration: BoxDecoration(
                         color: AppColors.carrot,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         s.next,

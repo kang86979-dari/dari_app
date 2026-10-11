@@ -88,6 +88,20 @@ class AppStrings {
  'mn': 'Визний төрлөө сонгоно уу',
  }, 'Select your visa type');
 
+ String get visaPopular => _t({
+ 'ko': '인기 비자', 'en': 'Popular', 'zh': '热门签证', 'hi': 'लोकप्रिय वीज़ा',
+ 'ja': '人気のビザ', 'th': 'วีซ่ายอดนิยม', 'vi': 'Visa phổ biến', 'bn': 'জনপ্রিয় ভিসা',
+ 'ru': 'Популярные', 'id': 'Visa populer', 'ne': 'लोकप्रिय भिसा', 'km': 'ទិដ្ឋាការពេញនិយម',
+ 'my': 'ရေပန်းစားဗီဇာ', 'si': 'ජනප්‍රිය වීසා', 'uz': 'Mashhur vizalar', 'mn': 'Түгээмэл виз',
+ }, 'Popular');
+
+ String get visaAll => _t({
+ 'ko': '전체 비자', 'en': 'All visas', 'zh': '全部签证', 'hi': 'सभी वीज़ा',
+ 'ja': 'すべてのビザ', 'th': 'วีซ่าทั้งหมด', 'vi': 'Tất cả visa', 'bn': 'সব ভিসা',
+ 'ru': 'Все визы', 'id': 'Semua visa', 'ne': 'सबै भिसा', 'km': 'ទិដ្ឋាការទាំងអស់',
+ 'my': 'ဗီဇာအားလုံး', 'si': 'සියලු වීසා', 'uz': 'Barcha vizalar', 'mn': 'Бүх виз',
+ }, 'All visas');
+
  String get selectVisaDesc => _t({
  'ko': '해당하는 비자를 모두 선택해주세요\n맞춤 공고를 먼저 보여드릴게요',
  'en': 'Select all your visa types\nWe\'ll show matching jobs first',
@@ -395,23 +409,11 @@ class AppStrings {
 
  // ── Home ──
  String get searchHint => _t({
- 'ko': '비자, 직종, 회사명 검색',
- 'en': 'Search visa, job type, company',
- 'zh': '搜索签证、职种、公司',
- 'hi': 'वीज़ा, नौकरी, कंपनी खोजें',
- 'ja': 'ビザ、職種、会社名を検索',
- 'th': 'ค้นหาวีซ่า อาชีพ บริษัท',
- 'vi': 'Tìm visa, nghề, công ty',
- 'bn': 'ভিসা, পেশা, কোম্পানি খুঁজুন',
- 'ru': 'Поиск по визе, профессии, компании',
- 'id': 'Cari visa, pekerjaan, perusahaan',
- 'ne': 'भिसा, जागिर, कम्पनी खोज्नुहोस्',
- 'km': 'ស្វែងរកទិដ្ឋាការ ការងារ ក្រុមហ៊ុន',
- 'my': 'ဗီဇာ၊ အလုပ်၊ ကုမ္ပဏီ ရှာဖွေပါ',
- 'si': 'වීසා, රැකියා, සමාගම සොයන්න',
- 'uz': 'Viza, kasb, kompaniya qidirish',
- 'mn': 'Виз, мэргэжил, компани хайх',
- }, 'Search visa, job type, company');
+ 'ko': '검색', 'en': 'Search', 'zh': '搜索', 'hi': 'खोजें',
+ 'ja': '検索', 'th': 'ค้นหา', 'vi': 'Tìm kiếm', 'bn': 'অনুসন্ধান',
+ 'ru': 'Поиск', 'id': 'Cari', 'ne': 'खोज्नुहोस्', 'km': 'ស្វែងរក',
+ 'my': 'ရှာဖွေ', 'si': 'සොයන්න', 'uz': 'Qidirish', 'mn': 'Хайх',
+ }, 'Search');
 
  String get filter => _t({
  'ko': '필터',
@@ -681,6 +683,18 @@ class AppStrings {
  'ru': 'Сохранить', 'id': 'Simpan', 'ne': 'सुरक्षित', 'km': 'រក្សាទុក',
  'my': 'သိမ်းရန်', 'si': 'සුරකින්න', 'uz': 'Saqlash', 'mn': 'Хадгалах',
  }, 'Save');
+ String get jobMemoSavedToast => _t({
+ 'ko': '메모를 저장했어요', 'en': 'Memo saved', 'zh': '备注已保存', 'hi': 'नोट सहेजा गया',
+ 'ja': 'メモを保存しました', 'th': 'บันทึกโน้ตแล้ว', 'vi': 'Đã lưu ghi chú', 'bn': 'নোট সংরক্ষিত হয়েছে',
+ 'ru': 'Заметка сохранена', 'id': 'Catatan disimpan', 'ne': 'टिप्पणी सुरक्षित भयो', 'km': 'បានរក្សាទុកកំណត់ចំណាំ',
+ 'my': 'မှတ်စုသိမ်းပြီး', 'si': 'සටහන සුරකින ලදී', 'uz': 'Eslatma saqlandi', 'mn': 'Тэмдэглэл хадгалагдлаа',
+ }, 'Memo saved');
+ String get jobMemoDeletedToast => _t({
+ 'ko': '메모를 삭제했어요', 'en': 'Memo deleted', 'zh': '备注已删除', 'hi': 'नोट हटाया गया',
+ 'ja': 'メモを削除しました', 'th': 'ลบโน้ตแล้ว', 'vi': 'Đã xóa ghi chú', 'bn': 'নোট মুছে ফেলা হয়েছে',
+ 'ru': 'Заметка удалена', 'id': 'Catatan dihapus', 'ne': 'टिप्पणी हटाइयो', 'km': 'បានលុបកំណត់ចំណាំ',
+ 'my': 'မှတ်စုဖျက်ပြီး', 'si': 'සටහන මකා දැමිණි', 'uz': 'Eslatma o‘chirildi', 'mn': 'Тэмдэглэл устгагдлаа',
+ }, 'Memo deleted');
  String get myMemosTitle => _t({
  'ko': '내 메모', 'en': 'My Memos', 'zh': '我的备注', 'hi': 'मेरे नोट्स',
  'ja': 'マイメモ', 'th': 'บันทึกของฉัน', 'vi': 'Ghi chú của tôi',

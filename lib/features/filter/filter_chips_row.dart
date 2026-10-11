@@ -57,7 +57,7 @@ class ReadOnlyFilterChips extends StatelessWidget {
                   // 키워드 칩: 필터 칩과 같은 톤 방식(연한 배경+진한 글자),
                   // 색만 남색 계열로 구분(2026-10-10 — 진한 남색이 무겁다는 피드백).
                   color: navy ? AppColors.navyLight : AppColors.carrotLight,
-                  borderRadius: BorderRadius.circular(15),
+                  borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

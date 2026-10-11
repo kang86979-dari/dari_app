@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'sheet_handle.dart';
 
 /// 앱 공통 바텀시트 — 모든 하단 시트의 껍데기 통일(2026-10-10).
-/// 라운드 20·흰 배경·상단 SheetHandle(드래그 바 + X)·하단 SafeArea를
+/// 라운드 16·흰 배경·상단 SheetHandle(드래그 바 + X)·하단 SafeArea를
 /// 한 곳에서 관리한다. 내용(child)만 넘기면 됨.
 ///
 /// [title] 주면 핸들 아래 굵은 제목 행을 그린다(정렬/언어 등 선택 시트용).
@@ -22,7 +22,8 @@ Future<T?> showAppSheet<T>(
     isScrollControlled: isScrollControlled,
     barrierColor: barrierColor,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      // radius 3단계 통일: 모달/시트 = 16(2026-10-11).
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
     ),
     builder: (ctx) => SafeArea(
       top: false,

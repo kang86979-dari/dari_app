@@ -59,24 +59,30 @@ class EmptyPlaceholder extends StatelessWidget {
             ),
             if (buttonLabel != null && onButton != null) ...[
               const SizedBox(height: 22),
-              SizedBox(
-                width: 180,
-                child: ElevatedButton(
+              // 고정폭(180) 금지 — 긴 번역은 버튼이 내용만큼 늘어남(2026-10-11).
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 180),
+                // 드래프트: 빈상태 CTA = 외곽선형(흰 배경 + carrot 테두리/글자).
+                child: OutlinedButton(
                   onPressed: onButton,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.carrot,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.carrot,
+                    side: const BorderSide(color: AppColors.carrot, width: 1.5),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 20),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: Text(
                     buttonLabel!,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
+                      height: 1.2,
                     ),
                   ),
                 ),

@@ -35,9 +35,16 @@ class _SkeletonCardState extends State<SkeletonCard>
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 6),
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFF0F0F0)),
+        decoration: const BoxDecoration(
+          // JobCard와 동일한 깊이 위계(radius 12 + 미세 그림자, 2026-10-11).
+          color: Colors.white,
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          boxShadow: [
+            BoxShadow(
+                color: Color(0x0F14161B), blurRadius: 3, offset: Offset(0, 1)),
+            BoxShadow(
+                color: Color(0x0D14161B), blurRadius: 14, offset: Offset(0, 4)),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

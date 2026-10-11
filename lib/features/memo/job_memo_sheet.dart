@@ -102,21 +102,26 @@ Future<String?> showJobMemoSheet(
                   ),
                 ),
               const Spacer(),
-              SizedBox(
-                width: 120,
+              // 고정폭(120) 금지 — 긴 번역은 내용만큼 늘어남(2026-10-11).
+              ConstrainedBox(
+                constraints: const BoxConstraints(minWidth: 120),
                 child: ElevatedButton(
                   onPressed: () =>
                       Navigator.of(context).pop(controller.text.trim()),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.carrot,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                        vertical: 12, horizontal: 16),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
                   child: Text(
                     strings.jobMemoSave,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
